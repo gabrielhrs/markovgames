@@ -1,0 +1,21 @@
+name = "markovgames"
+version = "0.1.0"
+keywords = ["math"]
+defaultTargets = ["Mdp", "Csg"]
+
+[leanOptions]
+pp.unicode.fun = true # pretty-prints `fun a ↦ b`
+relaxedAutoImplicit = false
+weak.linter.mathlibStandardSet = true
+maxSynthPendingDepth = 3
+
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4"
+rev = "master"
+
+[[lean_lib]]
+name = "Mdp"
+
+[[lean_lib]]
+name = "Csg"
