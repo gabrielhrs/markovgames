@@ -20,9 +20,8 @@ convention). Per the discussion in `PHASE0-NOTES.md`: this is the *opposite* of 
 column-minimises convention the FMSD paper itself uses, deliberately not threaded through the rest
 of the project as a sign flip -- so whichever player benefits from reaching `goal` is the *column*
 player here, regardless of which paper-side "player 1"/"player 2" label it carries in a given
-property. This computes `rPATL`'s `!goal U<=k goal` restricted to the trivial pre-condition case
-(`!goal` holds vacuously at every non-`goal` state, so this is really plain step-bounded
-reachability, `F<=k goal`) -- exactly the shape of the property in the rock-paper-scissors example
+property. This computes plain step-bounded reachability, `F<=k goal` (equivalently `rPATL`'s
+`Pmax=? [true U<=k goal]`) -- exactly the shape of the property in the rock-paper-scissors example
 this is being built for.
 
 Structurally this is `bwInd` (`BackwardInduction.lean`) with one real difference: `bwInd` has no

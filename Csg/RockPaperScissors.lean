@@ -11,9 +11,9 @@ import Csg.MatchingPennies
 
 **Status: drafted, not yet run through `lake build`.** Stage B of the reachability worked example
 agreed with the user, straight from their own FMSD paper: rock-paper-scissors as a four-state CSG
-(`initial`, `win1`, `win2`, `draw`), checked against `Pmax=? [!win2 U<=k win2]` for concrete `k`,
-which is really plain step-bounded reachability `F<=k win2` (`!win2` holds vacuously at every
-non-`win2` state -- see `BoundedReachability.lean`'s own docstring). Convention: as agreed, this
+(`initial`, `win1`, `win2`, `draw`), checked against plain step-bounded reachability, `F<=k win2`
+(the paper's own `Pmax=? [!win2 U<=k win2]`, restated in the clearer `F<=k` form -- see
+`BoundedReachability.lean`'s own docstring) for concrete `k`. Convention: as agreed, this
 project's `MatrixGame` is row-minimises/column-maximises (the opposite of the paper's own
 row-maximises/column-minimises), not worth a sign flip -- so `win2`, the state the maximising
 *column* player benefits from, corresponds to whichever player the paper calls "P1" for this
@@ -261,8 +261,8 @@ theorem rpsCSG_stageValue_initial (v : RPSState → ℝ) :
   rw [← hval]
   exact huu
 
-/-- The property being computed: reachability of `win2`, i.e. `Pmax=? [!win2 U<=k win2]` restricted
-    to the trivial pre-condition case (see `BoundedReachability.lean`). An `abbrev`, not a `def`:
+/-- The property being computed: reachability of `win2`, i.e. plain step-bounded reachability
+    `F<=k win2` (see `BoundedReachability.lean`). An `abbrev`, not a `def`:
     plain `def`s aren't unfolded during typeclass search, so `DecidablePred rpsGoalWin2` (needed
     implicitly everywhere `reachBounded rpsGoalWin2` appears below) would otherwise fail to
     synthesize even though `RPSState` itself has decidable equality. -/

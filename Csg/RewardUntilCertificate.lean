@@ -34,6 +34,27 @@ which for a linear system this size is a handful of `linarith` calls, and for a 
 cyclic-transition model would realistically need an external argument (see the note below on how
 this connects to `untilOp`/`reachOp`'s own `.lfp` machinery).
 
+**A second combinator for the min-objective/zero-reward-cycle case.** The `∃!` characterization
+above is not merely hard but outright false whenever `rewardUntilStep`'s Bellman equation admits a
+zero-reward cycle back through the *current* state: e.g. a single state `s` with a self-loop of
+reward `0` and an alternative eventually costing `1` gives `v s = min (0 + v s) 1`, satisfied by
+*every* `v s ≤ 1`, not just one. PRISM's own fix for this (`computeReachRewardsInfinity`'s
+epsilon-perturbed "upper bound" pass, run before the real value iteration, see below) is exactly a
+value-iteration-level instance of picking out the *greatest* fixed point of that equation, not the
+least -- perturbing every reward to a strictly positive `epsilon` turns the tautology
+`x = min (0 + x) 1` into the genuinely-forcing `x = min (epsilon + x) 1`, whose only solution is
+`x = 1`, and seeding the true (`epsilon = 0`) iteration from that value lands on it directly rather
+than sliding down to the spurious `0`. `rewardUntilOp_eq_of_gfp_certificate` below packages the
+same idea at the certificate level: instead of asking for the *only* fixed point (false here), it
+asks for a fixed point that *dominates every other fixed point* -- provable in exactly the cases
+where `huniq` is not, since an upper bound like `v s ≤ 1` typically falls straight out of the
+Bellman equation's own `min`, with no need to rule out anything smaller. Mirrors the
+reachability/safety duality already in this project: `reachOp`'s `.lfp` is the least fixed point of
+a monotone operator (Knaster-Tarski from below), `safetyOp`'s `.gfp` is the dual greatest fixed
+point (`SafetyCertificate.lean`); this is the same greatest-fixed-point idea again, just without a
+`CompleteLattice` on plain `ℝ` to hang an automatic `.gfp` on, so the caller supplies the dominance
+fact (`hub`) by hand instead of getting it packaged by `OrderHom.gfp`.
+
 **Design informed by PRISM-games' `CSGModelChecker.java`** (`computeReachRewardsInfinity`,
 `valInfinity`, fetched per the user's pointer to the upstream source), without importing any of
 its machinery. PRISM does not solve infinite-valued reward-until with an extended-value minimax
@@ -78,12 +99,31 @@ noncomputable def rewardUntilStep (goal : S → Prop) [DecidablePred goal] (v : 
     `rpsCSGSteps`/`rpsStepsStep`/`rpsSteps`) into a single reusable statement for an arbitrary
     `CSG`, `goal`, and candidate. As with `ReachCertificate.lean`, this combinator automates only
     the assembly of the two hypotheses into the `∃!` conclusion, not the (model-specific)
-    mathematics of `hfixed`/`huniq` themselves. -/
+    mathematics of `hfixed`/`huniq` themselves.
+
+    **Caveat:** sound only for models with no reachable zero-reward cycle outside `goal` --
+    `huniq` is not just hard to prove but outright false otherwise (see the module docstring
+    above, and `rewardUntilOp_eq_of_gfp_certificate` below for that case). -/
 theorem rewardUntilOp_eq_of_certificate (goal : S → Prop) [DecidablePred goal] (v : S → ℝ)
     (hfixed : C.rewardUntilStep goal v = v)
     (huniq : ∀ w : S → ℝ, C.rewardUntilStep goal w = w → w = v) :
     ∃! w : S → ℝ, C.rewardUntilStep goal w = w :=
   ⟨v, hfixed, huniq⟩
+
+/-- **The payoff, min/zero-reward-cycle version.** A candidate `v` that is a fixed point of
+    `rewardUntilStep`, together with a proof that it *dominates* every other fixed point (rather
+    than being the *only* one -- see the module docstring's worked example for why `∃!` fails
+    here), witnesses that `v` is *the* fixed point dominating every fixed point, and that this
+    dominating fixed point is unique. The order-theoretic analogue of `safetyOp`'s `.gfp`, stated
+    by hand since plain `S → ℝ` has no `CompleteLattice` to hang an automatic `.gfp` on. As with
+    `rewardUntilOp_eq_of_certificate`, this combinator automates only the assembly: `hfixed` and
+    `hub` are still model-specific mathematics the caller must supply. -/
+theorem rewardUntilOp_eq_of_gfp_certificate (goal : S → Prop) [DecidablePred goal] (v : S → ℝ)
+    (hfixed : C.rewardUntilStep goal v = v)
+    (hub : ∀ w : S → ℝ, C.rewardUntilStep goal w = w → w ≤ v) :
+    ∃! w : S → ℝ, C.rewardUntilStep goal w = w ∧
+      ∀ u : S → ℝ, C.rewardUntilStep goal u = u → u ≤ w :=
+  ⟨v, ⟨hfixed, hub⟩, fun w ⟨hwfixed, hwub⟩ => le_antisymm (hub w hwfixed) (hwub v hfixed)⟩
 
 end CSG
 end Csg
