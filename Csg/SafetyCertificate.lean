@@ -8,7 +8,8 @@ import Csg.SafetyOp
 /-!
 # A reusable safety-value certificate, dual to `ReachCertificate.lean`
 
-**Status: drafted, not yet run through `lake build`.** Mirrors `ReachCertificate.lean` on the
+**Status: done, confirmed by a clean `lake build` (via `RockPaperScissorsSafety.lean`, its first
+concrete consumer).** Mirrors `ReachCertificate.lean` on the
 `gfp` side of Knaster-Tarski rather than the `lfp` side, closing out the last unstarted row of
 `VERIFICATION-FRAMEWORK.md`'s Axis A (temporal shape) for zero-sum: step-bounded (`bwInd`),
 unbounded reachability/until (`reachOp`/`untilOp`), reward-until-absorption

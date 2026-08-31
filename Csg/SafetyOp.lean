@@ -8,7 +8,9 @@ import Csg.CsgMonotone
 /-!
 # The safety Bellman operator, bundled as an `OrderHom`
 
-**Status: drafted, not yet run through `lake build`.** The dual of `ReachOp.lean`: `G safe`
+**Status: done, confirmed by a clean `lake build` (via `RockPaperScissorsSafety.lean`, its first
+concrete consumer -- no direct build of this file alone was needed to confirm it).** The dual of
+`ReachOp.lean`: `G safe`
 ("always safe") rather than `F goal` ("eventually goal"). Reachability is a **least** fixed point
 because reaching `goal` is a one-off event that a candidate value can be pinned down from below;
 safety is a **greatest** fixed point because staying `safe` forever can only be falsified by an

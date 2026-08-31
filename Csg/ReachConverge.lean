@@ -5,14 +5,16 @@ Authors: Gabriel Santos
 -/
 import Csg.ReachOp
 import Mathlib.Topology.Order.MonotoneConvergence
+import Mathlib.Order.FixedPoints
+import Mathlib.Order.OmegaCompletePartialOrder
 
 /-!
 # Stage 3: the reachability operator is `ωScottContinuous`, and the convergence theorem
 
 **Status: done, confirmed by a clean `lake build`, first attempt, no fix round needed.** Stage 3 of
 the infinite-horizon build order (`PHASE0-NOTES.md`): shows `C.reachOp goal hr` (`ReachOp.lean`) is
-`ωScottContinuous`, using
-`stageValue_lipschitz` (`CsgMonotone.lean`) to bridge pointwise monotone convergence of a chain to
+`ωScottContinuous`, using `stageValue_lipschitz` (`CsgMonotone.lean`) to bridge pointwise monotone
+convergence of a chain to
 convergence of the operator applied along it, then invokes Mathlib's Kleene fixed-point theorem
 (`OrderHom.lfp_eq_sSup_iterate`) to conclude `(C.reachOp goal hr).lfp` -- the least fixed point
 Knaster-Tarski already hands us for free, the moment `ReachOp.lean` typechecks -- equals
@@ -28,6 +30,18 @@ argument, not derived automatically from `a ≤ b` being true). `ReachOp.lean` n
 instance, since building an `OrderHom` needs no more than a `Preorder` on either side; this file is
 the first to actually reason about `ωSup`/call `.lfp`, so the instance is registered here, once,
 for every `CSG` at once (it does not depend on `S`/`A1`/`A2`/`C`).
+
+`Mathlib.Order.FixedPoints` and `Mathlib.Order.OmegaCompletePartialOrder` are imported explicitly
+even though both are already reachable transitively (through `Csg.ReachOp` and through
+`Mathlib.Topology.Order.MonotoneConvergence`, confirmed by tracing the actual dependency graph, not
+guessed) -- this Mathlib revision has moved to Lean's new `module`/`public import`/`private import`
+system, still settling as of this toolchain (`v4.34.0-rc2`, a release candidate), and relying on an
+indirect re-export for a declaration this file uses directly is exactly the kind of thing that can
+elaborate fine in a batch `lake build` while the VS Code language server, resolving the same
+transitive re-export chain incrementally, gets stuck (`OmegaCompletePartialOrder` instance search
+stuck on a metavariable, `OrderHom.lfp_eq_sSup_iterate` reported unknown) even with a matching
+toolchain and a fresh server restart. Importing both directly sidesteps the question entirely,
+regardless of whether it turns out to be the actual cause.
 
 The main lemma, `reachOp_ωScottContinuous`, goes through `ωScottContinuous_iff_map_ωSup_of_orderHom`
 (`f (ωSup c) = ωSup (c.map f)` for every chain `c`) and `funext`, reducing to one state `s` at a
