@@ -9,7 +9,10 @@ import Csg.MatchingPennies
 /-!
 # Worked example: rock-paper-scissors
 
-**Status: drafted, not yet run through `lake build`.** Stage B of the reachability worked example
+**Status: done, confirmed by a clean `lake build` after one real fix round (a typeclass-search
+gap -- a goal predicate defined via plain `def` rather than `abbrev`, blocking automatic
+`DecidablePred` synthesis and cascading into several downstream errors, plus three smaller misses
+-- see `PHASE0-NOTES.md`).** Stage B of the reachability worked example
 agreed with the user, straight from their own FMSD paper: rock-paper-scissors as a four-state CSG
 (`initial`, `win1`, `win2`, `draw`), checked against plain step-bounded reachability, `F<=k win2`
 (the paper's own `Pmax=? [!win2 U<=k win2]`, restated in the clearer `F<=k` form -- see

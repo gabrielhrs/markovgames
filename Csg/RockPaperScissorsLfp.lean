@@ -9,7 +9,10 @@ import Csg.RockPaperScissors
 /-!
 # Worked example: the exact least fixed point for rock-paper-scissors
 
-**Status: drafted, not yet run through `lake build`.** Closes out the reachability worked example:
+**Status: done, confirmed by a clean `lake build` after two real fix rounds (concrete decidable
+conditions defeating `simp`'s `if_pos`/`if_neg` idiom, fixed with `change`/`rfl`; and Mathlib's
+pinning lemmas taking the operator as an explicit rather than implicit argument, fixed with dot
+notation -- see `PHASE0-NOTES.md`).** Closes out the reachability worked example:
 `(rpsCSG.reachOp rpsGoalWin2 rpsR_zero).lfp` -- the genuine infinite-horizon value, not merely a
 `reachBounded` sequence approximating it -- computed exactly, matching `RockPaperScissors.lean`'s
 own concrete `reachBounded` values (`0, 1/3, 1/3, 4/9, 4/9, ...`) at their shared limit `1/2`.

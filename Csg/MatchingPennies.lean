@@ -9,7 +9,9 @@ import Mathlib.Probability.ProbabilityMassFunction.Monad
 /-!
 # Worked example: matching pennies
 
-**Status: drafted, not yet run through `lake build`.** A concrete instantiation of the whole CSG
+**Status: done, confirmed by a clean `lake build` after one real fix round (an unimported Mathlib
+module, a default-simp-lemma ordering trap, plus cosmetic lint cleanup -- see
+`PHASE0-NOTES.md`).** A concrete instantiation of the whole CSG
 stack (`MatrixGame`, `CSG`, `bwInd`), checked against a hand-solved closed form -- the same role
 `RecyclingRobot.lean` played for the MDP side, extended here to a genuinely *concurrent* game.
 This is also, by a wide margin, the most tactic-heavy file in the project so far: several small

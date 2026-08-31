@@ -4,11 +4,15 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Gabriel Santos
 -/
 import Csg.RockPaperScissors
+import Csg.RewardUntilCertificate
 
 /-!
 # Worked example: expected number of steps until winning a round
 
-**Status: drafted, not yet run through `lake build`.** The reward-until-absorption worked example
+**Status: done, confirmed by a clean `lake build` on the first attempt, no fix round needed
+(including the two riskiest bits: dropping `private` from three reused lemmas in
+`RockPaperScissors.lean`, and every `change` past the concrete `win1 ∨ win2` condition in the
+fixed-point and uniqueness proofs).** The reward-until-absorption worked example
 agreed with the user: instead of a probability (`Pmax=? [F win2]`, already done in
 `RockPaperScissorsLfp.lean`/`RockPaperScissorsUntil.lean`), the expected number of raw `CSG` steps
 until *some* round is won (`win1` or `win2`, either player), under the same uniform play that was
@@ -59,6 +63,20 @@ probability `2/3`, so the probability of never resolving after `n` rounds is `(1
 fully formal a.s.-absorption/properness argument is exactly the piece reachcert's own `𝒟`/`𝒟_iv`
 ranking-function machinery exists for, and is not attempted here -- matching how reachcert's own
 `R_inf` completeness theorem was left `sorry` in its source rather than treated as a solved problem.
+
+**Retrofit, added after `RewardUntilCertificate.lean` existed.** `rpsSteps_fixed`/`rpsSteps_unique`
+below predate that file's general combinator -- this was, per that file's own docstring, the
+bespoke pair `CSG.rewardUntilOp_eq_of_certificate` generalised away from. Left unretrofitted, that
+generalisation was untested against the one instance it was extracted from, the same gap that made
+`RockPaperScissorsLfp.lean → ReachCertificate.lean`'s own retrofit worth doing rather than
+cosmetic. `rpsCSGSteps_rewardUntilOp_unique` closes it: feeding the same two hand-proved
+hypotheses through `rewardUntilOp_eq_of_certificate` instead of packaging the `∃!` conclusion
+inline exercises the combinator against real, previously-existing proof terms rather than only the
+fully abstract statement it specialises -- if the generalisation had silently dropped a hypothesis
+or flipped a direction, this would fail to typecheck even though the two source lemmas above still
+would. Closes `VERIFICATION-FRAMEWORK.md`'s Axis A note that this worked instance had never run
+through its own combinator. **Confirmed by a clean `lake build`, no fix round needed** (only the
+project's usual harmless warnings, unrelated to this addition).
 -/
 
 namespace Csg
@@ -234,6 +252,17 @@ theorem rpsSteps_unique {w : RPSState → ℝ} (hw : rpsStepsStep w = w) : w = r
   | win2 => simp [hwin2, rpsSteps]
   | initial => simp [hw_init, rpsSteps]
   | draw => simp [hw_draw, rpsSteps]
+
+/-- **The retrofit.** `rpsSteps_fixed`/`rpsSteps_unique` are exactly the `hfixed`/`huniq`
+    `CSG.rewardUntilOp_eq_of_certificate` needs, once `rpsStepsStep`'s hard-coded absorption
+    condition is read as that combinator's `goal` parameter specialised to
+    `fun s => s = win1 ∨ s = win2` -- `rpsStepsStep` and `rpsCSGSteps.rewardUntilStep` at that
+    `goal` are the same `ite` definitionally, so no bridging lemma is needed between them. -/
+theorem rpsCSGSteps_rewardUntilOp_unique :
+    ∃! w : RPSState → ℝ,
+      rpsCSGSteps.rewardUntilStep (fun s => s = RPSState.win1 ∨ s = RPSState.win2) w = w :=
+  rpsCSGSteps.rewardUntilOp_eq_of_certificate (fun s => s = RPSState.win1 ∨ s = RPSState.win2)
+    rpsSteps rpsSteps_fixed fun w hw => rpsSteps_unique hw
 
 /-- The number the whole exercise was after: from `initial`, expected `2` raw `CSG` steps until
     someone wins a round, under uniform (optimal) play. -/

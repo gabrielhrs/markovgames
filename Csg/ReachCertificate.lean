@@ -8,7 +8,9 @@ import Csg.ReachOp
 /-!
 # A reusable reachability-value certificate
 
-**Status: drafted, not yet run through `lake build`.** Pulls the assembly step of
+**Status: done, confirmed by a clean `lake build` on the first attempt (one cosmetic
+unused-variable warning at the call site, fixed by naming an unused lambda binder `_`).** Pulls
+the assembly step of
 `RockPaperScissorsLfp.lean`'s headline theorem -- `le_antisymm` applied to Knaster-Tarski's two
 pinning lemmas, `OrderHom.lfp_le_fixed`/`OrderHom.le_lfp` -- out of that one instance and into a
 combinator any `CSG`/goal/candidate can call directly. This is the first concrete artifact

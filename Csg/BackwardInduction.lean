@@ -8,7 +8,9 @@ import Csg.Basic
 /-!
 # Backward induction for bounded-horizon concurrent stochastic games
 
-**Status: drafted, not yet run through `lake build`.** Builds on the now-confirmed `Csg.Basic`
+**Status: done, confirmed by a clean `lake build`, zero `sorry`s (one caught-and-fixed regression
+along the way, from a mistaken self-review edit to the recursive call in `bwInd` -- see
+`PHASE0-NOTES.md`).** Builds on the now-confirmed `Csg.Basic`
 (`CSG`, `CSG.stageGame`, `CSG.stageValue`, `MatrixGame.value`) without touching that file, same
 pattern as `Basic.lean` → `Csg/Basic.lean`.
 

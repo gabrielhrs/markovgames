@@ -9,7 +9,7 @@ import Mathlib.Analysis.Convex.StdSimplex
 /-!
 # Finite two-player zero-sum matrix games
 
-**Status: drafted, not yet run through `lake build`.** This is the first artifact for Goal 02
+**Status: done, confirmed by a clean `lake build`.** This is the first artifact for Goal 02
 (concurrent stochastic games), and plays the same role for the CSG line of work that
 `RecyclingRobot.lean` played for the discounted-MDP line: a small, self-contained, hands-on
 exercise that checks a genuinely nontrivial piece of Mathlib before any downstream theory gets

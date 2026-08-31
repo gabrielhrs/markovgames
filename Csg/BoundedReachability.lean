@@ -8,7 +8,7 @@ import Csg.MatrixGameMonotone
 /-!
 # Bounded reachability for concurrent stochastic games
 
-**Status: drafted, not yet run through `lake build`.** First half of the rock-paper-scissors
+**Status: done, confirmed by a clean `lake build`.** First half of the rock-paper-scissors
 worked example agreed with the user: the general step-bounded reachability operator, before any
 concrete game is instantiated over it. Builds on `Csg/Basic.lean` (`CSG.stageValue`); only imports
 `MatrixGameMonotone.lean` for now (not yet used here) since the next artifact -- boundedness of
