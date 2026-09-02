@@ -24,8 +24,7 @@ of it — the split is about provenance, not about the underlying theory.
 
 ## Status
 
-No longer early, still incomplete in specific, nameable ways. The `Mdp`
-line (value iteration, policy iteration) is done, confirmed against a
+The `Mdp` line (value iteration, policy iteration) is done, confirmed against a
 hand-solved closed form. The `Csg` line's zero-sum (two-coalition,
 competing) theory is done and validated end to end: bounded objectives via
 backward induction, and infinite-horizon reachability/until/reward-until/
