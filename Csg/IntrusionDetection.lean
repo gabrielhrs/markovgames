@@ -4,16 +4,19 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Gabriel Santos
 -/
 import Csg.BackwardInduction
+import Csg.CsgMonotone
 import Mathlib.Probability.ProbabilityMassFunction.Monad
 
 /-!
 # A non-toy `bwInd` instance: intrusion detection, sourced from PRISM-games' IDS case study
 
-**Status: done, confirmed by a clean `lake build`.** Both the one-round instance
-(`idsV1`/`idsCSG_bwInd_one*`) and the two-round instance (`idsV2`/`idsCSG_bwInd_two*`, the first
-in this project to exercise `bwInd`'s recursion against a non-uniform, state-dependent
-continuation) build clean, VS Code included -- the one-round instance after the fix round below.
-`idsK` uses `PMF.pure`,
+**Status: done, confirmed by a clean `lake build`.** The two hand-checked instances
+(`idsV1`/`idsCSG_bwInd_one*` and `idsV2`/`idsCSG_bwInd_two*`, the first in this project to exercise
+`bwInd`'s recursion against a non-uniform, state-dependent continuation) build clean, VS Code
+included -- the one-round instance after the fix round below. Two further `∀ n` facts have since
+been added (see that section's own docstring) and build clean too, first attempt, no fix round
+needed: `idsCSG_bwInd_compromised_eq_healthy_add_one` and `idsCSG_bwInd_mono`. `idsK` uses
+`PMF.pure`,
 which lives in `Mathlib.Probability.ProbabilityMassFunction.Monad` (the monadic-operations file,
 not `.Basic`, per that file's own docstring) -- an import this file was originally missing, since
 `Csg.BackwardInduction`'s own transitive imports stop at `.Basic`. `MatchingPennies.lean` already
@@ -389,5 +392,67 @@ theorem idsCSG_bwInd_two_healthy : idsCSG.bwInd (fun _ => 0) 2 .healthy = 25 / 2
 /-- Numeric form at `compromised`. -/
 theorem idsCSG_bwInd_two_compromised : idsCSG.bwInd (fun _ => 0) 2 .compromised = 46 / 21 :=
   idsCSG_bwInd_two .compromised
+
+/-!
+## Two `∀ n` facts, beyond the two hand-checked rounds above
+
+Both worked instances above stop at a fixed `n` (`1` or `2`), checked by hand and cross-referenced
+against a real PRISM-games run. Two genuinely general facts, quantified over every round, follow
+from what is already in this file plus already-existing general lemmas -- neither needs a new
+worked instance or new numbers, only noticing what the existing pieces already give for free.
+-/
+
+/-- The two states' stage-game payoff matrices differ by exactly the constant `1`, at *every*
+    joint action and against *any* continuation `v` -- not just the zero continuation or `idsV1`.
+    Immediate from `idsCSG_stageGame_A'` plus the reward table's own structure (`idsR`'s
+    `compromised` row is its `healthy` row plus `1`, pointwise): the expected-continuation term is
+    identical between the two states for the same `v`, since `idsK` is state-independent, so only
+    the reward term's `+ 1` survives. -/
+theorem idsCSG_stageGame_compromised_eq_healthy_add_one (v : IDSState → ℝ) (a1 : PolicyAction)
+    (a2 : AttackAction) :
+    (idsCSG.stageGame .compromised v).A a1 a2 = (idsCSG.stageGame .healthy v).A a1 a2 + 1 := by
+  rw [idsCSG_stageGame_A', idsCSG_stageGame_A']
+  cases a1 <;> cases a2 <;> simp [idsR] <;> ring
+
+/-- **The general fact.** `compromised`'s stage value is always exactly `healthy`'s plus `1`, for
+    *any* continuation `v` -- `MatrixGameMonotone.lean`'s `value_add_const` (shifting every payoff
+    entry of a matrix game by a constant shifts the value by that same constant) applied to the
+    fact above. This is the real, structural reason the same mixed-strategy pair solved *both*
+    states' stage games at both `k = 1` and `k = 2` above: it was never a coincidence specific to
+    either round, it holds automatically at every stage of `bwInd`'s recursion, with no induction
+    on the round count needed to see it. -/
+theorem idsCSG_stageValue_compromised_eq_healthy_add_one (v : IDSState → ℝ) :
+    idsCSG.stageValue .compromised v = idsCSG.stageValue .healthy v + 1 :=
+  MatrixGame.value_add_const 1 (idsCSG_stageGame_compromised_eq_healthy_add_one v)
+
+/-- **For all `n ≥ 1`.** Unfolding `bwInd`'s recursive step once turns the fact above into a
+    statement about `bwInd` itself: `compromised`'s `n`-round value is always exactly `healthy`'s
+    plus `1`, at *every* round from one onward, not just the two rounds hand-checked above. This
+    genuinely needs `n ≥ 1` (equivalently, is stated here as `n + 1`): at `n = 0`, `bwInd`'s base
+    case is the literal terminal reward `fun _ => 0` for both states alike, so the gap is exactly
+    `0`, not `1` -- the asymmetry only enters once the reward table is actually consulted, at the
+    first stage-game evaluation. -/
+theorem idsCSG_bwInd_compromised_eq_healthy_add_one (n : ℕ) :
+    idsCSG.bwInd (fun _ => 0) (n + 1) .compromised =
+      idsCSG.bwInd (fun _ => 0) (n + 1) .healthy + 1 := by
+  rw [CSG.bwInd_succ, CSG.bwInd_succ]
+  exact idsCSG_stageValue_compromised_eq_healthy_add_one _
+
+/-- **`bwInd`'s sequence is nondecreasing in the round count, at every state.** Reward accumulates
+    without discounting here, and every entry of `idsR` is nonnegative, so one more round of play
+    never lowers the value -- a genuine induction on `n`, unlike the fact above, leaning on
+    `CsgMonotone.lean`'s `stageValue_mono`. Notably, `stageValue_mono` needs no `hr : C.r ≡ 0`
+    hypothesis -- monotonicity in the continuation never depended on the reward-free assumption
+    every previous worked instance in this project happened to satisfy, only boundedness did. -/
+theorem idsCSG_bwInd_mono (n : ℕ) (s : IDSState) :
+    idsCSG.bwInd (fun _ => 0) n s ≤ idsCSG.bwInd (fun _ => 0) (n + 1) s := by
+  induction n generalizing s with
+  | zero =>
+      have h0 : idsCSG.bwInd (fun _ => 0) 0 s = 0 := rfl
+      rw [h0, idsCSG_bwInd_one s]
+      cases s <;> norm_num [idsV1]
+  | succ n ih =>
+      rw [CSG.bwInd_succ, CSG.bwInd_succ]
+      exact idsCSG.stageValue_mono ih
 
 end Csg

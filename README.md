@@ -11,9 +11,11 @@ The repository has two parts:
   Isabelle/HOL development cited below.
 - **`Csg/`** — a from-scratch formalization of the multi-player
   generalization (concurrent stochastic games), including matrix-game
-  values, reachability/until/safety operators, and fixed-point-certificate
-  combinators for verifying computed values against those operators without
-  re-deriving the operators' own correctness.
+  values, backward induction for bounded objectives, reachability/until/
+  reward-until/safety operators for the infinite-horizon case, and
+  fixed-point-certificate combinators (both exact-pinning and interval/
+  sandwiched forms) for verifying computed values against those operators
+  without re-deriving the operators' own correctness.
 
 `Mdp` is nested inside `Csg` mathematically (an MDP is a one-player CSG),
 but the two are kept as sibling Lean libraries here because `Mdp` is a
@@ -22,14 +24,26 @@ of it — the split is about provenance, not about the underlying theory.
 
 ## Status
 
-Early and incomplete. The `Mdp` line covers value iteration and policy
-iteration. The `Csg` line currently covers: matrix-game values and their
-continuity, monotone CSG operators, and certificate combinators for
-reachability, until, reward-until, and safety objectives in the zero-sum
-(two-coalition, competing) case. General-sum equilibria (Nash/SWNE/SCNE)
-are not yet formalized — the relevant obstructions are noted in the
-project's working notes but are out of scope for this repository as it
-stands.
+No longer early, still incomplete in specific, nameable ways. The `Mdp`
+line (value iteration, policy iteration) is done, confirmed against a
+hand-solved closed form. The `Csg` line's zero-sum (two-coalition,
+competing) theory is done and validated end to end: bounded objectives via
+backward induction, and infinite-horizon reachability/until/reward-until/
+safety objectives via monotone fixed-point operators plus certificate
+combinators (exact-pinning and interval/sandwiched forms) — every piece of
+routing checked against at least one worked instance, from the classic
+small examples (matching pennies, rock-paper-scissors) up to a real,
+published, third-party model (PRISM-games' intrusion-detection case study,
+independently cross-checked against a live PRISM-games run).
+
+What's genuinely still open: general-sum equilibria (Nash/SWNE/SCNE) are
+not formalized — the relevant obstruction is an unconfirmed Mathlib gap,
+noted in the project's working notes; mean-payoff (average-reward)
+objectives are unstarted; and there is no executable, terminating
+value-iteration *algorithm* for CSGs yet — only certificates that verify a
+candidate value once one is already in hand, the same "automate the
+assembly of a proof, not the discharge of its side conditions" methodology
+this project follows throughout (see Credits below).
 
 ## Credits
 
