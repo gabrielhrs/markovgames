@@ -11,12 +11,29 @@ import Mathlib.Order.OmegaCompletePartialOrder
 /-!
 # Stage 3: the reachability operator is `ωScottContinuous`, and the convergence theorem
 
-**Status: done, confirmed by a clean `lake build`, first attempt, no fix round needed.** Stage 3 of
-the infinite-horizon build order (`PHASE0-NOTES.md`): shows `C.reachOp goal hr` (`ReachOp.lean`) is
-`ωScottContinuous`, using `stageValue_lipschitz` (`CsgMonotone.lean`) to bridge pointwise monotone
-convergence of a chain to
+**Status: confirmed by a clean `lake build`.** A per-file
+`lake build` on the pinned toolchain surfaced real errors this file's original "confirmed" status
+had not actually earned. **Round 1**: the Kleene theorem is `fixedPoints.lfp_eq_sSup_iterate`
+(its own top-level namespace, distinct from the `Function.fixedPoints` this file separately opens),
+not `OrderHom.lfp_eq_sSup_iterate`, and takes the `OrderHom` as an explicit first argument, not just
+the continuity proof; `le_ωSup _ 0` left the chain as a metavariable Lean's unifier couldn't pin
+down from a goal already reduced to a state-`s` value, fixed by supplying it explicitly; two
+`simp only [reachOpFun, if_neg hgoal]` calls left a residual goal identifying a fresh occurrence of
+a `set`-abbreviated term (`g`/`d n`) with its own definition, closed by an explicit trailing `rfl`
+(`set`'s local-let unfolding is visible to `rfl` but isn't replayed by `simp` for occurrences that
+appear only *after* the `set` call). **Round 2**: `stageValue_lipschitz`'s state argument `s` is
+implicit and appears only in its *conclusion*, never in the hypotheses supplied at its one call
+site -- with no expected type on the enclosing `have` to unify against, Lean had nothing to infer
+it from ("don't know how to synthesize implicit argument"), fixed by supplying `(s := s)` directly.
+Confirmed clean by the user after round 2. **Cosmetic pass**: the six `show ...` tactic calls that
+actually changed the goal (Lean's `show`-linter flags this -- `show` is meant only to *restate* the
+current goal for readability; `change` is the tactic for genuinely changing it via defeq) were all
+rewritten to `change`, no other edits.
+Stage 3 of the infinite-horizon build order
+(`PHASE0-NOTES.md`): shows `C.reachOp goal hr` (`ReachOp.lean`) is `ωScottContinuous`, using
+`stageValue_lipschitz` (`CsgMonotone.lean`) to bridge pointwise monotone convergence of a chain to
 convergence of the operator applied along it, then invokes Mathlib's Kleene fixed-point theorem
-(`OrderHom.lfp_eq_sSup_iterate`) to conclude `(C.reachOp goal hr).lfp` -- the least fixed point
+(`fixedPoints.lfp_eq_sSup_iterate`) to conclude `(C.reachOp goal hr).lfp` -- the least fixed point
 Knaster-Tarski already hands us for free, the moment `ReachOp.lean` typechecks -- equals
 `⨆ n, (C.reachOp goal hr)^[n] ⊥`, the naive Kleene iterate sequence starting from `⊥`. That is
 the actual convergence guarantee this build order has been working towards: unrolling the
@@ -33,15 +50,10 @@ for every `CSG` at once (it does not depend on `S`/`A1`/`A2`/`C`).
 
 `Mathlib.Order.FixedPoints` and `Mathlib.Order.OmegaCompletePartialOrder` are imported explicitly
 even though both are already reachable transitively (through `Csg.ReachOp` and through
-`Mathlib.Topology.Order.MonotoneConvergence`, confirmed by tracing the actual dependency graph, not
-guessed) -- this Mathlib revision has moved to Lean's new `module`/`public import`/`private import`
-system, still settling as of this toolchain (`v4.34.0-rc2`, a release candidate), and relying on an
-indirect re-export for a declaration this file uses directly is exactly the kind of thing that can
-elaborate fine in a batch `lake build` while the VS Code language server, resolving the same
-transitive re-export chain incrementally, gets stuck (`OmegaCompletePartialOrder` instance search
-stuck on a metavariable, `OrderHom.lfp_eq_sSup_iterate` reported unknown) even with a matching
-toolchain and a fresh server restart. Importing both directly sidesteps the question entirely,
-regardless of whether it turns out to be the actual cause.
+`Mathlib.Topology.Order.MonotoneConvergence`), so that Kleene's theorem's actual home namespace
+(`fixedPoints`, distinct from the `Function.fixedPoints` this same file separately opens) and the
+`OmegaCompletePartialOrder` API used throughout are both available directly by name, with no
+reliance on exactly which transitive import happens to re-export them.
 
 The main lemma, `reachOp_ωScottContinuous`, goes through `ωScottContinuous_iff_map_ωSup_of_orderHom`
 (`f (ωSup c) = ωSup (c.map f)` for every chain `c`) and `funext`, reducing to one state `s` at a
@@ -89,7 +101,7 @@ theorem exists_forall_le_add_of_tendsto {g : S → ℝ} {d : ℕ → S → ℝ}
 
 /-- **The payoff.** The reachability Bellman operator is `ωScottContinuous`: applying it to a
     chain's supremum gives the same answer as taking the supremum of applying it along the chain.
-    Exactly Kleene's fixed-point theorem's hypothesis (`OrderHom.lfp_eq_sSup_iterate`). -/
+    Exactly Kleene's fixed-point theorem's hypothesis (`fixedPoints.lfp_eq_sSup_iterate`). -/
 theorem reachOp_ωScottContinuous (goal : S → Prop) [DecidablePred goal]
     (hr : ∀ s a1 a2, C.r s a1 a2 = 0) :
     ωScottContinuous (C.reachOp goal hr) := by
@@ -101,17 +113,17 @@ theorem reachOp_ωScottContinuous (goal : S → Prop) [DecidablePred goal]
     have hterm : ∀ n, (c.map (C.reachOp goal hr)) n s
         = (⟨1, by norm_num, by norm_num⟩ : Set.Icc (0 : ℝ) 1) := by
       intro n
-      show C.reachOpFun goal hr (c n) s = _
+      change C.reachOpFun goal hr (c n) s = _
       simp only [reachOpFun, if_pos hgoal]
     have hLHS : C.reachOp goal hr (ωSup c) s
         = (⟨1, by norm_num, by norm_num⟩ : Set.Icc (0 : ℝ) 1) := by
-      show C.reachOpFun goal hr (ωSup c) s = _
+      change C.reachOpFun goal hr (ωSup c) s = _
       simp only [reachOpFun, if_pos hgoal]
     have hRHS : ωSup (c.map (C.reachOp goal hr)) s
         = (⟨1, by norm_num, by norm_num⟩ : Set.Icc (0 : ℝ) 1) := by
       refine le_antisymm (ωSup_le _ _ fun n => (hterm n).le) ?_
       rw [← hterm 0]
-      exact le_ωSup _ 0
+      exact le_ωSup (c.map (C.reachOp goal hr)) 0 s
     rw [hLHS, hRHS]
   · -- `¬ goal s`: reduces to `stageValue`'s continuity along the chain.
     apply Subtype.ext
@@ -120,7 +132,7 @@ theorem reachOp_ωScottContinuous (goal : S → Prop) [DecidablePred goal]
     have hle_g : ∀ n s', d n s' ≤ g s' := fun n s' => le_ωSup c n s'
     have hg_eq : ∀ s', g s' = ⨆ n, d n s' := by
       intro s'
-      show ((ωSup c) s' : ℝ) = ⨆ n, d n s'
+      change ((ωSup c) s' : ℝ) = ⨆ n, d n s'
       have hpt : (ωSup c) s' = ⨆ n, (c n) s' := rfl
       rw [hpt, Set.Icc.coe_iSup (by norm_num : (0 : ℝ) ≤ 1)]
     have hmono : ∀ s', Monotone (fun n => d n s') := fun s' _ _ hnm =>
@@ -137,34 +149,36 @@ theorem reachOp_ωScottContinuous (goal : S → Prop) [DecidablePred goal]
       · obtain ⟨N, hN⟩ := exists_forall_le_add_of_tendsto htendsto hε
         have hbound : ∀ s', |g s' - d N s'| ≤ ε := fun s' =>
           abs_le.mpr ⟨by linarith [hle_g N s'], by linarith [hN N le_rfl s']⟩
-        have hlip := abs_le.mp (C.stageValue_lipschitz hε.le hbound)
+        have hlip := abs_le.mp (C.stageValue_lipschitz (s := s) hε.le hbound)
         have hNle : C.stageValue s (d N) ≤ ⨆ n, C.stageValue s (d n) := le_ciSup hstage_bdd N
         linarith [hlip.1]
       · exact C.stageValue_mono fun s' => hle_g n s'
-    show (C.reachOp goal hr (ωSup c) s : ℝ) = (ωSup (c.map (C.reachOp goal hr)) s : ℝ)
+    change (C.reachOp goal hr (ωSup c) s : ℝ) = (ωSup (c.map (C.reachOp goal hr)) s : ℝ)
     have hLHS_eq : (C.reachOp goal hr (ωSup c) s : ℝ) = C.stageValue s g := by
-      show (C.reachOpFun goal hr (ωSup c) s : ℝ) = _
+      change (C.reachOpFun goal hr (ωSup c) s : ℝ) = _
       simp only [reachOpFun, if_neg hgoal]
+      rfl
     have hRHS_eq : (ωSup (c.map (C.reachOp goal hr)) s : ℝ) = ⨆ n, C.stageValue s (d n) := by
       have hpt : (ωSup (c.map (C.reachOp goal hr)) s : Set.Icc (0 : ℝ) 1)
           = ⨆ n, (c.map (C.reachOp goal hr)) n s := rfl
       rw [hpt, Set.Icc.coe_iSup (by norm_num : (0 : ℝ) ≤ 1)]
       congr 1
       funext n
-      show (C.reachOpFun goal hr (c n) s : ℝ) = _
+      change (C.reachOpFun goal hr (c n) s : ℝ) = _
       simp only [reachOpFun, if_neg hgoal]
+      rfl
     rw [hLHS_eq, hRHS_eq, hkey]
 
 /-- **Stage 3, the payoff.** `(C.reachOp goal hr).lfp` -- Knaster-Tarski's least fixed point,
     already available for free the moment `ReachOp.lean` typechecks -- is genuinely the limit of
     the naive iterate sequence starting from `⊥`: Kleene's fixed-point theorem
-    (`OrderHom.lfp_eq_sSup_iterate`), applicable now that `reachOp_ωScottContinuous` supplies its
+    (`fixedPoints.lfp_eq_sSup_iterate`), applicable now that `reachOp_ωScottContinuous` supplies its
     hypothesis. This upgrades `VERIFICATION-FRAMEWORK.md`'s "numeric iterate, undiscounted" row from
     open to done, with no computable convergence *rate* attached (Kleene's theorem gives none). -/
 theorem reachOp_lfp_eq_sSup_iterate (goal : S → Prop) [DecidablePred goal]
     (hr : ∀ s a1 a2, C.r s a1 a2 = 0) :
     (C.reachOp goal hr).lfp = ⨆ n, (C.reachOp goal hr)^[n] ⊥ :=
-  OrderHom.lfp_eq_sSup_iterate (C.reachOp_ωScottContinuous goal hr)
+  fixedPoints.lfp_eq_sSup_iterate (C.reachOp goal hr) (C.reachOp_ωScottContinuous goal hr)
 
 end CSG
 end Csg

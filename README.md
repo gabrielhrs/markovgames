@@ -33,16 +33,13 @@ combinators (exact-pinning and interval/sandwiched forms) — every piece of
 routing checked against at least one worked instance, from the classic
 small examples (matching pennies, rock-paper-scissors) up to a real,
 published, third-party model (PRISM-games' intrusion-detection case study,
-independently cross-checked against a live PRISM-games run).
-
-What's genuinely still open: general-sum equilibria (Nash/SWNE/SCNE) are
-not formalized — the relevant obstruction is an unconfirmed Mathlib gap,
-noted in the project's working notes; mean-payoff (average-reward)
-objectives are unstarted; and there is no executable, terminating
-value-iteration *algorithm* for CSGs yet — only certificates that verify a
-candidate value once one is already in hand, the same "automate the
-assembly of a proof, not the discharge of its side conditions" methodology
-this project follows throughout (see Credits below).
+independently cross-checked against a live PRISM-games run). The
+Büchi/co-Büchi (`◇□`/`□◇`) fixed-point-of-a-fixed-point operators are done
+too, following de Alfaro and Majumdar above, with a worked instance
+(`ConcurrentCoBuchiExample.lean`, their own Example 3 / Fig. 1) confirming
+their paper's own point: the MDP shortcut of reducing a Büchi/co-Büchi
+condition to plain reachability of the almost-surely-winning set fails for
+genuinely concurrent games.
 
 ## Credits
 
@@ -69,6 +66,11 @@ and, in the case of the AFP entries, their proof strategy for the ported
 - Marta Kwiatkowska, Gethin Norman, David Parker, and Gabriel Santos,
   ["Multi-player Equilibria Verification for Concurrent Stochastic Games"](https://link.springer.com/chapter/10.1007/978-3-030-59854-9_7),
   QEST 2020, LNCS 12289, Springer.
+- Luca de Alfaro and Rupak Majumdar,
+  ["Quantitative Solution of Omega-Regular Games"](https://doi.org/10.1016/j.jcss.2003.07.009),
+  Journal of Computer and System Sciences, vol. 68, no. 2, 2004, pp. 374-397. The source for
+  `Csg/BuchiOp.lean`/`Csg/CoBuchiOp.lean`'s Büchi/co-Büchi Bellman operators (eq. (4)/(5)) and
+  `Csg/ConcurrentCoBuchiExample.lean`'s worked instance (Example 3 / Fig. 1, p. 395).
 
 **The certificate-combinator methodology** (the "automate only the
 assembly of a candidate fixed point into a correctness proof, not the
