@@ -9,27 +9,21 @@ import Csg.MatrixGame
 /-!
 # Finite-state concurrent stochastic games
 
-**Status: done, confirmed by a clean `lake build`, including the later addition
-`MatrixGame.value_unique` (relocated here from `MatchingPennies.lean` once
-`MatrixGameMonotone.lean` needed it too -- see that file's own note).** Builds on the now-confirmed
-`Csg.MatrixGame` (`MatrixGame.lean`) without touching that file, matching how
-`ValueIteration.lean`/`PolicyIteration.lean` build on `Basic.lean` in the MDP line rather than
-reopening it.
+**Status: confirmed by a clean `lake build` after the `MatrixGame` section (`value` and its
+supporting API) was moved OUT of this file and into `MatrixGame.lean`, where it belongs -- see that
+file's own "Update" note; no fix round needed.** Builds on the now-confirmed `Csg.MatrixGame`
+(`MatrixGame.lean`), which now supplies `value` directly rather than through this file, matching
+how `ValueIteration.lean`/`PolicyIteration.lean` build on `Basic.lean` in the MDP line.
 
-Two things happen in this file:
-
-1. `MatrixGame` gets a `value : ℝ` (plus the two accessor strategies it was built from),
-   extracted from `exists_optimal_strategies` via `Classical.choose`. `MatrixGame.lean` itself
-   deliberately stopped at bare existence -- turning that into a usable real number is exactly the
-   "follow-up work" flagged in that file's own docstring.
-2. `CSG`, the concurrent-stochastic-game analogue of `DiscountedMDP` (`Basic.lean`): same
-   `K : S → A1 → A2 → PMF S`/`r : S → A1 → A2 → ℝ` shape, but with two independently-chosen
-   actions per step instead of one, since both players move simultaneously at each state. No
-   discount factor -- per the CSG scoping in `PHASE0-NOTES.md`, bounded objectives use backward
-   induction and infinite-horizon objectives use undiscounted reachability/until, neither of which
-   needs one. Same simplification `DiscountedMDP` already makes: every action available in every
-   state (Isabelle's per-state `A1 s`/`A2 s` restriction is a TODO there too, not done here
-   either).
+One thing happens in this file now: `CSG`, the concurrent-stochastic-game analogue of
+`DiscountedMDP` (`Basic.lean`, the MDP-line file of the same name): same
+`K : S → A1 → A2 → PMF S`/`r : S → A1 → A2 → ℝ` shape, but with two independently-chosen
+actions per step instead of one, since both players move simultaneously at each state. No
+discount factor -- per the CSG scoping in `PHASE0-NOTES.md`, bounded objectives use backward
+induction and infinite-horizon objectives use undiscounted reachability/until, neither of which
+needs one. Same simplification `DiscountedMDP` already makes: every action available in every
+state (Isabelle's per-state `A1 s`/`A2 s` restriction is a TODO there too, not done here
+either).
 
 `CSG.stageGame`/`CSG.stageValue` are the actual point of this file: the per-state, per-continuation
 one-shot matrix game that a `Backward_Induction.thy`-style recursion calls at each step, replacing
@@ -39,70 +33,6 @@ the next artifact, once this structure exists to state it over.
 -/
 
 namespace Csg
-
-namespace MatrixGame
-
-variable {I J : Type*} [Fintype I] [Fintype J] [Nonempty I] [Nonempty J]
-  [DecidableEq I] [DecidableEq J]
-variable (G : MatrixGame I J)
-
-/-- A row (minimizing player's) mixed strategy witnessing `exists_optimal_strategies` -- one
-    specific choice among possibly several, extracted via `Classical.choose` since Mathlib's
-    saddle-point existence doesn't come with a canonical one. -/
-noncomputable def optimalRow : I → ℝ := G.exists_optimal_strategies.choose
-
-/-- A column (maximizing player's) mixed strategy witnessing `exists_optimal_strategies`,
-    optimal against `optimalRow`. -/
-noncomputable def optimalCol : J → ℝ := G.exists_optimal_strategies.choose_spec.2.choose
-
-/-- **The game's value.** The payoff at the optimal strategy pair -- what neither player can do
-    better than, given the other holds still (`value_row_optimal`/`value_col_optimal` below). -/
-noncomputable def value : ℝ := G.payoff G.optimalRow G.optimalCol
-
-theorem optimalRow_mem : G.optimalRow ∈ stdSimplex ℝ I := by
-  unfold optimalRow
-  exact G.exists_optimal_strategies.choose_spec.1
-
-theorem optimalCol_mem : G.optimalCol ∈ stdSimplex ℝ J := by
-  unfold optimalCol
-  exact G.exists_optimal_strategies.choose_spec.2.choose_spec.1
-
-/-- The row player cannot lower the payoff below `value` by unilaterally deviating from
-    `optimalRow`, while the column player holds `optimalCol` fixed. -/
-theorem value_row_optimal : ∀ p' ∈ stdSimplex ℝ I, G.value ≤ G.payoff p' G.optimalCol := by
-  unfold value
-  exact G.exists_optimal_strategies.choose_spec.2.choose_spec.2.1
-
-/-- The column player cannot raise the payoff above `value` by unilaterally deviating from
-    `optimalCol`, while the row player holds `optimalRow` fixed. -/
-theorem value_col_optimal : ∀ q' ∈ stdSimplex ℝ J, G.payoff G.optimalRow q' ≤ G.value := by
-  unfold value
-  exact G.exists_optimal_strategies.choose_spec.2.choose_spec.2.2
-
-/-- The game's value doesn't depend on which saddle point exhibits it: *any* mixed-strategy pair
-    `p, q` satisfying the two no-unilateral-improvement conditions relative to each other has
-    `payoff p q = value`, not just the particular pair `value` was built from via
-    `Classical.choose`. Standard minimax fact (the *value* of a zero-sum game is unique even when
-    optimal strategies are not), proved directly from `value_row_optimal`/`value_col_optimal` by
-    chaining both pairs' optimality conditions against each other.
-
-    **Relocated here from `MatchingPennies.lean`**, where it was first proved, once
-    `MatrixGameMonotone.lean`'s `value_add_const` needed it too: a general fact about `value` that
-    doesn't depend on anything CSG- or worked-example-specific belongs beside `value` itself, not
-    behind a worked-example file downstream consumers would otherwise have to import for no reason
-    but this one lemma. Pure relocation -- the statement and proof are unchanged from
-    `MatchingPennies.lean`'s original. -/
-theorem value_unique {p : I → ℝ} {q : J → ℝ} (hp : p ∈ stdSimplex ℝ I) (hq : q ∈ stdSimplex ℝ J)
-    (hrow : ∀ p' ∈ stdSimplex ℝ I, G.payoff p q ≤ G.payoff p' q)
-    (hcol : ∀ q' ∈ stdSimplex ℝ J, G.payoff p q' ≤ G.payoff p q) :
-    G.payoff p q = G.value := by
-  apply le_antisymm
-  · calc G.payoff p q ≤ G.payoff G.optimalRow q := hrow G.optimalRow G.optimalRow_mem
-      _ ≤ G.value := G.value_col_optimal q hq
-  · calc G.value ≤ G.payoff p G.optimalCol := G.value_row_optimal p hp
-      _ ≤ G.payoff p q := hcol G.optimalCol G.optimalCol_mem
-
-end MatrixGame
 
 /-- A finite-state, finite-action concurrent stochastic game: at each state, the row player
     (minimizer) and column player (maximizer) pick actions `a1`/`a2` simultaneously, and the

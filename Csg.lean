@@ -2,7 +2,6 @@ import Csg.MatrixGame
 import Csg.Basic
 import Csg.BackwardInduction
 import Csg.MatchingPennies
-import Csg.MatrixGameMonotone
 import Csg.BoundedReachability
 import Csg.RockPaperScissors
 import Csg.CsgMonotone
@@ -25,3 +24,8 @@ import Csg.BuchiOp
 import Csg.CoBuchiOp
 import Csg.ConcurrentCoBuchiExample
 import Csg.ReachConverge
+import Csg.Coalition
+import Csg.CoalitionComplement
+import Csg.CoalitionComplementReach
+import Csg.SkirmishFeint
+import Csg.SkirmishFeintCoalition

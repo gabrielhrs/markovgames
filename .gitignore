@@ -3,3 +3,6 @@
 # Private working notes -- useful during development, not meant to be public.
 /PHASE0-NOTES.md
 /VERIFICATION-FRAMEWORK.md
+
+# macOS folder metadata
+.DS_Store

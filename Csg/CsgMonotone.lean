@@ -3,7 +3,7 @@ Copyright (c) 2026 Gabriel Santos. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Gabriel Santos
 -/
-import Csg.MatrixGameMonotone
+import Csg.Basic
 
 /-!
 # Monotonicity and boundedness of `CSG.stageValue`
