@@ -35,7 +35,7 @@ small examples (matching pennies, rock-paper-scissors) up to a real,
 published, third-party model (PRISM-games' intrusion-detection case study,
 independently cross-checked against a live PRISM-games run). The
 Büchi/co-Büchi (`◇□`/`□◇`) fixed-point-of-a-fixed-point operators are done
-too, following de Alfaro and Majumdar above, with a worked instance
+too, following de Alfaro and Majumdar below, with a worked instance
 (`ConcurrentCoBuchiExample.lean`, their own Example 3 / Fig. 1) confirming
 their paper's own point: the MDP shortcut of reducing a Büchi/co-Büchi
 condition to plain reachability of the almost-surely-winning set fails for
