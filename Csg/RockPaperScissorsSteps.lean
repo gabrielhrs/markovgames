@@ -12,8 +12,8 @@ import Csg.RewardUntilCertificate
 **Status: done, confirmed by a clean `lake build` on the first attempt, no fix round needed
 (including the two riskiest bits: dropping `private` from three reused lemmas in
 `RockPaperScissors.lean`, and every `change` past the concrete `win1 ∨ win2` condition in the
-fixed-point and uniqueness proofs).** The reward-until-absorption worked example
-agreed with the user: instead of a probability (`Pmax=? [F win2]`, already done in
+fixed-point and uniqueness proofs).** The reward-until-absorption worked example:
+instead of a probability (`Pmax=? [F win2]`, already done in
 `RockPaperScissorsLfp.lean`/`RockPaperScissorsUntil.lean`), the expected number of raw `CSG` steps
 until *some* round is won (`win1` or `win2`, either player), under the same uniform play that was
 already optimal for every stage game in this line. Hand-solved before any code was written: let

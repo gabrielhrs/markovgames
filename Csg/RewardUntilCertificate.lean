@@ -12,12 +12,12 @@ import Csg.Basic
 Generalises `RockPaperScissorsSteps.lean`'s
 bespoke `rpsStepsStep`/`rpsSteps_fixed`/`rpsSteps_unique` pattern from a hard-coded `win1 ∨ win2`
 goal to an arbitrary `CSG` and `goal : S → Prop`, exactly the way `ReachCertificate.lean`
-generalised `RockPaperScissorsLfp.lean`'s `rpsVStar`-specific certificate. The user asked for this
-after `RockPaperScissorsSteps.lean` built clean, and chose the `ℝ`-valued route explicitly over a
-fully general `ℝ≥0∞`-valued `CSG.rewardUntilOp` (see the `AskUserQuestion` decision recorded in
-this session, and `PHASE0-NOTES.md`'s writeup of the extended-value minimax obstruction that
-choice sidesteps: `Sion.exists_isSaddlePointOn`, which every stage-value computation in this
-project relies on, needs a genuine real topological vector space, and `ℝ≥0∞` is not one).
+generalised `RockPaperScissorsLfp.lean`'s `rpsVStar`-specific certificate, the natural next step
+once `RockPaperScissorsSteps.lean` built clean. Chose the `ℝ`-valued route explicitly over a
+fully general `ℝ≥0∞`-valued `CSG.rewardUntilOp` (see `PHASE0-NOTES.md`'s writeup of the
+extended-value minimax obstruction that choice sidesteps: `Sion.exists_isSaddlePointOn`, which
+every stage-value computation in this project relies on, needs a genuine real topological vector
+space, and `ℝ≥0∞` is not one).
 
 **Deliberately still bespoke in one respect, by design, not by oversight.** Reachability's
 `reachOp`/`untilOp` are bundled `OrderHom`s on the complete lattice `S → Set.Icc (0:ℝ) 1`, so
@@ -57,10 +57,10 @@ point (`SafetyCertificate.lean`); this is the same greatest-fixed-point idea aga
 fact (`hub`) by hand instead of getting it packaged by `OrderHom.gfp`.
 
 **Design informed by PRISM-games' `CSGModelChecker.java`** (`computeReachRewardsInfinity`,
-`valInfinity`, fetched per the user's pointer to the upstream source), without importing any of
-its machinery. PRISM does not solve infinite-valued reward-until with an extended-value minimax
-theorem; it first runs a purely qualitative almost-sure-reachability precomputation (`AF`) marking
-every state outside it `∞`, then solves the finite real-valued residual game normally, pruning any
+`valInfinity`, read directly from the upstream source), without importing any of its machinery.
+PRISM does not solve infinite-valued reward-until with an extended-value minimax theorem; it
+first runs a purely qualitative almost-sure-reachability precomputation (`AF`) marking every
+state outside it `∞`, then solves the finite real-valued residual game normally, pruning any
 action that can only lead to an already-`∞` state as dominated (`valInfinity`). That two-phase
 shape -- a qualitative gate, then a real-valued computation over what the gate certifies is
 finite -- is exactly what this project's own `untilOp`/`reachOp`'s `.lfp` already computes (hitting

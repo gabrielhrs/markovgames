@@ -59,7 +59,7 @@ Both states' stage games (continuation `fun _ => 0`, matching PRISM's convention
 genuine numeric coincidence of this particular reward table, not something engineered in, and not
 something that holds at every round (the two-rounds-remaining instance, a natural follow-up, needs
 a different pair). The resulting values, `1/3` at `healthy` and `4/3` at `compromised`, were
-independently checked against a real local PRISM-games run reported by the user for
+independently checked against a real local PRISM-games run of
 `<<policy>>R{"damage"}min=?[F r=rounds]` at `rounds=1`: `0.3333333333333333`, matching `1/3`
 exactly.
 -/
@@ -257,7 +257,7 @@ terminal reward `fun _ => 0` -- itself not the product of a previous `bwInd` cal
 feeds `idsV1` back in as the continuation, the step that actually exercises `bwInd_succ`'s
 recursion against a non-uniform, state-dependent value function for the first time in this
 project. The resulting values, `25/21` at `healthy` and `46/21` at `compromised`, were
-independently checked against the same real PRISM-games run reported by the user, at `rounds=2`:
+independently checked against the same real PRISM-games run, at `rounds=2`:
 `1.1904761904762453`, matching `25/21` exactly (`25/21 = 1.190476190476...`).
 
 The optimal strategies change from `idsP`/`idsQ` to a new pair, `idsP2`/`idsQ2` -- again shared

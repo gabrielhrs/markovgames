@@ -8,12 +8,15 @@ import Mdp.PolicyIteration
 /-!
 # Worked example: the recycling robot
 
-**Status: drafted, not yet run through `lake build`.** A concrete instantiation of
-`DiscountedMDP`, used to check the abstract Phase 1/2 machinery against a hand-solved, closed-form
-ground truth rather than just `lake build` accepting it. This is Sutton & Barto's "recycling
-robot" (the canonical minimal example used to introduce discounted MDPs in the first place): a
-robot with battery level `high` or `low`, choosing at each step to `search` for cans (risky when
-low on battery), `wait` (safe, low reward), or `recharge` (only useful when low).
+**Status: confirmed by a clean `lake build`; `robotMDP.vOpt` matches the hand-solved closed form
+exactly — see `PHASE0-NOTES.md`.** This status line had gone stale (it said "drafted, not yet run
+through `lake build`" long after the build had actually gone clean); corrected in place rather
+than treated as still-open work. A concrete instantiation of `DiscountedMDP`, used to check the
+abstract Phase 1/2 machinery against a hand-solved, closed-form ground truth rather than just
+`lake build` accepting it. This is Sutton & Barto's "recycling robot" (the canonical minimal
+example used to introduce discounted MDPs in the first place): a robot with battery level `high`
+or `low`, choosing at each step to `search` for cans (risky when low on battery), `wait` (safe,
+low reward), or `recharge` (only useful when low).
 
 Numbers, picked for clean arithmetic rather than taken from a published source (the textbook
 itself leaves them symbolic): `α = β = 1/2` (chance of staying in the current battery state while

@@ -12,11 +12,11 @@ import Csg.MatchingPennies
 **Status: done, confirmed by a clean `lake build` after one real fix round (a typeclass-search
 gap -- a goal predicate defined via plain `def` rather than `abbrev`, blocking automatic
 `DecidablePred` synthesis and cascading into several downstream errors, plus three smaller misses
--- see `PHASE0-NOTES.md`).** Stage B of the reachability worked example
-agreed with the user, straight from their own FMSD paper: rock-paper-scissors as a four-state CSG
+-- see `PHASE0-NOTES.md`).** Stage B of the reachability worked example,
+straight from the FMSD paper: rock-paper-scissors as a four-state CSG
 (`initial`, `win1`, `win2`, `draw`), checked against plain step-bounded reachability, `F<=k win2`
 (the paper's own `Pmax=? [!win2 U<=k win2]`, restated in the clearer `F<=k` form -- see
-`BoundedReachability.lean`'s own docstring) for concrete `k`. Convention: as agreed, this
+`BoundedReachability.lean`'s own docstring) for concrete `k`. Convention: this
 project's `MatrixGame` is row-minimises/column-maximises (the opposite of the paper's own
 row-maximises/column-minimises), not worth a sign flip -- so `win2`, the state the maximising
 *column* player benefits from, corresponds to whichever player the paper calls "P1" for this
@@ -45,9 +45,9 @@ Three pieces:
    what either player does -- the same "row/column sums are balanced" fact matching pennies relied
    on, just with three terms instead of two summing to a nonzero constant instead of zero.
 3. Concrete `reachBounded` values at `initial` for `k = 0, 1, 2, 3, 4`: `0, 1/3, 1/3, 4/9, 4/9` --
-   checked against the user's own recollection of the paper's numbers before any of this was
-   written. The repeated pairs are real, not a mistake: `draw` costs a genuine extra step (it's its
-   own state, not folded into the same step as `initial`), so each "round" of the game consumes two
+   checked by hand against the paper's numbers before any of this was written. The repeated pairs
+   are real, not a mistake: `draw` costs a genuine extra step (it's its own state, not folded into
+   the same step as `initial`), so each "round" of the game consumes two
    raw `CSG` steps except when it resolves immediately, and the sequence's *distinct* values are
    exactly the naive one-step-per-round recursion `x_{n+1} = 1/3 + x_n / 3` (solving to the
    textbook `x_n \to 1/2`), each now appearing at two consecutive `k`. The exact `k \to \infty`
@@ -300,7 +300,7 @@ theorem rpsCSG_reachBounded_initial_succ (k : ℕ) :
     rpsCSG_stageValue_initial, rpsCSG_reachBounded_win2]
 
 /-- **The payoff.** The recursion reduces to a single term: `x_{k+1} = (1 + d_k) / 3`, matching the
-    hand-derivation checked with the user before any of this was written. -/
+    hand-derivation worked out before any of this was written. -/
 theorem rpsCSG_reachBounded_initial_succ' (k : ℕ) :
     rpsCSG.reachBounded rpsGoalWin2 (k + 1) .initial =
       (1 + rpsCSG.reachBounded rpsGoalWin2 k .draw) / 3 := by

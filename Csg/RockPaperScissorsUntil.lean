@@ -12,7 +12,7 @@ import Csg.RockPaperScissorsLfp
 **Status: done, confirmed by a clean `lake build` on the first attempt, no fix round needed.**
 `RockPaperScissorsLfp.lean` computed
 `(rpsCSG.reachOp rpsGoalWin2 rpsR_zero).lfp`, i.e. `Pmax=? [F win2]` -- plain reachability. But the
-property actually discussed against the user's own FMSD paper is a genuine `until`: the maximising
+property actually stated in the FMSD paper is a genuine `until`: the maximising
 coalition (this project's *column* player, per the convention note in `RockPaperScissors.lean`'s own
 docstring -- row-minimises/column-maximises, the opposite of the paper's own convention) wants to
 reach its own win state while never letting the other side win first. In this project's naming that

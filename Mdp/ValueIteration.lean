@@ -9,10 +9,13 @@ import Mathlib.Data.Finset.Max
 /-!
 # Value iteration for discounted MDPs — Phase 2a
 
-**Status: drafted, not yet run through `lake build`.** Ports the parts of `Value_Iteration.thy`
-that come essentially for free once `Basic.lean`'s `bellman_contracting` /
-`contractingWith_bellman` are in hand, plus stationary policy evaluation (needed to state what
-"value iteration converges to an ε-optimal *policy*", not just an ε-optimal *value*, means).
+**Status: confirmed by a clean `lake build`, zero `sorry`s (Phase 2a) — see `PHASE0-NOTES.md`.**
+This status line had gone stale (it said "drafted, not yet run through `lake build`" long after
+the build had actually gone clean); corrected in place rather than treated as still-open work.
+Ports the parts of `Value_Iteration.thy` that come essentially for free once `Basic.lean`'s
+`bellman_contracting` / `contractingWith_bellman` are in hand, plus stationary policy evaluation
+(needed to state what "value iteration converges to an ε-optimal *policy*", not just an
+ε-optimal *value*, means).
 
 What this file does **not** yet do: translate `value_iteration` itself, the recursive function in
 `Value_Iteration.thy` that repeatedly applies `\<L>\<^sub>b` until
@@ -37,13 +40,12 @@ Maps to `Value_Iteration.thy` as follows:
   `is_arg_max_find_policy` / `\<L>\<^sub>b_eq_argmax_L\<^sub>a`: extracting a policy that
   realises the `sup` in `bellman` at a given value function.
 
-**Least certain part of this file**: `ContractingWith.fixedPoint f hf` takes `f` as an *explicit*
-argument alongside `hf : ContractingWith K f` (confirmed by reading
-`Mathlib/Topology/MetricSpace/Contracting.lean` directly rather than guessed at — see the
-`variable (f) in` annotation right before its `def`), so it's applied here as
-`ContractingWith.fixedPoint M.bellman M.contractingWith_bellman` rather than via dot notation, to
-sidestep any dot-notation argument-order surprise. If this is wrong, `vOpt`'s definition is the
-first place to look. -/
+**Least-certain call in this file, confirmed correct by the clean build**:
+`ContractingWith.fixedPoint f hf` takes `f` as an *explicit* argument alongside
+`hf : ContractingWith K f` (confirmed by reading `Mathlib/Topology/MetricSpace/Contracting.lean`
+directly rather than guessed at — see the `variable (f) in` annotation right before its `def`),
+so it's applied here as `ContractingWith.fixedPoint M.bellman M.contractingWith_bellman` rather
+than via dot notation, to sidestep any dot-notation argument-order surprise. -/
 
 namespace Mdp
 

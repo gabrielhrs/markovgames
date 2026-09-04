@@ -8,10 +8,14 @@ import Mdp.ValueIteration
 /-!
 # Policy iteration — Phase 2c
 
-**Status: drafted, not yet run through `lake build`.** Ports the whole of `Policy_Iteration.thy`
-for the finite-state/finite-action case: policy improvement never hurts, no improvement possible
-means already optimal, the algorithm reaches a fixed point in finitely many steps, and that fixed
-point's value is exactly `vOpt`.
+**Status: confirmed by a clean `lake build`, zero `sorry`s (Phase 2c) — see `PHASE0-NOTES.md`.**
+This status line had gone stale (it said "drafted, not yet run through `lake build`" long after
+the build had actually gone clean, across two passes: one fix round for `value_policyStep_ge`,
+then everything after it confirmed first try); corrected in place rather than treated as
+still-open work. Ports the whole of `Policy_Iteration.thy` for the finite-state/finite-action
+case: policy improvement never hurts, no improvement possible means already optimal, the
+algorithm reaches a fixed point in finitely many steps, and that fixed point's value is exactly
+`vOpt`.
 
 Isabelle proves the first, hardest piece (`policy_eval_mon`) via a
 Neumann-series/`blinfun`-inverse argument (`lemma_6_1_2_b`, `inv_norm_le'`), because its Banach

@@ -8,10 +8,13 @@ import Mdp.ValueIteration
 /-!
 # The value iteration algorithm — Phase 2b
 
-**Status: drafted, not yet run through `lake build`.** Ports `value_iteration` itself from
-`Value_Iteration.thy` — the piece Phase 2a deliberately left out because its termination argument
-in Isabelle (a `LEAST n` measure, shown to strictly decrease) isn't a corollary of anything already
-proved.
+**Status: confirmed by a clean `lake build`, zero `sorry`s (Phase 2b).** This opening line had
+gone stale (it said "drafted, not yet run through `lake build`" long after the build had actually
+gone clean, even though the note further down in this same docstring already recorded the two fix
+rounds that got it there — corrected in place rather than left contradicting itself). Ports
+`value_iteration` itself from `Value_Iteration.thy` — the piece Phase 2a deliberately left out
+because its termination argument in Isabelle (a `LEAST n` measure, shown to strictly decrease)
+isn't a corollary of anything already proved.
 
 Rather than reproduce that as a Lean well-founded recursion (`termination_by`/`decreasing_by`,
 mirroring `Least_Suc_less`), this file sidesteps it. Isabelle's `value_iteration eps v` unwinds, by
@@ -38,7 +41,7 @@ Not yet ported: `find_policy`/`vi_policy`/`vi_policy_opt` (extracting an ε-opti
 `valueIteration`'s output). Phase 2a's `findPolicy`/`bellman_eq_Lpolicy_findPolicy` already give the
 pieces this needs; wiring them together is a short follow-up once this file builds clean.
 
-**Status: `lake build` clean, zero `sorry`s.** Two build rounds got there:
+Two build rounds got there:
 
 * **Round 1**: `Real.decidableLT` does *not* auto-resolve `DecidablePred (M.stopCond eps v)` for
   `Nat.find` — instance search doesn't unfold the `stopCond` `def` far enough to see the `<`

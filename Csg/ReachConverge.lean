@@ -25,10 +25,10 @@ appear only *after* the `set` call). **Round 2**: `stageValue_lipschitz`'s state
 implicit and appears only in its *conclusion*, never in the hypotheses supplied at its one call
 site -- with no expected type on the enclosing `have` to unify against, Lean had nothing to infer
 it from ("don't know how to synthesize implicit argument"), fixed by supplying `(s := s)` directly.
-Confirmed clean by the user after round 2. **Cosmetic pass**: the six `show ...` tactic calls that
-actually changed the goal (Lean's `show`-linter flags this -- `show` is meant only to *restate* the
-current goal for readability; `change` is the tactic for genuinely changing it via defeq) were all
-rewritten to `change`, no other edits.
+Confirmed clean by `lake build` after round 2. **Cosmetic pass**: the six `show ...` tactic
+calls that actually changed the goal (Lean's `show`-linter flags this -- `show` is meant only to
+*restate* the current goal for readability; `change` is the tactic for genuinely changing it via
+defeq) were all rewritten to `change`, no other edits.
 Stage 3 of the infinite-horizon build order
 (`PHASE0-NOTES.md`): shows `C.reachOp goal hr` (`ReachOp.lean`) is `ωScottContinuous`, using
 `stageValue_lipschitz` (`CsgMonotone.lean`) to bridge pointwise monotone convergence of a chain to
