@@ -9,10 +9,7 @@ import Csg.RewardUntilCertificate
 /-!
 # Worked example: expected number of steps until winning a round
 
-**Status: done, confirmed by a clean `lake build` on the first attempt, no fix round needed
-(including the two riskiest bits: dropping `private` from three reused lemmas in
-`RockPaperScissors.lean`, and every `change` past the concrete `win1 ∨ win2` condition in the
-fixed-point and uniqueness proofs).** The reward-until-absorption worked example:
+**Status: confirmed by a clean `lake build`.** The reward-until-absorption worked example:
 instead of a probability (`Pmax=? [F win2]`, already done in
 `RockPaperScissorsLfp.lean`/`RockPaperScissorsUntil.lean`), the expected number of raw `CSG` steps
 until *some* round is won (`win1` or `win2`, either player), under the same uniform play that was
@@ -75,8 +72,7 @@ inline exercises the combinator against real, previously-existing proof terms ra
 fully abstract statement it specialises -- if the generalisation had silently dropped a hypothesis
 or flipped a direction, this would fail to typecheck even though the two source lemmas above still
 would. Closes `VERIFICATION-FRAMEWORK.md`'s Axis A note that this worked instance had never run
-through its own combinator. **Confirmed by a clean `lake build`, no fix round needed** (only the
-project's usual harmless warnings, unrelated to this addition).
+through its own combinator. **Confirmed by a clean `lake build`.**
 -/
 
 namespace Csg
@@ -201,7 +197,7 @@ noncomputable def rpsSteps : RPSState → ℝ
     close by `rfl` alone -- `rpsStepsStep`'s own absorbing branch pins them to `0` regardless of
     the continuation, matching `rpsSteps`'s own `0` there with no further reasoning needed.
     `initial`/`draw` `change` past the concrete `if` (a pure defeq jump on a closed, decidable
-    condition, the same technique `RockPaperScissorsLfp.lean`'s fix rounds established) down to
+    condition, the same technique `RockPaperScissorsLfp.lean` uses) down to
     the bare stage-value equation, then close with the lemmas above plus arithmetic. -/
 theorem rpsSteps_fixed : rpsStepsStep rpsSteps = rpsSteps := by
   funext s

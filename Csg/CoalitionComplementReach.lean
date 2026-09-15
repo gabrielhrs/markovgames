@@ -9,7 +9,7 @@ import Csg.ReachOp
 /-!
 # `⟨⟨C⟩⟩P_min =?[F goal]` and `⟨⟨Cᶜ⟩⟩P_max =?[F goal]` agree
 
-**Status: confirmed by a clean `lake build`, first attempt -- no fix round needed.** The lift
+**Status: confirmed by a clean `lake build`.** The lift
 `CoalitionComplement.lean`'s own docstring named as "free once [`reduceMin_stageValue_eq`] holds
 (`reachOp`'s own type doesn't mention the action types at all)": this file states and proves the
 actual `n`-player identity `Csg/Coalition.lean` promised under "Not attempted here" --
@@ -32,9 +32,9 @@ the proof of the one pointwise fact this file needs, and never resurfaces at thi
    continuation `v` and state `s`. Case split on `goal s`: the `goal`-state branch is the constant
    `1` on both sides regardless of which reduced game it came from (`if_pos`/`if_neg` used as
    rewrite lemmas rather than relying on kernel reduction of an `ite` on the ambient, uninstantiated
-   `[DecidablePred goal]` instance -- exactly the workaround `CoalitionComplement.lean`'s own
-   `combine_compl` fix (Round 1) already established for the analogous `dite`-on-abstract-`Finset`
-   problem); the other branch is `reduceMin_stageValue_eq` itself, transported across the
+   `[DecidablePred goal]` instance -- the same technique `CoalitionComplement.lean`'s own
+   `combine_compl` uses for the analogous `dite`-on-abstract-`Finset` case); the other branch is
+   `reduceMin_stageValue_eq` itself, transported across the
    `Set.Icc (0:ℝ) 1` `Subtype` wrapper via `Subtype.ext`.
 2. `reduceMin_reachOp_eq`: the two `OrderHom`s themselves are equal, not just their values --
    `OrderHom.ext` (`Mathlib.Order.Hom.Basic`) reduces `OrderHom` equality to equality of the

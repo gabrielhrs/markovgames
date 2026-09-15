@@ -8,11 +8,10 @@ import Csg.Basic
 /-!
 # Monotonicity and boundedness of `CSG.stageValue`
 
-**Status: done, confirmed by a clean `lake build` -- both the original monotonicity/boundedness
-family (`expect_mono` through `stageValue_le_one`) and the later addition (`expect_lipschitz`
-through `stageValue_lipschitz`, Lipschitz continuity of `stageValue` in the continuation), the
-latter after two genuinely separate fix rounds -- see `PHASE0-NOTES.md`'s "reachability iterate"
-section, Stage 2.**
+**Status: confirmed by a clean `lake build`, including both the monotonicity/boundedness family
+(`expect_mono` through `stageValue_le_one`) and the Lipschitz-continuity family
+(`expect_lipschitz` through `stageValue_lipschitz`, Lipschitz continuity of `stageValue` in the
+continuation).**
 Stage 2 of the infinite-horizon build order (`PHASE0-NOTES.md`): lifts `MatrixGameMonotone.lean`'s
 facts about `MatrixGame.value` (monotone in the payoff matrix; sandwiched between constant bounds
 on the matrix; Lipschitz in the matrix) up through `CSG.expect` and `CSG.stageGame` to

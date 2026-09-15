@@ -9,20 +9,16 @@ import Csg.Coalition
 /-!
 # `⟨⟨hider⟩⟩ P_max ≠ ⟨⟨hider⟩⟩ P_min`, in `Csg.Coalition`'s own terms
 
-**Status: confirmed by a clean `lake build`, after one real fix round.** Round 1: both real errors
-were in `combine_hiderC_hider`/`combine_hiderC_thrower`.
-The original proofs tried `simp [NCSG.combine, hiderSingletonEquiv/throwerComplementEquiv, dif_pos
-.../dif_neg ...]`, mirroring `Csg.CoalitionComplement.combine_compl`'s own fix -- but there `C` was
-a fully general, uninstantiated `Finset Players`, whereas `hiderC := {hider}` here is a *concrete*
-literal, and simp's rewriting via an explicitly-applied `dif_pos`/`dif_neg` term didn't fire against
-it (left the `dite` from `NCSG.combine` entirely unreduced; `dif_pos` is also deprecated in this
-Mathlib snapshot, in favour of `dite_eq_left`, though that alone wasn't the failure). Since
-`hiderC`/`hider`/`thrower` are all concrete, decidable data (no uninstantiated `Finset`/`Decidable`
-standing in the way the way `combine_compl`'s general `C` did), both equalities are provable by
-plain kernel computation -- replaced both proofs with a bare `rfl`. Also swapped two `show`s (in
-`reduceMin_hiderC_stageGame_eq`/`reduceMax_hiderC_stageGame_eq`) for `change`, per this toolchain's
-own style-linter suggestion (harmless, not a correctness issue, but free to fix). Clean on
-resubmission, no further rounds needed.
+**Status: confirmed by a clean `lake build`.** `combine_hiderC_hider`/`combine_hiderC_thrower` are
+proved by a bare `rfl`, not by `simp [NCSG.combine, hiderSingletonEquiv/throwerComplementEquiv,
+dif_pos/dif_neg]` the way `Csg.CoalitionComplement.combine_compl`'s analogous lemma is: that
+`dif_pos`/`dif_neg` route is needed when the coalition `C` is a fully general, uninstantiated
+`Finset Players`, but `hiderC := {hider}` here is a *concrete* literal, so
+`hiderC`/`hider`/`thrower` are all concrete, decidable data with no uninstantiated
+`Finset`/`Decidable` standing in the way --
+whenever every piece of `Finset`/`Decidable` data feeding a `dite` is concrete like this, plain
+kernel computation (`rfl`) closes the equality directly, and is simpler than reaching for the
+`dif_pos`/`dif_neg` simp lemmas that target the general case.
 
 `Csg.SkirmishFeint.skirmishMinCSG`/`skirmishMaxCSG` are the
 plain two-player `CSG`s that `NCSG.reduceMin {hider}`/`reduceMax {hider}` *would* produce for a
@@ -30,8 +26,9 @@ genuine two-player `NCSG`, built by hand there to avoid paying for `CoalitionAct
 `ComplementAction`'s dependent-product bookkeeping up front. This file pays for it: builds the
 actual two-player `NCSG` (`skirmishNCSG`), the actual coalition `{hider}` (`hiderC`), and connects
 `(skirmishNCSG.reduceMin hiderC).stageValue`/`(skirmishNCSG.reduceMax hiderC).stageValue` back to
-the already-confirmed `4/5`/`1/2` -- the one piece of new, reusable infrastructure
-`Csg.Coalition`'s own docstring flagged as missing ("Not attempted here: any worked instance"),
+the `4/5`/`1/2` values `Csg.SkirmishFeint` established -- the one piece of new, reusable
+infrastructure `Csg.Coalition`'s own docstring flagged as missing ("Not attempted here: any worked
+instance"),
 using `MatrixGameCongr.value_relabelRow`/`MatrixGameCongrCol.value_relabelCol` exactly as that
 docstring anticipated.
 

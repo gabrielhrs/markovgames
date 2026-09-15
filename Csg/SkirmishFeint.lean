@@ -10,23 +10,17 @@ import Mathlib.Probability.ProbabilityMassFunction.Constructions
 /-!
 # SKIRMISH with a third thrower action: `value(M) ≠ value(Mᵀ)` for a real instance
 
-**Status: confirmed by a clean `lake build`, after one real fix round.** Round 1 caught three
-independent issues, none touching the actual mathematics: (1)
-`PMF.pure`/`PMF.pure_apply` (from `Mathlib...Monad`) and `PMF.ofFinset` (from
-`Mathlib...Constructions`) came back "Unknown constant" even though `Csg.Basic` already imports
-`Mathlib...ProbabilityMassFunction.Basic` -- this project's toolchain (`lean4:v4.34.0-rc2`) is on
-Lean 4's newer module system, where a plain `import` does not re-export the imported module's names
-to further downstream importers; `Csg.ConcurrentCoBuchiExample.lean` already works around exactly
-this by importing `Mathlib...Monad`/`Mathlib...Uniform` directly rather than relying on getting them
-transitively through its `Csg.*` imports, so the fix here is the same: import both PMF modules
-directly (added above), rather than assuming anything reachable via `Csg.MatrixGameLP` is already in
-scope. (2) `throwerAction_sum`/`skirmishState_sum` (the three-term `_sum` expansions) left an
-unsolved associativity goal (`f a + (f b + f c)` from nested `Finset.sum_insert` versus the stated
-`f a + f b + f c`) -- missed the trailing `abel` that `Csg.ConcurrentCoBuchiExample.cbState_sum`'s
-own five-term version already needed for exactly this reason; added to both. (3) `throwerMinMix`/
-`throwerMaxMix` (real-number-valued witnesses using genuine division, e.g. `4/5`, `2/7`) were
-missing `noncomputable`, unlike `hiderPureHide`/`hiderPureHideCol` (only `0`/`1`, computable) --
-added. Clean on resubmission, no further rounds needed.
+**Status: confirmed by a clean `lake build`.** `PMF.pure`/`PMF.pure_apply` live in
+`Mathlib...Monad` and `PMF.ofFinset` in `Mathlib...Constructions`, both imported directly above
+rather than relied on transitively through `Csg.Basic`/`Csg.MatrixGameLP`: this project's
+toolchain is on Lean 4's newer module system, where a plain `import` does not re-export the
+imported module's names to further downstream importers, so any file whose own mathematics uses
+these needs both PMF modules imported directly, matching `Csg.ConcurrentCoBuchiExample.lean`'s own
+`Mathlib...Monad`/`Mathlib...Uniform` imports. Likewise, expanding a three-or-more-term sum via
+nested `Finset.sum_insert`/`Finset.sum_singleton` (as `throwerAction_sum`/`skirmishState_sum` do
+below) leaves the result right-associated (`f a + (f b + f c)`) against the stated left-associated
+form (`f a + f b + f c`), so such expansions need a trailing `abel` to close the gap, matching
+`Csg.ConcurrentCoBuchiExample.cbState_sum`'s own five-term version.
 
 **What this is and why.** SKIRMISH (de Alfaro & Henzinger, LICS 2000): a hider at a hiding spot
 (`s_hide`) can `hide` or `run` for home (`s_home`); a thrower can `wait` or `throw`. The plain

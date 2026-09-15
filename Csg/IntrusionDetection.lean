@@ -10,27 +10,20 @@ import Mathlib.Probability.ProbabilityMassFunction.Monad
 /-!
 # A non-toy `bwInd` instance: intrusion detection, sourced from PRISM-games' IDS case study
 
-**Status: done, confirmed by a clean `lake build`.** The two hand-checked instances
-(`idsV1`/`idsCSG_bwInd_one*` and `idsV2`/`idsCSG_bwInd_two*`, the first in this project to exercise
-`bwInd`'s recursion against a non-uniform, state-dependent continuation) build clean, VS Code
-included -- the one-round instance after the fix round below. Two further `∀ n` facts have since
-been added (see that section's own docstring) and build clean too, first attempt, no fix round
-needed: `idsCSG_bwInd_compromised_eq_healthy_add_one` and `idsCSG_bwInd_mono`. `idsK` uses
-`PMF.pure`,
-which lives in `Mathlib.Probability.ProbabilityMassFunction.Monad` (the monadic-operations file,
-not `.Basic`, per that file's own docstring) -- an import this file was originally missing, since
-`Csg.BackwardInduction`'s own transitive imports stop at `.Basic`. `MatchingPennies.lean` already
-imports `.Monad` directly for the same reason; `RockPaperScissors.lean` gets it for free only
-because it separately imports `Csg.MatchingPennies`. Traced by computing this file's actual
-transitive import closure (1659 Mathlib modules) and confirming `.Monad` was absent from it -- so
-VS Code's "Unknown constant `PMF.pure`" was a real, correct diagnosis, not the cosmetic
-elaboration-order noise seen elsewhere in this project. Fixed by adding the missing import
-directly, matching `MatchingPennies.lean`'s precedent; the fixed version compiles with zero
-warnings of its own, confirmed against the build's full, unfiltered log (2998 jobs, "Build
-completed successfully", nothing under `Csg.IntrusionDetection`) -- `lake build`'s default output
-only ever prints a line for a module that has a warning or error to report, which is also the real
-answer to why most of the project's 2998 compiled modules never show up in a pasted build log at
-all, this file included.
+**Status: confirmed by a clean `lake build`.** The two hand-checked instances
+(`idsV1`/`idsCSG_bwInd_one*` and `idsV2`/`idsCSG_bwInd_two*`) are the first in this project to
+exercise `bwInd`'s recursion against a non-uniform, state-dependent continuation. Two further
+`∀ n` facts, `idsCSG_bwInd_compromised_eq_healthy_add_one` and `idsCSG_bwInd_mono` (see that
+section's own docstring), build on them. `idsK` uses `PMF.pure`, which lives in
+`Mathlib.Probability.ProbabilityMassFunction.Monad` (the monadic-operations file, not `.Basic`,
+per that file's own docstring), imported directly above rather than relied on transitively:
+this project's toolchain is on Lean 4's newer module system, where a plain `import` does not
+re-export the imported module's names to further downstream importers, so any file whose own
+mathematics uses `PMF.pure` (or other `.Monad` operations) needs `.Monad` imported directly, even
+when some file reachable through its `Csg.*` imports already imports it -- `Csg.BackwardInduction`'s
+own transitive imports stop at `.Basic`. `MatchingPennies.lean` imports `.Monad` directly for the
+same reason; `RockPaperScissors.lean` gets it for free only because it separately imports
+`Csg.MatchingPennies`.
 
 `RockPaperScissors.lean`'s stage games are all "toy" in the specific sense flagged in
 `PHASE0-NOTES.md`: at every state, the optimal strategy for both players is the *same* uniform

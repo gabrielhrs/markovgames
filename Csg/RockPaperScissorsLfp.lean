@@ -9,10 +9,7 @@ import Csg.RockPaperScissors
 /-!
 # Worked example: the exact least fixed point for rock-paper-scissors
 
-**Status: done, confirmed by a clean `lake build` after two real fix rounds (concrete decidable
-conditions defeating `simp`'s `if_pos`/`if_neg` idiom, fixed with `change`/`rfl`; and Mathlib's
-pinning lemmas taking the operator as an explicit rather than implicit argument, fixed with dot
-notation -- see `PHASE0-NOTES.md`).** Closes out the reachability worked example:
+**Status: confirmed by a clean `lake build`.** Closes out the reachability worked example:
 `(rpsCSG.reachOp rpsGoalWin2 rpsR_zero).lfp` -- the genuine infinite-horizon value, not merely a
 `reachBounded` sequence approximating it -- computed exactly, matching `RockPaperScissors.lean`'s
 own concrete `reachBounded` values (`0, 1/3, 1/3, 4/9, 4/9, ...`) at their shared limit `1/2`.
@@ -50,8 +47,9 @@ back to `initial` and so shares its limiting value). Two things need proving abo
    alone (goal states are pinned to `1` by a purely structural `ite` on a concrete, decidable
    state comparison -- no stage game involved at all); `win1`, `initial`, `draw` first `change`
    the goal past the `OrderHom`/`ite` packaging down to a bare `stageValue` equation (the same
-   defeq idiom `ReachOp.lean`'s own fix round established, safer here than `simp`-based `ite`
-   unfolding -- see the fix-round note once this file is confirmed), then close with
+   defeq idiom used throughout the project: when an `ite`'s condition is a concrete, decidable
+   comparison, `change`ing straight to the underlying equation and closing by `rfl` is more
+   reliable than unfolding through `simp`'s `if_pos`/`if_neg`), then close with
    `RockPaperScissors.lean`'s own stage-value lemmas plus `norm_num` arithmetic.
 2. `rpsVStar_le_of_prefixed`: it lower-bounds every pre-fixed point `b`. Forced facts first --
    `b win2 = 1` (sandwiched between the goal-state lower bound and the `[0, 1]` membership upper
@@ -147,10 +145,9 @@ theorem rpsVStar_le_of_prefixed {b : RPSState → Set.Icc (0 : ℝ) 1}
 
 /-- **The headline result.** `rpsVStar` *is* the least fixed point, on the nose -- no limiting
     argument, just the two payoff lemmas above fed into `ReachCertificate.lean`'s reusable
-    `CSG.reachOp_lfp_eq_of_certificate` combinator (`VERIFICATION-FRAMEWORK.md`'s first concrete
-    artifact), rather than an inlined `le_antisymm`. Re-deriving this same confirmed result
-    through the generic combinator, rather than the hand-rolled proof the previous round shipped,
-    is itself the regression check that the generalisation is real and not cosmetic. -/
+    `CSG.reachOp_lfp_eq_of_certificate` combinator, rather than an inlined `le_antisymm`. Deriving
+    it through the generic combinator rather than a hand-rolled proof is itself a regression check
+    that the generalisation is real and not cosmetic. -/
 theorem rpsCSG_reachOp_lfp_eq :
     (rpsCSG.reachOp rpsGoalWin2 rpsR_zero).lfp = rpsVStar :=
   rpsCSG.reachOp_lfp_eq_of_certificate rpsGoalWin2 rpsR_zero rpsVStar rpsVStar_fixed

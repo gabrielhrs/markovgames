@@ -9,8 +9,7 @@ import Csg.RockPaperScissorsLfp
 /-!
 # Worked example: rock-paper-scissors as a genuine `until` property
 
-**Status: done, confirmed by a clean `lake build` on the first attempt, no fix round needed.**
-`RockPaperScissorsLfp.lean` computed
+**Status: confirmed by a clean `lake build`.** `RockPaperScissorsLfp.lean` computed
 `(rpsCSG.reachOp rpsGoalWin2 rpsR_zero).lfp`, i.e. `Pmax=? [F win2]` -- plain reachability. But the
 property actually stated in the FMSD paper is a genuine `until`: the maximising
 coalition (this project's *column* player, per the convention note in `RockPaperScissors.lean`'s own

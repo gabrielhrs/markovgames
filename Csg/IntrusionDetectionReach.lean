@@ -9,16 +9,12 @@ import Csg.ReachCertificate
 /-!
 # A genuine reachability instance on the IDS model, separate from `bwInd`'s reward question
 
-**Status: done, confirmed by a clean `lake build`, after two real fix rounds** -- both
-`MatrixGame.value_le_of_forall_le`/`le_value_of_forall_le` take their matrix game as an *explicit*
-argument, not one inferred from the proof term, fixed with dot notation (the same pitfall
-`RockPaperScissorsLfp.lean` hit with the analogous Knaster-Tarski lemmas); and, in `idsVStar_fixed`,
-`simp only [idsVStar]` rewrote the goal's `fun s' => (idsVStar s' : ℝ)` down to `fun s' => 1` while
-`hle`/`hge` still carried the un-rewritten form, leaving `linarith` looking at two syntactically
-different `.value` atoms for the same real number -- fixed by pinning `idsVStar .compromised = 1`
-as its own fact and rewriting only the goal's right-hand side, so the `.value` term itself stays
-untouched and matches `hle`/`hge` exactly. A `show`-vs-`change` style-linter nit was also cleaned
-up along the way (`show` was silently unfolding `reachOp`, which is exactly what `change` is for).
+**Status: confirmed by a clean `lake build`.** `idsVStar_fixed`'s `compromised` case is a reminder
+that `simp only` rewriting only the goal -- turning `fun s' => (idsVStar s' : ℝ)` into
+`fun s' => 1` -- while a hypothesis such as `hle`/`hge` still carries the un-rewritten form, leaves
+`linarith` comparing syntactically different `.value` atoms for what is definitionally the same real
+number: pinning the needed equality (`idsVStar .compromised = 1`) as its own fact and rewriting only
+the side that needs it keeps the `.value` term itself untouched, so it matches `hle`/`hge` exactly.
 
 `IntrusionDetection.lean` asks a *reward* question of this model: how much cumulative damage does
 optimal play produce (`bwInd`). This file asks a completely different, plain *reachability*

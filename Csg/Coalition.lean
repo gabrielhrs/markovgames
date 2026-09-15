@@ -8,16 +8,15 @@ import Csg.Basic
 /-!
 # Coalitions: reducing an n-player game to the two-player `CSG` already built
 
-**Status: confirmed by a clean `lake build`, after one real fix round (see below).** First cut
+**Status: confirmed by a clean `lake build`.** First cut
 at the gap recorded in
 `PHASE0-NOTES.md`'s "coalitions and direction are both missing, and it's one gap, not two":
 `CSG S A1 A2` fixes, in its own type, both a coalition of size exactly two and a direction (`A1`
 always minimises `r`, `A2` always maximises it). The FMSD/QEST papers' `⟨⟨C⟩⟩ P_max`/`⟨⟨C⟩⟩ P_min`
 let both vary freely: `C` is any subset of any number of players, checked in either direction.
-This file adds exactly one thing on top of everything already confirmed -- an n-player structure
-plus a reduction to `CSG` -- and touches nothing downstream: `reachOp`, `untilOp`, `SafetyOp`,
-`BuchiOp`/`CoBuchiOp`, every certificate combinator all keep working unchanged on whatever `CSG`
-the reduction below hands them.
+This file adds an n-player structure and a reduction to `CSG`, and touches nothing downstream:
+`reachOp`, `untilOp`, `SafetyOp`, `BuchiOp`/`CoBuchiOp`, every certificate combinator all keep
+working unchanged on whatever `CSG` the reduction below hands them.
 
 **`NCSG`** mirrors `CSG`'s own `(S A1 A2 : Type*) [Fintype S] [Fintype A1] [Fintype A2]
 [Nonempty A1] [Nonempty A2] [DecidableEq A1] [DecidableEq A2]` shape exactly, just replacing the
@@ -25,10 +24,10 @@ two fixed action types with one `Players`-indexed family `A : Players → Type*`
 three instances per player instead of per side.
 
 **`CoalitionAction`/`ComplementAction`** are declared `abbrev`, not `def`, deliberately: a plain
-`def` here would risk exactly the typeclass-synthesis gap `RockPaperScissors.lean` hit in its own
-round-1 fix (a goal predicate defined via `def` blocking automatic `DecidablePred` synthesis) --
-`abbrev` stays reducible, so instance search can see straight through it to the underlying
-`∀ i, A i` shape it actually is.
+`def` is semi-reducible by default and can block automatic typeclass synthesis on whatever it
+unfolds to (as with a goal predicate defined via `def` blocking `DecidablePred` synthesis in
+`RockPaperScissors.lean`) -- `abbrev` stays reducible, so instance search can see straight through
+it to the underlying `∀ i, A i` shape it actually is.
 
 **`combine`** rebuilds a full joint action from a coalition's and its complement's, by a decidable
 case split on membership in `C` -- the one place this file is genuinely doing something; the rest
@@ -39,22 +38,13 @@ is packaging.
 same `reachOp`, no changes to it, just a different `CSG` built from the same `NCSG` and the same
 `C`.
 
-**Round 1, from real `lake build` output:** `CoalitionAction`/`ComplementAction` originally left
-`A` implicit, inferred from the ambient section variable like everything else in this file. Broke
-exactly at `reduceMin`/`reduceMax`'s return-type annotations -- `CSG S (CoalitionAction C)
-(ComplementAction C)` is a bare type expression with no value argument anywhere for Lean to read
-`A` off of (unlike `combine`, called with actual `aC`/`aC'` values whose types pin `A` down by
-ordinary unification), so the implicit had nothing to unify against: "don't know how to
-synthesize implicit argument `A`", cascading into two more errors where `DecidableEq` instance
-search got stuck on the resulting metavariable. Fixed by making `A` an explicit parameter of
-`CoalitionAction`/`ComplementAction` specifically (see each one's own docstring) and passing it
-explicitly at every call site that isn't already inferring it from a value argument.
-
-**Confirmed working by the clean build, not just no-longer-erroring:** the
-`BooleanAlgebra (Finset Players)` instance behind `Cᶜ`, and the six `Fintype`/`Nonempty`/
-`DecidableEq` instances `CSG` demands on `CoalitionAction A C`/`ComplementAction A C`, both resolve
-automatically now that `A` is concrete at those call sites, exactly as round 1's errors (instance
-search "stuck" on a metavariable, not rejected outright) suggested they would.
+**A general Lean note:** an implicit argument that appears only in a bare return-type annotation
+(as `A` does in `reduceMin`/`reduceMax` below, `CSG S (CoalitionAction C) (ComplementAction C)`)
+has no value argument anywhere for Lean to read it off of, so nothing pins it down and synthesis
+fails -- unlike `combine`, called with actual `aC`/`aC'` values whose types pin `A` down by
+ordinary unification. `CoalitionAction`/`ComplementAction` therefore take `A` as an explicit
+parameter (see each one's own docstring) rather than inferring it from the ambient section
+variable.
 
 **Still not thought through:** `r`'s sign convention across the coalition split (which side a
 reward-until objective should be read as favouring once `C` moves between the `A1` and `A2` slots)
@@ -111,11 +101,10 @@ variable (C : Finset Players)
     `|C|` players folded into a single side instead of one. `abbrev`, not `def`: see the module
     docstring on why.
 
-    `A` explicit here, unlike everywhere else in this file: the first real `lake build` attempt
-    caught that leaving it implicit (inferred from the ambient section variable) fails exactly
-    where this gets used in `reduceMin`/`reduceMax`'s return type below -- a bare type annotation
-    with no value argument in sight for Lean to read `A` off of, so nothing pins the implicit
-    down. Made explicit here instead of threading a value argument through just to fix inference. -/
+    `A` explicit here, unlike everywhere else in this file: it appears in `reduceMin`/`reduceMax`'s
+    return type below, a bare type annotation with no value argument in sight for Lean to read `A`
+    off of, so nothing would pin an implicit down there. Explicit instead of threading a value
+    argument through just to fix inference. -/
 abbrev CoalitionAction (A : Players → Type*) (C : Finset Players) : Type _ := ∀ i : C, A i
 
 /-- The joint action of everyone outside `C`. Same reasoning as `CoalitionAction`, `A` explicit

@@ -9,11 +9,9 @@ import Csg.MatrixGame
 /-!
 # Finite-state concurrent stochastic games
 
-**Status: confirmed by a clean `lake build` after the `MatrixGame` section (`value` and its
-supporting API) was moved OUT of this file and into `MatrixGame.lean`, where it belongs -- see that
-file's own "Update" note; no fix round needed.** Builds on the now-confirmed `Csg.MatrixGame`
-(`MatrixGame.lean`), which now supplies `value` directly rather than through this file, matching
-how `ValueIteration.lean`/`PolicyIteration.lean` build on `Basic.lean` in the MDP line.
+**Status: confirmed by a clean `lake build`.** Builds on `Csg.MatrixGame` (`MatrixGame.lean`),
+which supplies `value` directly, matching how `ValueIteration.lean`/`PolicyIteration.lean` build
+on `Basic.lean` in the MDP line.
 
 One thing happens in this file now: `CSG`, the concurrent-stochastic-game analogue of
 `DiscountedMDP` (`Basic.lean`, the MDP-line file of the same name): same

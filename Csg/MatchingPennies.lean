@@ -9,15 +9,9 @@ import Mathlib.Probability.ProbabilityMassFunction.Monad
 /-!
 # Worked example: matching pennies
 
-**Status: done, confirmed by a clean `lake build` after one real fix round (an unimported Mathlib
-module, a default-simp-lemma ordering trap, plus cosmetic lint cleanup -- see
-`PHASE0-NOTES.md`).** A concrete instantiation of the whole CSG
+**Status: confirmed by a clean `lake build`.** A concrete instantiation of the whole CSG
 stack (`MatrixGame`, `CSG`, `bwInd`), checked against a hand-solved closed form -- the same role
 `RecyclingRobot.lean` played for the MDP side, extended here to a genuinely *concurrent* game.
-This is also, by a wide margin, the most tactic-heavy file in the project so far: several small
-lemmas rather than one big proof, none individually deep, but with more chances for a naming or
-unfolding mismatch than any single-theorem file shipped previously. Treat a `lake build` round
-here as more likely than usual, not as a sign something is architecturally wrong.
 
 Matching pennies is the canonical example motivating mixed strategies in the first place: row
 picks `i : Fin 2`, column picks `j : Fin 2` simultaneously, row wins (payoff `-1`, since row
@@ -31,16 +25,12 @@ the state type, trivial self-loop transition), and `bwInd`'s first step on it --
 `0` exactly, via `MatrixGame.value_unique` plus the row/column sums of the payoff matrix both
 vanishing (the concrete fact underlying "uniform is optimal here").
 
-**`MatrixGame.value_unique` itself now lives in `Csg/Basic.lean`, not here.** It was first proved
-in this file -- a general fact `MatrixGame.lean`/`Csg/Basic.lean` didn't need at the time and so
-never proved (*any* strategy pair satisfying the two no-improvement conditions has the same payoff
-as `value`, not just the particular `Classical.choose`-extracted pair `value` is built from --
-standard minimax fact, the game's *value* is unique even when optimal strategies are not). It
-moved once `MatrixGameMonotone.lean`'s `value_add_const` needed it too and, being imported only
-through this worked-example file, wasn't available there -- a build failure caught this rather
-than a design review, fixed by relocating the theorem (statement and proof unchanged) to sit
-beside `value` itself in `Basic.lean`, where any future general-infrastructure consumer can reach
-it without importing a worked example. -/
+**`MatrixGame.value_unique` lives in `Csg/Basic.lean`, not here:** *any* strategy pair satisfying
+the two no-improvement conditions has the same payoff as `value`, not just the particular
+`Classical.choose`-extracted pair `value` is built from -- standard minimax fact, the game's
+*value* is unique even when optimal strategies are not. It sits beside `value` itself in
+`Basic.lean`, where any general-infrastructure consumer can reach it without importing a worked
+example. -/
 
 namespace Csg
 
@@ -69,8 +59,8 @@ private theorem penniesMatrix_col_sum_zero (j : Fin 2) : ∑ i, penniesMatrix.A 
     default simp set includes `Fin.sum_univ_two`, which would expand both finite sums into
     concrete numeral terms *before* the abstract `penniesMatrix_row_sum_zero` gets a chance to
     fire on the still-general `∑ j, penniesMatrix.A i j` pattern, leaving a residual goal neither
-    lemma can close (the bug in the version this file was first drafted with). Naming the exact
-    lemmas needed, in the order they're needed, avoids that ordering trap entirely. -/
+    lemma can close. Naming the exact lemmas needed, in the order they're needed, avoids that
+    ordering trap. -/
 theorem penniesMatrix_payoff_row (p' : Fin 2 → ℝ) : penniesMatrix.payoff p' unif2 = 0 := by
   simp only [MatrixGame.payoff_eq_sum_mul, unif2, ← Finset.sum_mul, penniesMatrix_row_sum_zero,
     zero_mul, mul_zero, Finset.sum_const_zero]

@@ -8,8 +8,8 @@ import Csg.CsgMonotone
 /-!
 # The Büchi Bellman operator, bundled as a genuine nested fixed point
 
-**Status: done, confirmed by a clean `lake build` and clean in VS Code, first attempt, no fix round
-needed.** The first genuinely new architectural piece in the `Csg/` line since
+**Status: confirmed by a clean `lake build` and clean in VS Code.** The first genuinely new
+architectural piece in the `Csg/` line since
 `ReachOp.lean`/`SafetyOp.lean`/`UntilOp.lean` were first built: every operator so far has been a
 *single-level* `OrderHom.lfp` or `.gfp`. This file's `buchiOp` is a *fixed point of a fixed point*
 -- `νy.μx.(...)` -- following de Alfaro and Majumdar, "Quantitative Solution of Omega-Regular

@@ -8,9 +8,7 @@ import Csg.ReachOp
 /-!
 # A reusable reachability-value certificate
 
-**Status: done, confirmed by a clean `lake build` on the first attempt (one cosmetic
-unused-variable warning at the call site, fixed by naming an unused lambda binder `_`).** Pulls
-the assembly step of
+**Status: confirmed by a clean `lake build`.** Pulls the assembly step of
 `RockPaperScissorsLfp.lean`'s headline theorem -- `le_antisymm` applied to Knaster-Tarski's two
 pinning lemmas, `OrderHom.lfp_le_fixed`/`OrderHom.le_lfp` -- out of that one instance and into a
 combinator any `CSG`/goal/candidate can call directly. This is the first concrete artifact
@@ -26,13 +24,11 @@ makes it (a handful of case splits closed by `linarith` for something rock-paper
 and symmetric; realistically an external numeric solver plus a widened interval version of this
 same combinator for anything larger, per `VERIFICATION-FRAMEWORK.md`'s own scope note).
 
-**Update: the assembly step itself has nothing to do with `CSG`s.** `le_antisymm` applied to
+**The assembly step itself has nothing to do with `CSG`s.** `le_antisymm` applied to
 `OrderHom.lfp_le_fixed`/`OrderHom.le_lfp` never touches `reachOp`, `stageValue`, or any `CSG` field
 -- it is a fact about an arbitrary monotone self-map `f` of an arbitrary `CompleteLattice`.
 `OrderHom.lfp_eq_of_certificate` below states it at that level of generality; `CSG`'s own
-`reachOp_lfp_eq_of_certificate` is now a one-line wrapper specialising `f` to `C.reachOp goal hr`.
-This is a pure refactor -- the statement `CSG.reachOp_lfp_eq_of_certificate` proves is unchanged,
-and `RockPaperScissorsLfp.lean`'s call site needs no edit. -/
+`reachOp_lfp_eq_of_certificate` is a one-line wrapper specialising `f` to `C.reachOp goal hr`. -/
 
 /-- **The payoff, fully generalised.** A candidate `v` in any `CompleteLattice` that is an exact
     fixed point of a monotone self-map `f`, and that lower-bounds every pre-fixed point of `f`,
@@ -56,9 +52,9 @@ variable (C : CSG S A1 A2)
     Knaster-Tarski pinning argument, generalised from `RockPaperScissorsLfp.lean`'s
     `rpsVStar`-specific proof to an arbitrary `CSG`, goal, and candidate. Callers still have to
     supply `hfixed`/`hlb` themselves: this combinator automates the assembly of the two pinning
-    lemmas via `le_antisymm`, not the two mathematical facts underneath it. Now a one-line wrapper
+    lemmas via `le_antisymm`, not the two mathematical facts underneath it. A one-line wrapper
     around the fully generic `OrderHom.lfp_eq_of_certificate` above, specialising its `f` to
-    `C.reachOp goal hr` -- the statement is exactly what it was before this refactor. -/
+    `C.reachOp goal hr`. -/
 theorem reachOp_lfp_eq_of_certificate (goal : S → Prop) [DecidablePred goal]
     (hr : ∀ s a1 a2, C.r s a1 a2 = 0) (v : S → Set.Icc (0 : ℝ) 1)
     (hfixed : C.reachOp goal hr v = v)

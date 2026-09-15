@@ -8,18 +8,17 @@ import Csg.Coalition
 /-!
 # `⟨⟨Cᶜ⟩⟩P_max`'s stage value equals `⟨⟨C⟩⟩P_min`'s
 
-**Status: confirmed by a clean `lake build`, after one real fix round (see below) -- clean meaning
-no errors; two harmless unused-instance lint warnings remain, deliberately left in rather than
-risk an untested syntax fix for pure lint noise, same call as `MatrixGameCongr.lean`'s own Round
-2.** Second and larger of the two pieces
+**Status: confirmed by a clean `lake build`** (two harmless unused-instance lint warnings remain
+on `combine_compl`, which does not need `Fintype`/`DecidableEq` on the action types). Second and
+larger of the two pieces
 `Csg/Coalition.lean`'s own docstring named as missing (`MatrixGameCongr.lean` was the first): the
 complement bookkeeping, and the one place it actually needs `value_relabelRow` rather than pure
 type-level rewriting. Stops at `stageValue` equality, one state and one continuation at a time --
 lifting that to `reachOp`/`.lfp` equality (and so to the actual `⟨⟨C⟩⟩P_min = ⟨⟨Cᶜ⟩⟩P_max` theorem
 promised in `Coalition.lean`'s "Not attempted here") is free once this holds (`reachOp`'s own type
 doesn't mention the action types at all), but is deliberately not attempted in this file -- a
-separate, smaller artifact once this one is confirmed clean, matching how `MatrixGameCongr.lean`
-was kept to exactly the one lemma it needed to be.
+separate, smaller artifact, matching how `MatrixGameCongr.lean` was kept to exactly the one lemma
+it needed to be.
 
 **The shape of the argument**, all bookkeeping except one real step:
 
@@ -44,36 +43,23 @@ The column side needs nothing from `MatrixGameCongr`: `ComplementAction A C` and
 `CoalitionAction A Cᶜ` are the same `abbrev` unfolding already, exactly as `Csg/Coalition.lean`'s
 own docstring noted.
 
-**Round 1, from real `lake build` output:** two independent issues.
+**Two standing proof-technique notes, both relevant beyond this file:**
 
-First, `combine_compl`'s original proof tried `show`-ing the goal past `combine`'s `dite` directly
-to the two branches' bodies, then closing with `rfl` (the same idiom `MatrixGameCongr.lean`'s
-`payoff_relabelRow` and this project's own `RockPaperScissorsLfp.lean` use for `ite`/`OrderHom`
-packaging). It failed here: `RockPaperScissorsLfp.lean`'s concrete states (`RPSState.win1`, ...)
-let their `ite` reduce by pure computation once the branch is fixed, but `combine`'s `dite` is on
-`i ∈ C` for an arbitrary, uninstantiated `C : Finset Players` -- its `Decidable` instance has
-nothing concrete to compute down to, so the kernel can't reduce the `dite` by `whnf` alone, and
-`show` (which needs definitional equality, not just propositional) failed with a clear "not
-definitionally equal to target" error rather than something silent. Fixed by going back to
-`dif_pos`/`dif_neg` as rewrite *lemmas* (propositional, not relying on the instance computing) fed
-to `simp`, which also unfolds `complCoalitionEquiv` and closes the resulting proof-irrelevance
-equality automatically -- the approach the module docstring's own numbered list above already
-described, restored here after a detour through `show`/`rfl` that this error correctly rejected.
-
-Second, `reduceMin_stageValue_eq`'s `ext x y` step failed outright: "No applicable extensionality
-theorem found for type `MatrixGame ...`" -- confirming the module docstring's own stated
-uncertainty about whether `MatrixGame` has an auto-registered `@[ext]` lemma the `ext` *tactic*
-(as opposed to a directly-named lemma) can find; it does not. Fixed without depending on any
-`MatrixGame`-specific extensionality lemma at all: proved the two games' `.A` fields equal via
-plain `funext`, then closed the actual `MatrixGame` equality with `congrArg MatrixGame.mk` against
-that -- `G = MatrixGame.mk G.A` holds by Lean's own structure eta for the one-field structure, so
-`congrArg MatrixGame.mk (hA : G1.A = G2.A) : MatrixGame.mk G1.A = MatrixGame.mk G2.A` already *is*
-`G1 = G2` up to that eta, with no separate lemma name to get right.
-
-Also dropped an unused `Finset.mem_compl` argument from two `simp` calls (real build feedback, a
-one-line fix), and left in two remaining linter warnings (`combine_compl` not needing
-`Fintype`/`DecidableEq` on the action types) rather than risk another untested `omit`/argument-list
-fix for pure lint noise -- the same call `MatrixGameCongr.lean`'s own Round 2 made.
+- A goal-directed `show` past a `dite`, closed by `rfl`, only works when the branch's `Decidable`
+  instance has something concrete to reduce to (e.g. `RockPaperScissorsLfp.lean`'s fixed-constructor
+  states, whose `ite` reduces by pure computation once the branch is fixed). When the case split is
+  on membership in an arbitrary, uninstantiated `Finset` (as `combine`'s `dite` on `i ∈ C` is here),
+  the `Decidable` instance has nothing concrete to compute down to, so the kernel can't reduce the
+  `dite` by `whnf`, and `show` (which needs definitional, not just propositional, equality) fails.
+  Use `dif_pos`/`dif_neg` as *propositional* rewrite lemmas fed to `simp` instead -- `simp` can also
+  unfold surrounding `abbrev`s (here, `complCoalitionEquiv`) and close a residual
+  proof-irrelevance equality automatically.
+- The `ext` *tactic* only fires when a type has an auto-registered `@[ext]` lemma; `MatrixGame` has
+  none, so `ext x y` on a `MatrixGame` equality goal fails with "No applicable extensionality
+  theorem found". Prove the underlying field equality directly (`funext` on `.A`) and close with
+  `congrArg MatrixGame.mk` against it instead -- for a one-field structure, `G = MatrixGame.mk G.A`
+  holds by Lean's own structure eta, so `congrArg MatrixGame.mk (hA : G1.A = G2.A)` already *is*
+  `G1 = G2` up to that eta, with no `@[ext]` lemma needed.
 -/
 
 namespace Csg

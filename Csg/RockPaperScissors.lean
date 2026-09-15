@@ -9,10 +9,7 @@ import Csg.MatchingPennies
 /-!
 # Worked example: rock-paper-scissors
 
-**Status: done, confirmed by a clean `lake build` after one real fix round (a typeclass-search
-gap -- a goal predicate defined via plain `def` rather than `abbrev`, blocking automatic
-`DecidablePred` synthesis and cascading into several downstream errors, plus three smaller misses
--- see `PHASE0-NOTES.md`).** Stage B of the reachability worked example,
+**Status: confirmed by a clean `lake build`.** Stage B of the reachability worked example,
 straight from the FMSD paper: rock-paper-scissors as a four-state CSG
 (`initial`, `win1`, `win2`, `draw`), checked against plain step-bounded reachability, `F<=k win2`
 (the paper's own `Pmax=? [!win2 U<=k win2]`, restated in the clearer `F<=k` form -- see
@@ -51,8 +48,7 @@ Three pieces:
    raw `CSG` steps except when it resolves immediately, and the sequence's *distinct* values are
    exactly the naive one-step-per-round recursion `x_{n+1} = 1/3 + x_n / 3` (solving to the
    textbook `x_n \to 1/2`), each now appearing at two consecutive `k`. The exact `k \to \infty`
-   limit is not proved here -- that needs the `OrderHom.lfp` machinery scoped in `PHASE0-NOTES.md`,
-   not yet built.
+   limit is not proved here -- that needs the `OrderHom.lfp` machinery scoped in `PHASE0-NOTES.md`.
 -/
 
 namespace Csg.MatrixGame

@@ -8,7 +8,7 @@ import Csg.Basic
 /-!
 # A reusable reward-until-absorption certificate, in plain `ℝ`
 
-**Status: done, confirmed by a clean `lake build` on the first attempt, no fix round needed.**
+**Status: confirmed by a clean `lake build`.**
 Generalises `RockPaperScissorsSteps.lean`'s
 bespoke `rpsStepsStep`/`rpsSteps_fixed`/`rpsSteps_unique` pattern from a hard-coded `win1 ∨ win2`
 goal to an arbitrary `CSG` and `goal : S → Prop`, exactly the way `ReachCertificate.lean`

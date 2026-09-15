@@ -9,8 +9,7 @@ import Csg.ReachOp
 /-!
 # The until Bellman operator, bundled as an `OrderHom`
 
-**Status: everything in this file done, confirmed by a clean `lake build`, including
-`reachOp_eq_untilOp_true` after one small fix round (see its own note below).**
+**Status: confirmed by a clean `lake build`.**
 
 Generalises `ReachOp.lean`'s reachability-only operator to a genuine `φ U goal` ("stay in `φ`
 until `goal`") operator, per
@@ -29,36 +28,30 @@ a state that is neither `goal` nor `safe` is a dead end, worth `0` (the "stay in
 one non-goal case already does. Both `goal` and `safe` are abstract, universally-quantified
 predicates throughout this file (never instantiated to a concrete decidable proposition), so the
 `by_cases` + `simp only [defName, if_pos h]`/`if_neg h` idiom `reachOpFun_mono` already uses is
-safe here too -- the pitfall diagnosed while debugging `RockPaperScissorsLfp.lean` (`simp`
-pre-normalising a *concrete* ground `ite` condition before considering a supplied `if_pos`/`if_neg`
-lemma) only bites when the condition is closed and decidable by `decide`, which neither `goal s`
-nor `safe s` is here.
+safe here too: `simp only [if_pos h]`/`if_neg h` only work when the condition is not already
+closed and decidable by `decide` -- a concrete ground `ite` gets pre-normalised by `simp` before it
+considers a supplied `if_pos`/`if_neg` lemma (as in `RockPaperScissorsLfp.lean`), so the idiom is
+safe only for abstract conditions, which neither `goal s` nor `safe s` is here.
 
-**`reachOp_eq_untilOp_true`**, added once the three-way split above and a concrete instance
-(`RockPaperScissorsUntil.lean`) were both confirmed building: `reachOp goal hr = untilOp (fun _ =>
-True) goal hr`, recovering plain reachability as `until`'s special case with a trivially-always-safe
-predicate. This mixes an abstract condition (`goal`, safe via the `by_cases`/`if_pos`/`if_neg` idiom
-above) with a concrete one (`safe := fun _ => True`, closed and decidable) in the same proof --
-exactly the combination flagged as risky before any confirmed `until` instance existed. Handled by
+**`reachOp_eq_untilOp_true`** states `reachOp goal hr = untilOp (fun _ => True) goal hr`,
+recovering plain reachability as `until`'s special case with a trivially-always-safe predicate.
+This mixes an abstract condition (`goal`, safe via the `by_cases`/`if_pos`/`if_neg` idiom above)
+with a concrete one (`safe := fun _ => True`, closed and decidable) in the same proof. Handled by
 splitting the two concerns rather than fighting them together: `change` first jumps past the
 `OrderHom`/`FunLike` coercion layer down to `reachOpFun`/`untilOpFun` application (a pure defeq
 step, unrelated to either condition's truth value); *then* `by_cases hg : goal s` plus
 `simp only [reachOpFun, untilOpFun, if_pos/if_neg hg]` handles the abstract `goal` condition exactly
 as `untilOpFun_mono` already does safely.
 
-One real fix round, confirmed by a clean `lake build` after it, and a genuinely new wrinkle on the
-ground-normalisation pitfall: in the `goal`-false branch, `simp only` *did* rewrite the concrete
-condition `(fun _ => True) s` down to `True` (unopposed, exactly as expected, since no lemma about
-it was supplied) -- but left the goal stuck as `... = if True then A else B` rather than also
-collapsing the `ite` down to `A`, since `simp only`'s automatic closing check apparently doesn't
-perform the further iota reduction on `True`'s own `Decidable` instance the way a bare `rfl` does.
-So the earlier documented pitfall was one instance of a slightly broader fact worth generalising:
-`simp only`'s built-in ground-condition normalisation rewrites the *condition*, but reaching the
-literal branch value can still need an explicit follow-up (`rfl` here; `simp only [rpsVStar]` played
-the same role for a different residual gap in `RockPaperScissorsLfp.lean`). Fixed with a trailing
-`rfl` after the `simp only` in the `goal`-false case alone -- the `goal`-true case needed no such
-follow-up, since `untilOpFun`'s `goal` branch is pinned to `1` without ever consulting `safe` at
-all, so `if_pos hg` alone already leaves both sides at the same literal value.
+A broader fact about `simp only`'s ground-condition normalisation shows up in the `goal`-false
+branch: `simp only` rewrites the concrete condition `(fun _ => True) s` down to `True`, but that
+alone leaves the goal stuck as `... = if True then A else B` rather than collapsing the `ite` down
+to `A` -- `simp only`'s automatic closing check does not perform the further iota reduction on
+`True`'s own `Decidable` instance the way a bare `rfl` does. So rewriting a ground `ite` condition
+to a literal with `simp only` still needs an explicit follow-up (`rfl` here) to reach the branch
+value itself. The `goal`-true case needs no such follow-up, since `untilOpFun`'s `goal` branch is
+pinned to `1` without ever consulting `safe` at all, so `if_pos hg` alone already leaves both sides
+at the same literal value.
 -/
 
 namespace Csg

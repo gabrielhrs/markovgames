@@ -9,8 +9,7 @@ import Mathlib.Analysis.Convex.StdSimplex
 /-!
 # Finite two-player zero-sum matrix games
 
-**Status: confirmed by a clean `lake build`, including Update 2's four-satellite-file consolidation
-below -- no fix round needed.** This is the first artifact for Goal 02
+**Status: confirmed by a clean `lake build`.** This is the first artifact for Goal 02
 (concurrent stochastic games), and plays the same role for the CSG line of work that
 `RecyclingRobot.lean` played for the discounted-MDP line: a small, self-contained, hands-on
 exercise that checks a genuinely nontrivial piece of Mathlib before any downstream theory gets
@@ -29,34 +28,18 @@ single biggest unconfirmed dependency in the CSG roadmap. `exists_optimal_strate
 it: it exists in Mathlib, and it is usable directly, without reproving von Neumann from scratch the
 way the rest of this project avoids reproving Banach from scratch for the MDP case.
 
-**Update.** `value` and its supporting API
-(`optimalRow`, `optimalCol`, `value_row_optimal`, `value_col_optimal`, `value_unique`) used to live
-in `Basic.lean`, added there only because this file "deliberately stopped at bare existence" when
-first written and the packaging step came later. On reflection (prompted by a design discussion
-about `MatrixGame`/`MatrixGameCongr`/`MatrixGameLP` being split across files for no reason beyond
-avoiding reopening a confirmed one) that placement was never right: none of that content is about
-`CSG`, all of it is about `MatrixGame` alone, and it belongs beside `exists_optimal_strategies`
-itself, not smuggled into the file that happens to define `CSG` on top of it. Moved here verbatim
-(statements and proofs unchanged from `Basic.lean`'s copy) as the first step of a staged
-consolidation. `Basic.lean` now only defines `CSG`/`stageGame`/`stageValue`, importing `value` from
-here like any other consumer.
+`value` and its supporting API (`optimalRow`, `optimalCol`, `value_row_optimal`,
+`value_col_optimal`, `value_unique`) live here rather than in `Basic.lean`: none of it is about
+`CSG`, all of it is about `MatrixGame` alone, so it belongs beside `exists_optimal_strategies`
+itself. `Basic.lean` only defines `CSG`/`stageGame`/`stageValue`, importing `value` from here like
+any other consumer.
 
-**Update 2 (confirmed by a clean `lake build`).** Step two of that same consolidation:
-`MatrixGameMonotone.lean`, `MatrixGameCongr.lean`, `MatrixGameCongrCol.lean`, and
-`MatrixGameLP.lean` -- each a pure `MatrixGame` fact with no `CSG` content (checked before Update 1
-above, re-checked now: still true of all four) -- are folded in below as four further sections,
-each keeping its own original module docstring's design rationale and fix-round history verbatim
-(as a section note rather than a top-of-file docstring), rather than losing that record. The four
-satellite files are deleted; every downstream file that imported one of them now gets the same
-content transitively through `Csg.Basic`/`Csg.Coalition`/`Csg.SkirmishFeint` (whichever it already
-imported) importing `Csg.MatrixGame` in turn, so most needed no new import at all -- only
-`BoundedReachability.lean`, `CsgMonotone.lean`, and `SkirmishFeint.lean`, which imported a satellite
-file *directly* rather than through `Csg.Basic`, needed their import line repointed to `Csg.Basic`.
-No statement or proof below changed from its original file's copy; only `variable` declarations
-were deduplicated against the ones already active from Update 1 above (each satellite's own
-`{I J} [Fintype I]...`/`(G : MatrixGame I J)` was identical to what this file already declares, so
-only genuinely new variables -- `MatrixGameCongr`'s `I'`, `MatrixGameCongrCol`'s `J'` -- needed
-restating).
+Four further sections below -- `value`'s monotonicity and boundedness in the payoff matrix,
+invariance under relabelling the row player's action type, invariance under relabelling the column
+player's action type, and `value` as a linear program -- likewise state facts about `MatrixGame`
+alone, with no `CSG` content, and so are gathered here alongside the rest of the `MatrixGame` API
+rather than living in their own files. Each keeps its own section heading and design rationale
+below.
 
 Convention: the row player picks `i : I` and *minimizes* the payoff `A i j`; the column player
 picks `j : J` and *maximizes* it. This matches `Sion.exists_isSaddlePointOn`'s own `X`/`Y`
@@ -261,16 +244,10 @@ theorem value_unique {p : I → ℝ} {q : J → ℝ} (hp : p ∈ stdSimplex ℝ 
 
 /-! ## Monotonicity and boundedness of `value`
 
-Folded in from `MatrixGameMonotone.lean` (Update 2 above); original module docstring, verbatim:
-
-**Original status: done, confirmed by a clean `lake build`, including the later addition
-(`payoff_add_const` through `abs_value_sub_le`, Lipschitz continuity of `value` in the payoff
-matrix) -- see `PHASE0-NOTES.md`'s "reachability iterate" section for the plan this feeds, and its
-one fix round (a missing-dependency error, `value_unique` relocated to `Basic.lean`).** First
-building block for the infinite-horizon half of Phase 3
-(`until`/reachability), scoped in the "Heavy debrief" section of `PHASE0-NOTES.md` but not built
-until now. Builds on the now-confirmed `Csg/Basic.lean`, adding lemmas to the existing `MatrixGame`
-namespace rather than reopening anything else -- the same pattern `MatchingPennies.lean` used for
+**Status: confirmed by a clean `lake build`.** First building block for the infinite-horizon half of
+Phase 3 (`until`/reachability) -- see `PHASE0-NOTES.md`'s "reachability iterate" section for the
+plan this feeds. Builds on `Csg/Basic.lean`, adding lemmas to the existing `MatrixGame` namespace
+rather than reopening anything else -- the same pattern `MatchingPennies.lean` used for
 `value_unique`.
 
 Why this file, and why now: reachability/until values for CSGs, unlike the bounded objectives
@@ -455,14 +432,13 @@ theorem abs_value_sub_le {G G' : MatrixGame I J} {ε : ℝ}
 
 /-! ## `value` is invariant under relabelling the row player's action type
 
-Folded in from `MatrixGameCongr.lean` (Update 2 above); original module docstring, verbatim:
-
-**Original status: confirmed by a clean `lake build`, after two real fix rounds (see below) --
-clean meaning no errors; two harmless unused-instance lint warnings remain, deliberately left in
-rather than risk a third untested syntax fix for pure lint noise, see Round 2.** The one genuinely
-new piece of infrastructure `Csg/Coalition.lean`'s own docstring flagged as missing: nothing in
-`MatrixGame.lean`/`Csg/Basic.lean` states that a matrix game's value doesn't care how the row
-player's action type is labelled, only what it's in bijection with.
+**Status: confirmed by a clean `lake build`** (two harmless unused-instance lint warnings on
+`mem_stdSimplex_comp`/`_symm` are left in deliberately: neither theorem needs `Nonempty`/
+`DecidableEq` on the relabelled type, only `Fintype`, so the linter correctly flags those instance
+arguments as unused). The one genuinely new piece of infrastructure `Csg/Coalition.lean`'s own
+docstring flagged as missing: nothing in `MatrixGame.lean`/`Csg/Basic.lean` states that a matrix
+game's value doesn't care how the row player's action type is labelled, only what it's in bijection
+with.
 
 Checked against the FMSD paper (Kwiatkowska, Norman, Parker, Santos, "Automatic verification of
 concurrent stochastic systems") before drafting this, rather than assuming the shape needed: its
@@ -484,8 +460,7 @@ exactly the free/relabelling-level fact this section exists to actually *prove*,
 there is a genuine worked instance of `⟨⟨C⟩⟩P_max ≠ ⟨⟨C⟩⟩P_min` built on exactly this and the
 `value_relabelCol` section below.)
 
-Only the row side was built first here; the column side follows in its own section below
-(`value_relabelCol`, folded in from `MatrixGameCongrCol.lean`).
+The column side follows below (`value_relabelCol`).
 
 **The technique.** `value_unique` (above) already says any saddle point's payoff equals the
 value, not just the one `Classical.choose` happened to pick. So: push `G.optimalRow` forward along
@@ -496,26 +471,11 @@ saddle-point existence argument needed. The only computation anywhere is reindex
 `Finset.sum` along a bijection (`Equiv.sum_comp`), both for `payoff` itself and for `stdSimplex`
 membership.
 
-**Round 1, from real `lake build` output:** two independent issues, both in `value_relabelRow`.
-First, `hpayoff`'s closing `rw [payoff_relabelRow, hcomp]` left the goal
-`G.payoff G.optimalRow G.optimalCol = G.value` unsolved -- true by `value`'s own definition, but
-`rw`'s trailing automatic-`rfl` check apparently didn't unfold a plain `noncomputable def` far
-enough to see it; fixed with an explicit `rfl` line, which does unfold that far. Second, the final
-`(G.relabelRow e).value_unique hp'_mem G.optimalCol_mem hrow hcol` comes out stated as
-`(G.relabelRow e).payoff _ _ = (G.relabelRow e).value`, so rewriting by `hpayoff` turns it into
-`G.value = (G.relabelRow e).value` -- the mirror image of the theorem's own goal
-`(G.relabelRow e).value = G.value` -- caught by a genuine type-mismatch error, fixed with `.symm`
-rather than restating the chain in the other order.
-
-**Round 2:** tried silencing two unused-section-variable linter warnings on
-`mem_stdSimplex_comp`/`_symm` (correctly flagged: they don't need `Nonempty`/`DecidableEq` on
-either action type, only `Fintype`) with an `omit [...] in` modifier placed after each theorem's
-doc comment, copying the build output's own suggested fix verbatim. That broke parsing outright
-("unexpected token `omit`; expected `lemma`") against this toolchain/Mathlib version, for reasons
-not chased down (possibly `omit ... in` needing to sit with no preceding doc comment, or a
-version-specific syntax difference from whatever produced the suggestion). Reverted rather than
-guess at a second untested fix for a lint warning, not a correctness issue: the two theorems are
-unchanged, the warnings are left in. Fixing linter noise is not worth spending a build round on.
+**Note.** `rw`'s trailing automatic `rfl` check does not always unfold a plain `noncomputable def`
+far enough to close a goal that is true only by that definition (as in `hpayoff` below, which is
+`G.payoff G.optimalRow G.optimalCol = G.value` -- true directly from `value`'s definition, but not
+closed by `rw` alone): when a `rw` leaves behind a goal that looks like it should already hold by
+`rfl`, append an explicit `rfl` line rather than assuming the rewrite itself is wrong.
 -/
 
 variable {I' : Type*} [Fintype I'] [Nonempty I'] [DecidableEq I']
@@ -530,10 +490,8 @@ noncomputable def relabelRow (e : I' ≃ I) : MatrixGame I' J where
     been pulled back from a candidate on `I'`.
 
     Pure `stdSimplex`-membership bookkeeping (a nonnegativity fact plus a reindexed sum), needing
-    only `Fintype I`/`Fintype I'` for `Equiv.sum_comp` -- round 1's `lake build` flagged
-    `Nonempty`/`DecidableEq` on both action types as unused here, correctly, but an `omit [...] in`
-    modifier to silence it broke parsing against this toolchain (see the fix-round note above), so
-    the warning is left in rather than risk a second untested syntax. -/
+    only `Fintype I`/`Fintype I'` for `Equiv.sum_comp` -- the `Nonempty`/`DecidableEq` instance
+    arguments on both action types go unused here (harmless lint warning, left in). -/
 theorem mem_stdSimplex_comp_symm (e : I' ≃ I) {x' : I' → ℝ} (hx' : x' ∈ stdSimplex ℝ I') :
     x' ∘ ⇑e.symm ∈ stdSimplex ℝ I := by
   obtain ⟨hnonneg, hsum⟩ := hx'
@@ -541,7 +499,8 @@ theorem mem_stdSimplex_comp_symm (e : I' ≃ I) {x' : I' → ℝ} (hx' : x' ∈ 
 
 /-- The other direction of `mem_stdSimplex_comp_symm`: pushing a strategy on `I` forward along `e`
     lands back in `I'`'s own simplex. Needed below to turn `G.optimalRow` (a strategy on `I`) into
-    a candidate strategy on `I'` in the first place. Same unused-instance warning, same reason. -/
+    a candidate strategy on `I'` in the first place. Same harmless unused-instance lint warning as
+    `mem_stdSimplex_comp_symm`. -/
 theorem mem_stdSimplex_comp (e : I' ≃ I) {x : I → ℝ} (hx : x ∈ stdSimplex ℝ I) :
     x ∘ ⇑e ∈ stdSimplex ℝ I' := by
   obtain ⟨hnonneg, hsum⟩ := hx
@@ -589,11 +548,9 @@ theorem value_relabelRow (e : I' ≃ I) : (G.relabelRow e).value = G.value := by
 
 /-! ## `value` is invariant under relabelling the column player's action type
 
-Folded in from `MatrixGameCongrCol.lean` (Update 2 above); original module docstring, verbatim:
-
-**Original status: confirmed by a clean `lake build`, first attempt -- no fix round needed.** The
-mirror image `MatrixGameCongr.lean`'s own docstring flagged as "not attempted here, would be a
-direct mirror of everything below with `I`/`J` swapped" -- needed for the `Csg.Coalition` lift of
+**Status: confirmed by a clean `lake build`.** The mirror image of the row-relabelling section
+above ("not attempted here, would be a direct mirror of everything below with `I`/`J` swapped") --
+needed for the `Csg.Coalition` lift of
 `Csg.SkirmishFeint` (`SkirmishFeintCoalition.lean`), which has to relabel *both* sides of a stage
 game at once: the row and column index types coming out of `NCSG.reduceMin`/`reduceMax`
 (`CoalitionAction`/`ComplementAction`, dependent products over a `Finset` subtype) are each only in
@@ -671,24 +628,18 @@ theorem value_relabelCol (e : J' ≃ J) : (G.relabelCol e).value = G.value := by
 
 /-! ## `value` as a linear program, for any action counts
 
-Folded in from `MatrixGameLP.lean` (Update 2 above); original module docstring, verbatim:
-
-**Original status: confirmed by a clean `lake build`, first attempt -- no fix round needed**,
-unlike every other satellite file folded into this one in Update 2 (`MatrixGameCongr.lean`,
-`CoalitionComplement.lean` each needed real fix rounds). Replaces an earlier draft of this section
-(`MatrixGameExtreme.lean`, never shipped past a first cut, no `lake build` ever run against it) that
-stopped at two bound lemmas motivated by one specific need -- certifying an explicit `value` for a
-worked instance with three actions on one side, since `RockPaperScissorsLfp.lean`'s technique
-(a uniform strategy optimal regardless of the continuation) is a lucky accident of that game's
-cyclic symmetry, not something available in general. That need is still met here (see
-`payoff_ge_of_row_ge`/`payoff_le_of_col_le` below, unchanged from the earlier draft), but it is no
-longer the point: on reflection, a file motivated by "what does this one example need" is exactly
-the kind of narrowly-triggered "core" file worth avoiding when the underlying fact is actually
-general. What this section proves instead is a fact true of *every* `MatrixGame`, at *every*
-action count, with no reference to any specific worked instance anywhere in a statement or proof:
-`value` is not just *some* real number pinned down by `Classical.choose` over Sion's minimax
-existence proof, it is *exactly* the optimal value of a genuine finite linear program, in the
-textbook sense -- `value_isLeast_rowLPFeasible`/`value_isGreatest_colLPFeasible` below.
+**Status: confirmed by a clean `lake build`.** `payoff_ge_of_row_ge`/`payoff_le_of_col_le` below
+serve the need that first motivated bound lemmas here -- certifying an explicit `value` for a worked
+instance, since `RockPaperScissorsLfp.lean`'s technique (a uniform strategy optimal regardless of
+the continuation) is a lucky accident of that game's cyclic symmetry, not something available in
+general. But a file motivated by "what does this one example need" is exactly the kind of
+narrowly-triggered "core" file worth avoiding when the underlying fact is actually general, so this
+section proves something more general than any one example needs: a fact true of *every*
+`MatrixGame`, at *every* action count, with no reference to any specific worked instance anywhere
+in a statement or proof: `value` is not just *some* real number pinned down by `Classical.choose`
+over Sion's minimax existence proof, it is *exactly* the optimal value of a genuine finite linear
+program, in the textbook sense -- `value_isLeast_rowLPFeasible`/`value_isGreatest_colLPFeasible`
+below.
 
 **The two characterizations, precisely.** Writing `colVal p j := ∑ i, p i * G.A i j` (a row
 strategy `p`'s expected payoff against the *pure* column strategy `j`) and `rowVal q i := ∑ j, G.A

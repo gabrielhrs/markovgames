@@ -9,24 +9,18 @@ import Csg.RockPaperScissorsLfp
 /-!
 # Worked example: a genuine interval, not an exact pin, for rock-paper-scissors
 
-**Status: `lake build` clean throughout; one real fix round caught by the interactive elaborator,
-not by batch compilation.** `rpsCSG_reachOp_lfp_mem_Icc`'s certificate application originally
-passed `rpsLo_le_of_prefixed` point-free where `CSG.reachOp_lfp_mem_Icc_of_certificate` expects a
-`∀ b, ...` -- `rpsLo_le_of_prefixed` has an implicit leading `{b}`, and every other certificate
-application in this project (`rpsVStar_le_of_prefixed`, `rpsVStarSafety_upper_bound`) wraps this
-in an explicit `fun _ hb => ...` for exactly that reason; this file initially broke that
-convention and VS Code caught it as a genuine application type mismatch, not a postponed-
-elaboration artifact like `ReachConverge.lean`'s. `rpsCSG_reachOp_lfp_initial_mem_Icc` also had two
-`simpa [...] using h` bridging steps replaced with the plain term-mode application `⟨h1, h2⟩` --
-per `ReachOp.lean`'s own docstring on this toolchain's duplicate `Subtype.LE` instance, bare
-`exact`/defeq sees through the mismatch reliably where `simp`'s own rewriting does not. This is the
-first file in the project working with a genuine *inequality*-shaped pre-fixed-point hypothesis,
-`f hi ≤ hi`, rather than the equality-shaped `f hi = hi` every prior worked instance used -- the
-`change`/`rw` idiom that closed those goals by ending on a bare equation instead ends on an
-arithmetic inequality here, closed by `norm_num`/`linarith` rather than falling out for free. The
-first concrete instance for `IntervalCertificate.lean`, which until now had no worked example
-anywhere in the project -- only the general combinator, dual on both the `lfp` and `gfp` sides but
-never exercised against an actual `CSG`.
+**Status: confirmed by a clean `lake build`.** A certificate application that takes a lemma with
+an implicit leading `{b}` argument (like `rpsLo_le_of_prefixed`) needs it wrapped in an explicit
+`fun _ hb => ...` when passed to `CSG.reachOp_lfp_mem_Icc_of_certificate`, which expects a
+`∀ b, ...` -- point-free application against the implicit-argument term does not unify. Likewise,
+`rpsCSG_reachOp_lfp_initial_mem_Icc`'s two `⟨h1, h2⟩` bridging steps use plain term-mode
+application rather than `simpa [...] using h`: per `ReachOp.lean`'s own docstring on this
+toolchain's duplicate `Subtype.LE` instance, bare `exact`/defeq sees through the mismatch reliably
+where `simp`'s own rewriting does not. This file also works with a genuine *inequality*-shaped
+pre-fixed-point hypothesis, `f hi ≤ hi`, rather than the equality-shaped `f hi = hi` every other
+worked instance uses -- the `change`/`rw` idiom that closes those goals by ending on a bare
+equation instead ends on an arithmetic inequality here, closed by `norm_num`/`linarith` rather
+than falling out for free.
 
 **Honest framing: this is a smoke test, not the technique's real motivating case.**
 `RockPaperScissorsLfp.lean` already pins `(rpsCSG.reachOp rpsGoalWin2 rpsR_zero).lfp` down
