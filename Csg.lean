@@ -34,3 +34,5 @@ import Csg.SkirmishFeint
 import Csg.SkirmishFeintCoalition
 import Csg.Skirmish
 import Csg.SkirmishProperties
+import Csg.Discounted
+import Csg.DiscountedValueIteration

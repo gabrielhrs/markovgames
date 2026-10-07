@@ -68,9 +68,9 @@ theorem reachOpFun_mono (goal : S → Prop) [DecidablePred goal]
   intro v w hvw s
   by_cases h : goal s
   · have heq : C.reachOpFun goal hr v s = C.reachOpFun goal hr w s := by
-      simp only [reachOpFun, if_pos h]
+      simp only [reachOpFun, ite_eq_left h]
     exact heq.le
-  · simp only [reachOpFun, if_neg h]
+  · simp only [reachOpFun, ite_eq_right h]
     exact C.stageValue_mono fun s' => hvw s'
 
 /-- **The payoff.** The reachability Bellman operator, bundled as an `OrderHom` on the complete

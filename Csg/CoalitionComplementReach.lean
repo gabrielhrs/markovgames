@@ -30,7 +30,8 @@ the proof of the one pointwise fact this file needs, and never resurfaces at thi
 
 1. `reduceMin_reachOpFun_eq`: the two operators' underlying functions agree pointwise, at every
    continuation `v` and state `s`. Case split on `goal s`: the `goal`-state branch is the constant
-   `1` on both sides regardless of which reduced game it came from (`if_pos`/`if_neg` used as
+   `1` on both sides regardless of which reduced game it came from (`ite_eq_left`/`ite_eq_right`
+   used as
    rewrite lemmas rather than relying on kernel reduction of an `ite` on the ambient, uninstantiated
    `[DecidablePred goal]` instance -- the same technique `CoalitionComplement.lean`'s own
    `combine_compl` uses for the analogous `dite`-on-abstract-`Finset` case); the other branch is
@@ -65,8 +66,8 @@ theorem reduceMin_reachOpFun_eq (goal : S → Prop) [DecidablePred goal]
     (G.reduceMax Cᶜ).reachOpFun goal (G.reduceMax_r_zero Cᶜ hr) v s =
       (G.reduceMin C).reachOpFun goal (G.reduceMin_r_zero C hr) v s := by
   by_cases h : goal s
-  · simp only [CSG.reachOpFun, if_pos h]
-  · simp only [CSG.reachOpFun, if_neg h]
+  · simp only [CSG.reachOpFun, ite_eq_left h]
+  · simp only [CSG.reachOpFun, ite_eq_right h]
     exact Subtype.ext (reduceMin_stageValue_eq C G s (fun s' => (v s' : ℝ)))
 
 /-- **The payoff.** The two reduced games' reachability Bellman operators are the *same*

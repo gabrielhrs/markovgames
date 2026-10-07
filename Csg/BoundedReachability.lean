@@ -62,8 +62,8 @@ theorem reachBounded_succ (goal : S → Prop) [DecidablePred goal] (k : ℕ) (s 
 theorem reachBounded_of_goal (goal : S → Prop) [DecidablePred goal] (k : ℕ) {s : S}
     (hs : goal s) : C.reachBounded goal k s = 1 := by
   cases k with
-  | zero => rw [reachBounded_zero, if_pos hs]
-  | succ k => rw [reachBounded_succ, if_pos hs]
+  | zero => rw [reachBounded_zero, ite_eq_left hs]
+  | succ k => rw [reachBounded_succ, ite_eq_left hs]
 
 end CSG
 end Csg

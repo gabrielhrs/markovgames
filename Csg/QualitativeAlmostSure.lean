@@ -189,7 +189,7 @@ theorem AFInnerFun_mono_y (b : Set S) {y1 y2 : Set S} (hy : y1 ≤ y2) (x : Set 
     on `Set S` via `OrderHom.lfp_mono_of_le` applied to `AFInnerFun_mono_y`. -/
 noncomputable def AFOuter (b : Set S) : Set S →o Set S where
   toFun y := (C.AFInner b y).lfp
-  monotone' := fun y1 y2 hy => OrderHom.lfp_mono_of_le (fun x => C.AFInnerFun_mono_y b hy x)
+  monotone' := fun _y1 _y2 hy => OrderHom.lfp_mono_of_le (fun x => C.AFInnerFun_mono_y b hy x)
 
 /-- **The payoff.** Almost-sure reachability (`AF` in the Java, per LICS 2000): the greatest fixed
     point of `AFOuter`, the states from which the row player can force reaching `b` almost
@@ -233,7 +233,7 @@ theorem AGFInnerFun_mono_y (b : Set S) {y1 y2 : Set S} (hy : y1 ≤ y2) (x : Set
     same construction `SGFOuter` uses, with `Apre1` standing in for `Pre1` on the non-`b` branch. -/
 noncomputable def AGFOuter (b : Set S) : Set S →o Set S where
   toFun y := (C.AGFInner b y).lfp
-  monotone' := fun y1 y2 hy => OrderHom.lfp_mono_of_le (fun x => C.AGFInnerFun_mono_y b hy x)
+  monotone' := fun _y1 _y2 hy => OrderHom.lfp_mono_of_le (fun x => C.AGFInnerFun_mono_y b hy x)
 
 /-- **The payoff.** Almost-sure Büchi (`AGF` in the Java, per LICS 2000 eq. 3, S4.1): the greatest
     fixed point of `AGFOuter`, the states from which the row player can force visiting `b`
@@ -344,7 +344,7 @@ theorem AFGY_mono_x (b z : Set S) {x1 x2 : Set S} (hx : x1 ≤ x2) :
 /-- `AFG`'s **middle** (`μX`) step, bundled as an `OrderHom` for a fixed outer candidate `z`. -/
 noncomputable def AFGMiddle (b z : Set S) : Set S →o Set S where
   toFun x := C.AFGY b z x
-  monotone' := fun x1 x2 hx => C.AFGY_mono_x b z hx
+  monotone' := fun _x1 _x2 hx => C.AFGY_mono_x b z hx
 
 /-- `AFG`'s **middle** (`μX`) fixed point, for a fixed outer candidate `z`. -/
 noncomputable def AFGX (b z : Set S) : Set S := (C.AFGMiddle b z).lfp
@@ -369,7 +369,7 @@ theorem AFGX_mono_z (b : Set S) {z1 z2 : Set S} (hz : z1 ≤ z2) :
 /-- **The payoff.** `AFG`'s outer (`νZ`) step, bundled as an `OrderHom` on `Set S`. -/
 noncomputable def AFGOuter (b : Set S) : Set S →o Set S where
   toFun z := C.AFGX b z
-  monotone' := fun z1 z2 hz => C.AFGX_mono_z b hz
+  monotone' := fun _z1 _z2 hz => C.AFGX_mono_z b hz
 
 /-- **The payoff.** Almost-sure co-Büchi (`AFG` in the Java, per LICS 2000 eq. 4, S4.2): the
     greatest fixed point of `AFGOuter`, the states from which the row player can force `b` to hold

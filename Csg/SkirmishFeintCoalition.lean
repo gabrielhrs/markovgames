@@ -11,14 +11,16 @@ import Csg.Coalition
 
 **Status: confirmed by a clean `lake build`.** `combine_hiderC_hider`/`combine_hiderC_thrower` are
 proved by a bare `rfl`, not by `simp [NCSG.combine, hiderSingletonEquiv/throwerComplementEquiv,
-dif_pos/dif_neg]` the way `Csg.CoalitionComplement.combine_compl`'s analogous lemma is: that
-`dif_pos`/`dif_neg` route is needed when the coalition `C` is a fully general, uninstantiated
+dite_eq_left/dite_eq_right]` the way `Csg.CoalitionComplement.combine_compl`'s analogous lemma is:
+that
+`dite_eq_left`/`dite_eq_right` route is needed when the coalition `C` is a fully general,
+uninstantiated
 `Finset Players`, but `hiderC := {hider}` here is a *concrete* literal, so
 `hiderC`/`hider`/`thrower` are all concrete, decidable data with no uninstantiated
 `Finset`/`Decidable` standing in the way --
 whenever every piece of `Finset`/`Decidable` data feeding a `dite` is concrete like this, plain
 kernel computation (`rfl`) closes the equality directly, and is simpler than reaching for the
-`dif_pos`/`dif_neg` simp lemmas that target the general case.
+`dite_eq_left`/`dite_eq_right` simp lemmas that target the general case.
 
 `Csg.SkirmishFeint.skirmishMinCSG`/`skirmishMaxCSG` are the
 plain two-player `CSG`s that `NCSG.reduceMin {hider}`/`reduceMax {hider}` *would* produce for a

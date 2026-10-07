@@ -79,9 +79,6 @@ and, in the case of the AFP entries, their proof strategy for the ported
 - Marta Kwiatkowska, Gethin Norman, David Parker, and Gabriel Santos,
   ["Automatic Verification of Concurrent Stochastic Systems"](https://link.springer.com/article/10.1007/s10703-020-00356-y),
   Formal Methods in System Design, vol. 58, 2021.
-- Marta Kwiatkowska, Gethin Norman, David Parker, and Gabriel Santos,
-  ["Multi-player Equilibria Verification for Concurrent Stochastic Games"](https://link.springer.com/chapter/10.1007/978-3-030-59854-9_7),
-  QEST 2020, LNCS 12289, Springer.
 - Luca de Alfaro and Rupak Majumdar,
   ["Quantitative Solution of Omega-Regular Games"](https://doi.org/10.1016/j.jcss.2003.07.009),
   Journal of Computer and System Sciences, vol. 68, no. 2, 2004, pp. 374-397. The source for
@@ -94,8 +91,11 @@ and, in the case of the AFP entries, their proof strategy for the ported
   `Csg/QualitativeLimitSure.lean`, and for the plain SKIRMISH game (`Csg/Skirmish.lean`) used as
   this line's worked instance. The qualitative operators themselves (`G`, `SF`, `SFG`, `SGF`,
   `A`, `B`, `Apre1`, `AF`, `AGF`, `AFpre1`, `AFG`, `Lpre1`, `LF`, `LGF`, `LFpre1`, `LFG`) are
-  ported from PRISM-games' own `explicit/CSGModelChecker.java`, and the
-  SKIRMISH worked instance is checked directly against PRISM-games' own test fixture.
+  ported method-by-method from PRISM-games' own `explicit/CSGModelChecker.java`, and the
+  SKIRMISH worked instance is checked directly against PRISM-games' own test fixture,
+  `prism-tests/functionality/verify/csgs/qualitative/skirmish.prism`/`.props` — no PRISM-games
+  source code is incorporated, only its published algorithm structure and test results, same as
+  every other prior work cited here.
 
 **The certificate-combinator methodology** (the "automate only the
 assembly of a candidate fixed point into a correctness proof, not the

@@ -76,7 +76,7 @@ variable (C : CSG S A1 A2)
     `B` gets restricted to) then `A_mono_v2` (widening the excused-columns set that feeds `A`). -/
 theorem LStepFun_mono (x y : Set S) (s : S) :
     Monotone (fun w : Set A1 => C.A (C.B w x s) y s) :=
-  fun w1 w2 hw => C.A_mono_v2 y (C.B_mono_v1 x hw s) s
+  fun _w1 _w2 hw => C.A_mono_v2 y (C.B_mono_v1 x hw s) s
 
 /-- `LStepFun` bundled as an `OrderHom` on `Set A1`, for a fixed state `s` and targets `x`/`y`. -/
 noncomputable def LStep (x y : Set S) (s : S) : Set A1 →o Set A1 where
@@ -178,7 +178,7 @@ theorem LFInnerFun_mono_y (b : Set S) {y1 y2 : Set S} (hy : y1 ≤ y2) (x : Set 
     on `Set S` via `OrderHom.lfp_mono_of_le` applied to `LFInnerFun_mono_y`. -/
 noncomputable def LFOuter (b : Set S) : Set S →o Set S where
   toFun y := (C.LFInner b y).lfp
-  monotone' := fun y1 y2 hy => OrderHom.lfp_mono_of_le (fun x => C.LFInnerFun_mono_y b hy x)
+  monotone' := fun _y1 _y2 hy => OrderHom.lfp_mono_of_le (fun x => C.LFInnerFun_mono_y b hy x)
 
 /-- **The payoff.** Limit-sure reachability (`LF` in the Java, per LICS 2000): the greatest fixed
     point of `LFOuter`, the states from which the row player can force reaching `b` in the limit. -/
@@ -212,7 +212,7 @@ theorem LGFInnerFun_mono_y (b : Set S) {y1 y2 : Set S} (hy : y1 ≤ y2) (x : Set
     `OrderHom` on `Set S` via `OrderHom.lfp_mono_of_le` applied to `LGFInnerFun_mono_y`. -/
 noncomputable def LGFOuter (b : Set S) : Set S →o Set S where
   toFun y := (C.LGFInner b y).lfp
-  monotone' := fun y1 y2 hy => OrderHom.lfp_mono_of_le (fun x => C.LGFInnerFun_mono_y b hy x)
+  monotone' := fun _y1 _y2 hy => OrderHom.lfp_mono_of_le (fun x => C.LGFInnerFun_mono_y b hy x)
 
 /-- **The payoff.** Limit-sure Büchi (`LGF` in the Java, per LICS 2000): the greatest fixed point
     of `LGFOuter`, the states from which the row player can force visiting `b` infinitely often in
@@ -288,7 +288,7 @@ theorem LFW_mono_z (v : Set A1) (x y : Set S) {z1 z2 : Set S} (hz : z1 ≤ z2) (
     outer (`νV`) level. -/
 noncomputable def LFVStep (x y z : Set S) (s : S) : Set A1 →o Set A1 where
   toFun V := C.LFW V x y z s
-  monotone' := fun v1 v2 hv => C.LFW_mono_v x y z hv s
+  monotone' := fun _v1 _v2 hv => C.LFW_mono_v x y z hv s
 
 /-- The limit-sure 3-argument predecessor's *outer* row-action witness set at state `s`, one whole
     fixed-point layer deeper than `AFV`: the greatest fixed point of `LFVStep`. -/
@@ -359,7 +359,7 @@ theorem LFGY_mono_x (b z : Set S) {x1 x2 : Set S} (hx : x1 ≤ x2) :
 /-- `LFG`'s **middle** (`μX`) step, bundled as an `OrderHom` for a fixed outer candidate `z`. -/
 noncomputable def LFGMiddle (b z : Set S) : Set S →o Set S where
   toFun x := C.LFGY b z x
-  monotone' := fun x1 x2 hx => C.LFGY_mono_x b z hx
+  monotone' := fun _x1 _x2 hx => C.LFGY_mono_x b z hx
 
 /-- `LFG`'s **middle** (`μX`) fixed point, for a fixed outer candidate `z`. -/
 noncomputable def LFGX (b z : Set S) : Set S := (C.LFGMiddle b z).lfp
@@ -384,7 +384,7 @@ theorem LFGX_mono_z (b : Set S) {z1 z2 : Set S} (hz : z1 ≤ z2) :
 /-- **The payoff.** `LFG`'s outer (`νZ`) step, bundled as an `OrderHom` on `Set S`. -/
 noncomputable def LFGOuter (b : Set S) : Set S →o Set S where
   toFun z := C.LFGX b z
-  monotone' := fun z1 z2 hz => C.LFGX_mono_z b hz
+  monotone' := fun _z1 _z2 hz => C.LFGX_mono_z b hz
 
 /-- **The payoff.** Limit-sure co-Büchi (`LFG` in the Java, per LICS 2000): the greatest fixed
     point of `LFGOuter`, the states from which the row player can force `b` to hold from some point

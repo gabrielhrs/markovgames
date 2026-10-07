@@ -61,10 +61,10 @@ theorem safetyOpFun_mono (safe : S → Prop) [DecidablePred safe]
     Monotone (C.safetyOpFun safe hr) := by
   intro v w hvw s
   by_cases h : safe s
-  · simp only [safetyOpFun, if_pos h]
+  · simp only [safetyOpFun, ite_eq_left h]
     exact C.stageValue_mono fun s' => hvw s'
   · have heq : C.safetyOpFun safe hr v s = C.safetyOpFun safe hr w s := by
-      simp only [safetyOpFun, if_neg h]
+      simp only [safetyOpFun, ite_eq_right h]
     exact heq.le
 
 /-- **The payoff.** The safety Bellman operator, bundled as an `OrderHom` on the complete lattice

@@ -432,10 +432,10 @@ theorem abs_value_sub_le {G G' : MatrixGame I J} {ε : ℝ}
 
 /-! ## `value` is invariant under relabelling the row player's action type
 
-**Status: confirmed by a clean `lake build`** (two harmless unused-instance lint warnings on
-`mem_stdSimplex_comp`/`_symm` are left in deliberately: neither theorem needs `Nonempty`/
-`DecidableEq` on the relabelled type, only `Fintype`, so the linter correctly flags those instance
-arguments as unused). The one genuinely new piece of infrastructure `Csg/Coalition.lean`'s own
+**Status: confirmed by a clean `lake build`.** `mem_stdSimplex_comp`/`_symm` need only `Fintype`
+on the relabelled type, so each carries an `omit` for the `Nonempty`/`DecidableEq` instances the
+surrounding `variable` block would otherwise attach. The one genuinely new piece of infrastructure
+`Csg/Coalition.lean`'s own
 docstring flagged as missing: nothing in `MatrixGame.lean`/`Csg/Basic.lean` states that a matrix
 game's value doesn't care how the row player's action type is labelled, only what it's in bijection
 with.
@@ -485,22 +485,24 @@ variable {I' : Type*} [Fintype I'] [Nonempty I'] [DecidableEq I']
 noncomputable def relabelRow (e : I' ≃ I) : MatrixGame I' J where
   A i' j := G.A (e i') j
 
+omit [Nonempty I] [DecidableEq I] [Nonempty I'] [DecidableEq I'] in
 /-- A strategy on the relabelled row type transports to one on the original, by pushing along
     `e.symm`. Needed below to check that a strategy is optimal for the *original* game once it's
     been pulled back from a candidate on `I'`.
 
     Pure `stdSimplex`-membership bookkeeping (a nonnegativity fact plus a reindexed sum), needing
     only `Fintype I`/`Fintype I'` for `Equiv.sum_comp` -- the `Nonempty`/`DecidableEq` instance
-    arguments on both action types go unused here (harmless lint warning, left in). -/
+    arguments on both action types go unused here, which is what the `omit` above drops. -/
 theorem mem_stdSimplex_comp_symm (e : I' ≃ I) {x' : I' → ℝ} (hx' : x' ∈ stdSimplex ℝ I') :
     x' ∘ ⇑e.symm ∈ stdSimplex ℝ I := by
   obtain ⟨hnonneg, hsum⟩ := hx'
   exact ⟨fun i => hnonneg (e.symm i), (Equiv.sum_comp e.symm x').trans hsum⟩
 
+omit [Nonempty I] [DecidableEq I] [Nonempty I'] [DecidableEq I'] in
 /-- The other direction of `mem_stdSimplex_comp_symm`: pushing a strategy on `I` forward along `e`
     lands back in `I'`'s own simplex. Needed below to turn `G.optimalRow` (a strategy on `I`) into
-    a candidate strategy on `I'` in the first place. Same harmless unused-instance lint warning as
-    `mem_stdSimplex_comp_symm`. -/
+    a candidate strategy on `I'` in the first place. Same unused instances, and the same `omit`,
+    as `mem_stdSimplex_comp_symm`. -/
 theorem mem_stdSimplex_comp (e : I' ≃ I) {x : I → ℝ} (hx : x ∈ stdSimplex ℝ I) :
     x ∘ ⇑e ∈ stdSimplex ℝ I' := by
   obtain ⟨hnonneg, hsum⟩ := hx
@@ -576,12 +578,14 @@ variable {J' : Type*} [Fintype J'] [Nonempty J'] [DecidableEq J']
 noncomputable def relabelCol (e : J' ≃ J) : MatrixGame I J' where
   A i j' := G.A i (e j')
 
+omit [Nonempty J] [DecidableEq J] [Nonempty J'] [DecidableEq J'] in
 /-- Mirror of `mem_stdSimplex_comp_symm`, for the column side. -/
 theorem mem_stdSimplex_comp_symm' (e : J' ≃ J) {y' : J' → ℝ} (hy' : y' ∈ stdSimplex ℝ J') :
     y' ∘ ⇑e.symm ∈ stdSimplex ℝ J := by
   obtain ⟨hnonneg, hsum⟩ := hy'
   exact ⟨fun j => hnonneg (e.symm j), (Equiv.sum_comp e.symm y').trans hsum⟩
 
+omit [Nonempty J] [DecidableEq J] [Nonempty J'] [DecidableEq J'] in
 /-- Mirror of `mem_stdSimplex_comp`, for the column side. -/
 theorem mem_stdSimplex_comp' (e : J' ≃ J) {y : J → ℝ} (hy : y ∈ stdSimplex ℝ J) :
     y ∘ ⇑e ∈ stdSimplex ℝ J' := by
@@ -686,7 +690,7 @@ instance remains exactly as much per-instance work as it was before this section
 theorem payoff_single_right (x : I → ℝ) (j : J) :
     G.payoff x (Pi.single j 1) = ∑ i, x i * G.A i j := by
   rw [payoff_eq_sum_mul']
-  simp [Pi.single_apply, mul_ite, ite_mul, mul_zero, mul_one, Finset.sum_ite_eq', Finset.mem_univ]
+  simp [Pi.single_apply, mul_ite, mul_zero, mul_one, Finset.sum_ite_eq', Finset.mem_univ]
 
 /-- The column player's payoff against the pure row strategy `i` collapses to the bare sum
     `∑ j, G.A i j * y j` -- symmetric counterpart of `payoff_single_right`, via
@@ -694,7 +698,7 @@ theorem payoff_single_right (x : I → ℝ) (j : J) :
 theorem payoff_single_left (i : I) (y : J → ℝ) :
     G.payoff (Pi.single i 1) y = ∑ j, G.A i j * y j := by
   rw [payoff_eq_sum_mul]
-  simp [Pi.single_apply, mul_ite, ite_mul, mul_zero, mul_one, Finset.sum_ite_eq', Finset.mem_univ]
+  simp [Pi.single_apply, ite_mul, Finset.sum_ite_eq', Finset.mem_univ]
 
 /-- **The row-side bound.** If every row's payoff against a fixed column strategy `y` is at least
     `m`, then *every* mixed row strategy's payoff against `y` is at least `m` too -- `payoff (·) y`

@@ -273,7 +273,7 @@ theorem rpsCSG_reachBounded_win1 (k : ℕ) : rpsCSG.reachBounded rpsGoalWin2 k .
   induction k with
   | zero => simp [CSG.reachBounded_zero, rpsGoalWin2]
   | succ k ih =>
-      rw [CSG.reachBounded_succ, if_neg (show ¬ rpsGoalWin2 .win1 by decide),
+      rw [CSG.reachBounded_succ, ite_eq_right (show ¬ rpsGoalWin2 .win1 by decide),
         rpsCSG_stageValue_win1, ih]
 
 /-- `win2` is worth `1` at every step budget -- direct from `reachBounded_of_goal`. -/
@@ -284,7 +284,8 @@ theorem rpsCSG_reachBounded_win2 (k : ℕ) : rpsCSG.reachBounded rpsGoalWin2 k .
     genuine extra step `draw`, as its own state, costs. -/
 theorem rpsCSG_reachBounded_draw_succ (k : ℕ) :
     rpsCSG.reachBounded rpsGoalWin2 (k + 1) .draw = rpsCSG.reachBounded rpsGoalWin2 k .initial := by
-  rw [CSG.reachBounded_succ, if_neg (show ¬ rpsGoalWin2 .draw by decide), rpsCSG_stageValue_draw]
+  rw [CSG.reachBounded_succ, ite_eq_right (show ¬ rpsGoalWin2 .draw by decide),
+    rpsCSG_stageValue_draw]
 
 /-- The general one-step recursion at `initial`, with `win2`'s constant value already substituted
     in -- `win1`'s constant `0` is substituted next, in `rpsCSG_reachBounded_initial_succ'`. -/
@@ -292,7 +293,7 @@ theorem rpsCSG_reachBounded_initial_succ (k : ℕ) :
     rpsCSG.reachBounded rpsGoalWin2 (k + 1) .initial =
       (rpsCSG.reachBounded rpsGoalWin2 k .win1 + 1 +
         rpsCSG.reachBounded rpsGoalWin2 k .draw) / 3 := by
-  rw [CSG.reachBounded_succ, if_neg (show ¬ rpsGoalWin2 .initial by decide),
+  rw [CSG.reachBounded_succ, ite_eq_right (show ¬ rpsGoalWin2 .initial by decide),
     rpsCSG_stageValue_initial, rpsCSG_reachBounded_win2]
 
 /-- **The payoff.** The recursion reduces to a single term: `x_{k+1} = (1 + d_k) / 3`, matching the

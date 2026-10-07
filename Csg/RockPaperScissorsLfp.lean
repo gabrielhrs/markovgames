@@ -49,7 +49,7 @@ back to `initial` and so shares its limiting value). Two things need proving abo
    the goal past the `OrderHom`/`ite` packaging down to a bare `stageValue` equation (the same
    defeq idiom used throughout the project: when an `ite`'s condition is a concrete, decidable
    comparison, `change`ing straight to the underlying equation and closing by `rfl` is more
-   reliable than unfolding through `simp`'s `if_pos`/`if_neg`), then close with
+   reliable than unfolding through `simp`'s `ite_eq_left`/`ite_eq_right`), then close with
    `RockPaperScissors.lean`'s own stage-value lemmas plus `norm_num` arithmetic.
 2. `rpsVStar_le_of_prefixed`: it lower-bounds every pre-fixed point `b`. Forced facts first --
    `b win2 = 1` (sandwiched between the goal-state lower bound and the `[0, 1]` membership upper

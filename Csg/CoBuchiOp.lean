@@ -8,9 +8,7 @@ import Csg.BuchiOp
 /-!
 # The co-Büchi Bellman operator, the dual nested fixed point
 
-**Status: confirmed by a clean `lake build` (only cosmetic deprecation/unused-variable warnings --
-deprecated `if_pos`/`if_neg` at a few call sites, unused lambda binder names -- no errors).**
-`BuchiOp.lean`'s exact dual, following de
+**Status: confirmed by a clean `lake build`.** `BuchiOp.lean`'s exact dual, following de
 Alfaro and Majumdar, "Quantitative Solution of Omega-Regular Games," JCSS 68 (2004) 374-397, eq.
 (5):
 
@@ -72,7 +70,8 @@ noncomputable def coBuchiInnerOpFun (U : S → Prop) [DecidablePred U]
     `coBuchiInnerOpFun`'s own definition packages each branch as an anonymous-constructor element
     of `Set.Icc (0 : ℝ) 1` (value plus a two-part membership proof), and Mathlib's `rw`/`show`
     machinery can fail to see through that packaging at the transparency level those tactics check
-    against -- concretely, `rw [if_pos h]`/`rw [if_neg h]` applied directly to an unfolded
+    against -- concretely, `rw [ite_eq_left h]`/`rw [ite_eq_right h]` applied directly to an
+    unfolded
     `coBuchiInnerOpFun` goal can report a spurious "motive is not type correct" or pattern-matching
     failure, even though the two sides are definitionally equal. Working with this `ℝ`-valued
     equation instead avoids the packaging entirely: `split_ifs` produces two goals, each closed by
@@ -94,10 +93,10 @@ theorem coBuchiInnerOpFun_mono (U : S → Prop) [DecidablePred U]
     Monotone (C.coBuchiInnerOpFun U hr x) := by
   intro y1 y2 hy s
   by_cases h : U s
-  · simp only [coBuchiInnerOpFun, if_pos h]
+  · simp only [coBuchiInnerOpFun, ite_eq_left h]
     exact C.stageValue_mono fun s' => hy s'
   · have heq : C.coBuchiInnerOpFun U hr x y1 s = C.coBuchiInnerOpFun U hr x y2 s := by
-      simp only [coBuchiInnerOpFun, if_neg h]
+      simp only [coBuchiInnerOpFun, ite_eq_right h]
     exact heq.le
 
 /-- The inner Bellman step, bundled as an `OrderHom` for a fixed outer candidate `x` --
@@ -122,9 +121,9 @@ theorem coBuchiInnerOpFun_mono_x (U : S → Prop) [DecidablePred U]
   intro s
   by_cases h : U s
   · have heq : C.coBuchiInnerOpFun U hr x1 y s = C.coBuchiInnerOpFun U hr x2 y s := by
-      simp only [coBuchiInnerOpFun, if_pos h]
+      simp only [coBuchiInnerOpFun, ite_eq_left h]
     exact heq.le
-  · simp only [coBuchiInnerOpFun, if_neg h]
+  · simp only [coBuchiInnerOpFun, ite_eq_right h]
     exact C.stageValue_mono fun s' => hx s'
 
 /-- **The payoff.** The co-Büchi Bellman operator, `x ↦ νy.coBuchiInnerOpFun U x y`, bundled as an
@@ -136,7 +135,7 @@ noncomputable def coBuchiOp (U : S → Prop) [DecidablePred U]
     (hr : ∀ s a1 a2, C.r s a1 a2 = 0) :
     (S → Set.Icc (0 : ℝ) 1) →o (S → Set.Icc (0 : ℝ) 1) where
   toFun x := (C.coBuchiInnerOp U hr x).gfp
-  monotone' := fun x1 x2 hx =>
+  monotone' := fun _x1 _x2 hx =>
     OrderHom.gfp_mono_of_le (fun y => C.coBuchiInnerOpFun_mono_x U hr hx y)
 
 end CSG

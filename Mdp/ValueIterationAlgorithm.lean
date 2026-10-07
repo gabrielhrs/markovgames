@@ -113,7 +113,7 @@ noncomputable def valueIteration (eps : ℝ) (v : S → ℝ) : S → ℝ :=
 theorem valueIteration_error {eps : ℝ} (heps : 0 < eps) (v : S → ℝ) :
     2 * dist (M.valueIteration eps v) M.vOpt < eps := by
   have hval : M.valueIteration eps v = M.bellman^[M.numIters heps v + 1] v := by
-    simp only [valueIteration, dif_pos heps]
+    simp only [valueIteration, dite_eq_left heps]
   have hstop : 2 * M.l * dist (M.bellman^[M.numIters heps v + 1] v)
       (M.bellman^[M.numIters heps v] v) < eps * (1 - M.l) :=
     M.numIters_spec heps v

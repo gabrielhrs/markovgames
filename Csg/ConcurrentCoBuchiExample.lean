@@ -19,7 +19,7 @@ plus assorted tactic-level fixes -- `ring`→`abel`, `norm_num`→`simp` on cust
 `if`-conditions, `← mul_add`/`← add_mul` factoring, explicit `mul_le_mul_of_nonneg_left/right`
 hints in place of bare `nlinarith` (round 2); a stray `ℝ≥0∞` that failed to parse (`ENNReal`
 instead), and `coBuchiInnerOpFun`'s `Set.Icc`-subtype packaging defeating `rw`'s motive-checking
-on `if_pos`/`if_neg`, fixed by adding `CSG.coBuchiInnerOpFun_coe` (`CoBuchiOp.lean`) as a
+on `ite_eq_left`/`ite_eq_right`, fixed by adding `CSG.coBuchiInnerOpFun_coe` (`CoBuchiOp.lean`) as a
 subtype-free `ℝ`-valued `if`-`then`-`else` (round 3); a `rw [lemma (by tac)]`/`exact lemma (by
 tac)` pattern in `cbCoin_apply_left`/`_right`/`_other` leaving the embedded tactic block's target
 as a genuinely separate unsolved goal, fixed by naming the side condition with an explicit `have`
@@ -131,7 +131,7 @@ theorem colMove_sum {β : Type*} [AddCommMonoid β] (f : ColMove → β) :
 
 /-- A fair coin between two distinct states, via `PMF.uniformOfFinset` on the two-element
     `Finset` `{x, y}` -- each gets probability `1 / #{x, y} = 1/2`. -/
-noncomputable def cbCoin (x y : CBState) (hxy : x ≠ y) : PMF CBState :=
+noncomputable def cbCoin (x y : CBState) (_hxy : x ≠ y) : PMF CBState :=
   PMF.uniformOfFinset {x, y} ⟨x, by simp⟩
 
 theorem cbCoin_apply_left (x y : CBState) (hxy : x ≠ y) :
@@ -526,11 +526,11 @@ theorem cbInnerGfp_eq (b : CBState → Set.Icc (0 : ℝ) 1) :
     cases s with
     | t1 =>
       have hU : cbU .t1 := Or.inl rfl
-      rw [if_pos hU, cbStageValue_t1]
+      rw [ite_eq_left hU, cbStageValue_t1]
       rfl
     | t2 =>
       have hU : cbU .t2 := Or.inr (Or.inl rfl)
-      rw [if_pos hU, cbStageValue_t2]
+      rw [ite_eq_left hU, cbStageValue_t2]
       change min (cbGClosedVal (fun s' => (b s' : ℝ)) .t2)
           ((cbGClosedVal (fun s' => (b s' : ℝ)) .t1 +
             cbGClosedVal (fun s' => (b s' : ℝ)) .t3) / 2) =
@@ -539,15 +539,15 @@ theorem cbInnerGfp_eq (b : CBState → Set.Icc (0 : ℝ) 1) :
       rw [min_eq_left (le_refl _)]
     | t3 =>
       have hU : ¬ cbU .t3 := by unfold cbU; simp
-      rw [if_neg hU, cbStageValue_t3]
+      rw [ite_eq_right hU, cbStageValue_t3]
       rfl
     | t4 =>
       have hU : cbU .t4 := Or.inr (Or.inr rfl)
-      rw [if_pos hU, cbStageValue_t4]
+      rw [ite_eq_left hU, cbStageValue_t4]
       rfl
     | t5 =>
       have hU : ¬ cbU .t5 := by unfold cbU; simp
-      rw [if_neg hU, cbStageValue_t5]
+      rw [ite_eq_right hU, cbStageValue_t5]
       rfl
   · intro w hw
     have hw3 : (w .t3 : ℝ) ≤ cbGClosedVal (fun s' => (b s' : ℝ)) .t3 := by
@@ -556,7 +556,7 @@ theorem cbInnerGfp_eq (b : CBState → Set.Icc (0 : ℝ) 1) :
         _ = cbCSG.stageValue .t3 (fun s' => (b s' : ℝ)) := by
               change (cbCSG.coBuchiInnerOpFun cbU cbR_zero b w .t3 : ℝ) =
                 cbCSG.stageValue .t3 (fun s' => (b s' : ℝ))
-              rw [CSG.coBuchiInnerOpFun_coe, if_neg hU]
+              rw [CSG.coBuchiInnerOpFun_coe, ite_eq_right hU]
         _ = cbGClosedVal (fun s' => (b s' : ℝ)) .t3 := by rw [cbStageValue_t3]; rfl
     have hw5 : (w .t5 : ℝ) ≤ cbGClosedVal (fun s' => (b s' : ℝ)) .t5 := by
       have hU : ¬ cbU .t5 := by unfold cbU; simp
@@ -564,7 +564,7 @@ theorem cbInnerGfp_eq (b : CBState → Set.Icc (0 : ℝ) 1) :
         _ = cbCSG.stageValue .t5 (fun s' => (b s' : ℝ)) := by
               change (cbCSG.coBuchiInnerOpFun cbU cbR_zero b w .t5 : ℝ) =
                 cbCSG.stageValue .t5 (fun s' => (b s' : ℝ))
-              rw [CSG.coBuchiInnerOpFun_coe, if_neg hU]
+              rw [CSG.coBuchiInnerOpFun_coe, ite_eq_right hU]
         _ = cbGClosedVal (fun s' => (b s' : ℝ)) .t5 := by rw [cbStageValue_t5]; rfl
     have hw4 : (w .t4 : ℝ) ≤ cbGClosedVal (fun s' => (b s' : ℝ)) .t4 := by
       have hU : cbU .t4 := Or.inr (Or.inr rfl)
@@ -572,7 +572,7 @@ theorem cbInnerGfp_eq (b : CBState → Set.Icc (0 : ℝ) 1) :
         _ = cbCSG.stageValue .t4 (fun s' => (w s' : ℝ)) := by
               change (cbCSG.coBuchiInnerOpFun cbU cbR_zero b w .t4 : ℝ) =
                 cbCSG.stageValue .t4 (fun s' => (w s' : ℝ))
-              rw [CSG.coBuchiInnerOpFun_coe, if_pos hU]
+              rw [CSG.coBuchiInnerOpFun_coe, ite_eq_left hU]
         _ = (w .t5 : ℝ) := by rw [cbStageValue_t4]
         _ ≤ cbGClosedVal (fun s' => (b s' : ℝ)) .t5 := hw5
         _ = cbGClosedVal (fun s' => (b s' : ℝ)) .t4 := rfl
@@ -585,7 +585,7 @@ theorem cbInnerGfp_eq (b : CBState → Set.Icc (0 : ℝ) 1) :
         _ = min (w .t2 : ℝ) (((w .t1 : ℝ) + (w .t3 : ℝ)) / 2) := by
               change (cbCSG.coBuchiInnerOpFun cbU cbR_zero b w .t2 : ℝ) =
                 min (w .t2 : ℝ) (((w .t1 : ℝ) + (w .t3 : ℝ)) / 2)
-              rw [CSG.coBuchiInnerOpFun_coe, if_pos hU, cbStageValue_t2]
+              rw [CSG.coBuchiInnerOpFun_coe, ite_eq_left hU, cbStageValue_t2]
         _ ≤ ((w .t1 : ℝ) + (w .t3 : ℝ)) / 2 := min_le_right _ _
         _ ≤ (cbGClosedVal (fun s' => (b s' : ℝ)) .t1 +
               cbGClosedVal (fun s' => (b s' : ℝ)) .t3) / 2 := by

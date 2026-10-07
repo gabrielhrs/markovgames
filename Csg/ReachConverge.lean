@@ -18,7 +18,8 @@ had not actually earned. **Round 1**: the Kleene theorem is `fixedPoints.lfp_eq_
 not `OrderHom.lfp_eq_sSup_iterate`, and takes the `OrderHom` as an explicit first argument, not just
 the continuity proof; `le_ωSup _ 0` left the chain as a metavariable Lean's unifier couldn't pin
 down from a goal already reduced to a state-`s` value, fixed by supplying it explicitly; two
-`simp only [reachOpFun, if_neg hgoal]` calls left a residual goal identifying a fresh occurrence of
+`simp only [reachOpFun, ite_eq_right hgoal]` calls left a residual goal identifying a fresh
+occurrence of
 a `set`-abbreviated term (`g`/`d n`) with its own definition, closed by an explicit trailing `rfl`
 (`set`'s local-let unfolding is visible to `rfl` but isn't replayed by `simp` for occurrences that
 appear only *after* the `set` call). **Round 2**: `stageValue_lipschitz`'s state argument `s` is
@@ -85,13 +86,15 @@ variable {S A1 A2 : Type*} [Fintype S] [Fintype A1] [Fintype A2] [Nonempty A1] [
   [DecidableEq A1] [DecidableEq A2]
 variable (C : CSG S A1 A2)
 
+omit [Fintype S] in
 /-- Finite-index "monotone convergence is eventually uniform": if `d n s'` tends to `g s'` for
     every `s'` ranging over a `Fintype`, there is a single `N` past which `d n` is within any given
     `δ` of `g` at *every* state at once, not just eventually at each state separately.
-    `Filter.eventually_all` (needs `Finite S`, which `Fintype S` gives) is exactly the fact that
-    lets finitely many individual `∀ᶠ` statements swap into one `∀ᶠ` of the conjunction -- the only
-    place in this file `S`'s finiteness, rather than just its being a `Fintype`, earns its keep. -/
-theorem exists_forall_le_add_of_tendsto {g : S → ℝ} {d : ℕ → S → ℝ}
+    `Filter.eventually_all` is exactly the fact that lets finitely many individual `∀ᶠ` statements
+    swap into one `∀ᶠ` of the conjunction. It needs only `Finite S`, not `Fintype S`'s enumeration
+    data, so this is the one declaration in the file taking `[Finite S]` while omitting the ambient
+    `[Fintype S]`; callers are unaffected, since `Fintype` yields `Finite` by instance. -/
+theorem exists_forall_le_add_of_tendsto [Finite S] {g : S → ℝ} {d : ℕ → S → ℝ}
     (htendsto : ∀ s', Tendsto (fun n => d n s') atTop (𝓝 (g s'))) {δ : ℝ} (hδ : 0 < δ) :
     ∃ N, ∀ n ≥ N, ∀ s', g s' ≤ d n s' + δ := by
   have h1 : ∀ s', ∀ᶠ n in atTop, g s' - δ < d n s' := fun s' =>
@@ -114,11 +117,11 @@ theorem reachOp_ωScottContinuous (goal : S → Prop) [DecidablePred goal]
         = (⟨1, by norm_num, by norm_num⟩ : Set.Icc (0 : ℝ) 1) := by
       intro n
       change C.reachOpFun goal hr (c n) s = _
-      simp only [reachOpFun, if_pos hgoal]
+      simp only [reachOpFun, ite_eq_left hgoal]
     have hLHS : C.reachOp goal hr (ωSup c) s
         = (⟨1, by norm_num, by norm_num⟩ : Set.Icc (0 : ℝ) 1) := by
       change C.reachOpFun goal hr (ωSup c) s = _
-      simp only [reachOpFun, if_pos hgoal]
+      simp only [reachOpFun, ite_eq_left hgoal]
     have hRHS : ωSup (c.map (C.reachOp goal hr)) s
         = (⟨1, by norm_num, by norm_num⟩ : Set.Icc (0 : ℝ) 1) := by
       refine le_antisymm (ωSup_le _ _ fun n => (hterm n).le) ?_
@@ -156,7 +159,7 @@ theorem reachOp_ωScottContinuous (goal : S → Prop) [DecidablePred goal]
     change (C.reachOp goal hr (ωSup c) s : ℝ) = (ωSup (c.map (C.reachOp goal hr)) s : ℝ)
     have hLHS_eq : (C.reachOp goal hr (ωSup c) s : ℝ) = C.stageValue s g := by
       change (C.reachOpFun goal hr (ωSup c) s : ℝ) = _
-      simp only [reachOpFun, if_neg hgoal]
+      simp only [reachOpFun, ite_eq_right hgoal]
       rfl
     have hRHS_eq : (ωSup (c.map (C.reachOp goal hr)) s : ℝ) = ⨆ n, C.stageValue s (d n) := by
       have hpt : (ωSup (c.map (C.reachOp goal hr)) s : Set.Icc (0 : ℝ) 1)
@@ -165,7 +168,7 @@ theorem reachOp_ωScottContinuous (goal : S → Prop) [DecidablePred goal]
       congr 1
       funext n
       change (C.reachOpFun goal hr (c n) s : ℝ) = _
-      simp only [reachOpFun, if_neg hgoal]
+      simp only [reachOpFun, ite_eq_right hgoal]
       rfl
     rw [hLHS_eq, hRHS_eq, hkey]
 

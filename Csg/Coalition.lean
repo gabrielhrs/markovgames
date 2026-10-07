@@ -12,7 +12,7 @@ import Csg.Basic
 at the gap recorded in
 `PHASE0-NOTES.md`'s "coalitions and direction are both missing, and it's one gap, not two":
 `CSG S A1 A2` fixes, in its own type, both a coalition of size exactly two and a direction (`A1`
-always minimises `r`, `A2` always maximises it). The FMSD/QEST papers' `⟨⟨C⟩⟩ P_max`/`⟨⟨C⟩⟩ P_min`
+always minimises `r`, `A2` always maximises it). The FMSD paper's `⟨⟨C⟩⟩ P_max`/`⟨⟨C⟩⟩ P_min`
 let both vary freely: `C` is any subset of any number of players, checked in either direction.
 This file adds an n-player structure and a reduction to `CSG`, and touches nothing downstream:
 `reachOp`, `untilOp`, `SafetyOp`, `BuchiOp`/`CoBuchiOp`, every certificate combinator all keep

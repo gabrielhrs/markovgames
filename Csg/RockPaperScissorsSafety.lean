@@ -37,7 +37,8 @@ direction from what one might first expect (the property that's guaranteed here 
 *failing* almost surely, not holding).
 
 **No new fact about `rpsCSG`'s stage games is needed.** `rpsSafeUnresolved`'s two violating states,
-`win1` and `win2`, are both handled by `safetyOpFun`'s own absorption branch directly (`if_neg`,
+`win1` and `win2`, are both handled by `safetyOpFun`'s own absorption branch directly
+(`ite_eq_right`,
 pinned to `0` regardless of the continuation) -- unlike `RockPaperScissorsLfp.lean`'s `reachOp`,
 which needs `rpsCSG_stageValue_win1` because `win1` there is merely a dead end, still playing its
 own (trivial) stage game rather than being an operator-level absorbing state.

@@ -186,13 +186,13 @@ noncomputable def homeWetSplit (p : ℝ) (hp0 : 0 ≤ p) (hp1 : p ≤ 1) : PMF S
     {SkirmishState.home, .wet}
     (by
       have hne : (SkirmishState.home : SkirmishState) ≠ .wet := by decide
-      rw [Finset.sum_insert (by simpa using hne), Finset.sum_singleton]
-      show ENNReal.ofReal p + ENNReal.ofReal (1 - p) = 1
+      rw [Finset.sum_insert (by simp), Finset.sum_singleton]
+      change ENNReal.ofReal p + ENNReal.ofReal (1 - p) = 1
       rw [← ENNReal.ofReal_add hp0 (by linarith), show p + (1 - p) = 1 by ring, ENNReal.ofReal_one])
     (by
       intro s hs
       simp only [Finset.mem_insert, Finset.mem_singleton] at hs
-      push_neg at hs
+      push Not at hs
       rcases s with _ | _ | _
       · rfl
       · exact absurd rfl hs.1

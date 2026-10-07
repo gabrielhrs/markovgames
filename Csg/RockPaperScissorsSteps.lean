@@ -258,7 +258,7 @@ theorem rpsCSGSteps_rewardUntilOp_unique :
     ∃! w : RPSState → ℝ,
       rpsCSGSteps.rewardUntilStep (fun s => s = RPSState.win1 ∨ s = RPSState.win2) w = w :=
   rpsCSGSteps.rewardUntilOp_eq_of_certificate (fun s => s = RPSState.win1 ∨ s = RPSState.win2)
-    rpsSteps rpsSteps_fixed fun w hw => rpsSteps_unique hw
+    rpsSteps rpsSteps_fixed fun _w hw => rpsSteps_unique hw
 
 /-- The number the whole exercise was after: from `initial`, expected `2` raw `CSG` steps until
     someone wins a round, under uniform (optimal) play. -/

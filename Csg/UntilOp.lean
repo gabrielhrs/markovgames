@@ -27,20 +27,25 @@ a state that is neither `goal` nor `safe` is a dead end, worth `0` (the "stay in
 `safe` but not yet `goal` plays the stage game against the continuation, exactly as `reachOpFun`'s
 one non-goal case already does. Both `goal` and `safe` are abstract, universally-quantified
 predicates throughout this file (never instantiated to a concrete decidable proposition), so the
-`by_cases` + `simp only [defName, if_pos h]`/`if_neg h` idiom `reachOpFun_mono` already uses is
-safe here too: `simp only [if_pos h]`/`if_neg h` only work when the condition is not already
+`by_cases` + `simp only [defName, ite_eq_left h]`/`ite_eq_right h` idiom `reachOpFun_mono` already
+uses is
+safe here too: `simp only [ite_eq_left h]`/`ite_eq_right h` only work when the condition is not
+already
 closed and decidable by `decide` -- a concrete ground `ite` gets pre-normalised by `simp` before it
-considers a supplied `if_pos`/`if_neg` lemma (as in `RockPaperScissorsLfp.lean`), so the idiom is
+considers a supplied `ite_eq_left`/`ite_eq_right` lemma (as in `RockPaperScissorsLfp.lean`), so the
+idiom is
 safe only for abstract conditions, which neither `goal s` nor `safe s` is here.
 
 **`reachOp_eq_untilOp_true`** states `reachOp goal hr = untilOp (fun _ => True) goal hr`,
 recovering plain reachability as `until`'s special case with a trivially-always-safe predicate.
-This mixes an abstract condition (`goal`, safe via the `by_cases`/`if_pos`/`if_neg` idiom above)
+This mixes an abstract condition (`goal`, safe via the `by_cases`/`ite_eq_left`/`ite_eq_right` idiom
+above)
 with a concrete one (`safe := fun _ => True`, closed and decidable) in the same proof. Handled by
 splitting the two concerns rather than fighting them together: `change` first jumps past the
 `OrderHom`/`FunLike` coercion layer down to `reachOpFun`/`untilOpFun` application (a pure defeq
 step, unrelated to either condition's truth value); *then* `by_cases hg : goal s` plus
-`simp only [reachOpFun, untilOpFun, if_pos/if_neg hg]` handles the abstract `goal` condition exactly
+`simp only [reachOpFun, untilOpFun, ite_eq_left/ite_eq_right hg]` handles the abstract `goal`
+condition exactly
 as `untilOpFun_mono` already does safely.
 
 A broader fact about `simp only`'s ground-condition normalisation shows up in the `goal`-false
@@ -50,7 +55,8 @@ to `A` -- `simp only`'s automatic closing check does not perform the further iot
 `True`'s own `Decidable` instance the way a bare `rfl` does. So rewriting a ground `ite` condition
 to a literal with `simp only` still needs an explicit follow-up (`rfl` here) to reach the branch
 value itself. The `goal`-true case needs no such follow-up, since `untilOpFun`'s `goal` branch is
-pinned to `1` without ever consulting `safe` at all, so `if_pos hg` alone already leaves both sides
+pinned to `1` without ever consulting `safe` at all, so `ite_eq_left hg` alone already leaves both
+sides
 at the same literal value.
 -/
 
@@ -81,22 +87,24 @@ noncomputable def untilOpFun (safe goal : S → Prop) [DecidablePred safe] [Deci
     `safe`) are pinned to the constant `0` (also trivially monotone), and every remaining state's
     value is `stageValue_mono` applied to the pointwise hypothesis, unwrapped from
     `Set.Icc (0 : ℝ) 1`'s order back to `≤` on `ℝ` by definitional unfolding -- the same nested
-    `by_cases` + `simp only [untilOpFun, if_pos h]`/`if_neg h` idiom `reachOpFun_mono` already uses,
+    `by_cases` + `simp only [untilOpFun, ite_eq_left h]`/`ite_eq_right h` idiom `reachOpFun_mono`
+    already uses,
     safe here since both `goal` and `safe` are abstract predicates, never concrete decidable
-    propositions `simp` could ground-normalise out from under a supplied `if_pos`/`if_neg`. -/
+    propositions `simp` could ground-normalise out from under a supplied
+    `ite_eq_left`/`ite_eq_right`. -/
 theorem untilOpFun_mono (safe goal : S → Prop) [DecidablePred safe] [DecidablePred goal]
     (hr : ∀ s a1 a2, C.r s a1 a2 = 0) :
     Monotone (C.untilOpFun safe goal hr) := by
   intro v w hvw s
   by_cases hg : goal s
   · have heq : C.untilOpFun safe goal hr v s = C.untilOpFun safe goal hr w s := by
-      simp only [untilOpFun, if_pos hg]
+      simp only [untilOpFun, ite_eq_left hg]
     exact heq.le
   · by_cases hs : safe s
-    · simp only [untilOpFun, if_neg hg, if_pos hs]
+    · simp only [untilOpFun, ite_eq_right hg, ite_eq_left hs]
       exact C.stageValue_mono fun s' => hvw s'
     · have heq : C.untilOpFun safe goal hr v s = C.untilOpFun safe goal hr w s := by
-        simp only [untilOpFun, if_neg hg, if_neg hs]
+        simp only [untilOpFun, ite_eq_right hg, ite_eq_right hs]
       exact heq.le
 
 /-- **The payoff.** The until Bellman operator, bundled as an `OrderHom` on the complete lattice
@@ -119,11 +127,12 @@ noncomputable def untilOp (safe goal : S → Prop) [DecidablePred safe] [Decidab
     statement it was concrete evidence for). `change` jumps past the `OrderHom`/`FunLike` coercion
     to bare `reachOpFun`/`untilOpFun` application (pure defeq, independent of either condition's
     truth value); `by_cases hg : goal s` plus
-    `simp only [reachOpFun, untilOpFun, if_pos/if_neg hg]` then handles the abstract `goal`
+    `simp only [reachOpFun, untilOpFun, ite_eq_left/ite_eq_right hg]` then handles the abstract
+    `goal`
     condition, the same idiom `untilOpFun_mono` already uses safely.
     The concrete condition `(fun _ => True) s` is never named in a supplied lemma -- left for
     `simp`'s own ground-decidable normalisation to collapse unopposed, which is exactly what closes
-    the `if_neg hg` branch once `goal`'s split is out of the way. -/
+    the `ite_eq_right hg` branch once `goal`'s split is out of the way. -/
 theorem reachOp_eq_untilOp_true (goal : S → Prop) [DecidablePred goal]
     (hr : ∀ s a1 a2, C.r s a1 a2 = 0) :
     C.reachOp goal hr = C.untilOp (fun _ => True) goal hr := by
@@ -133,8 +142,8 @@ theorem reachOp_eq_untilOp_true (goal : S → Prop) [DecidablePred goal]
   apply Subtype.ext
   change (C.reachOpFun goal hr v s : ℝ) = (C.untilOpFun (fun _ => True) goal hr v s : ℝ)
   by_cases hg : goal s
-  · simp only [reachOpFun, untilOpFun, if_pos hg]
-  · simp only [reachOpFun, untilOpFun, if_neg hg]
+  · simp only [reachOpFun, untilOpFun, ite_eq_left hg]
+  · simp only [reachOpFun, untilOpFun, ite_eq_right hg]
     rfl
 
 end CSG

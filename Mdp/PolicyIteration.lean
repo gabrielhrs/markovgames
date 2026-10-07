@@ -198,7 +198,7 @@ theorem eval_eq_imp_policy_eq (d : S → A) (h : M.value d = M.value (M.policySt
     apply hs₀
     change d s₀ = M.policyImprove d (M.value d) s₀
     unfold policyImprove
-    rw [if_pos hkeep]
+    rw [ite_eq_left hkeep]
   have hle :
       M.r s₀ (d s₀) + M.l * M.expect s₀ (d s₀) (M.value d) ≤ M.bellman (M.value d) s₀ :=
     Finset.le_sup' (fun a => M.r s₀ a + M.l * M.expect s₀ a (M.value d))

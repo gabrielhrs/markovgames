@@ -165,7 +165,7 @@ theorem SGFInnerFun_mono_y (b : Set S) {y1 y2 : Set S} (hy : y1 ≤ y2) (x : Set
     unchanged from `Csg.BuchiOp`, no re-proof needed. -/
 noncomputable def SGFOuter (b : Set S) : Set S →o Set S where
   toFun y := (C.SGFInner b y).lfp
-  monotone' := fun y1 y2 hy => OrderHom.lfp_mono_of_le (fun x => C.SGFInnerFun_mono_y b hy x)
+  monotone' := fun _y1 _y2 hy => OrderHom.lfp_mono_of_le (fun x => C.SGFInnerFun_mono_y b hy x)
 
 /-- **The payoff.** Sure-mode Büchi (`SGF` in the Java): the greatest fixed point of `SGFOuter`,
     the states from which the row player can force visiting `b` infinitely often, with certainty.

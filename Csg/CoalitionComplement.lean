@@ -8,8 +8,8 @@ import Csg.Coalition
 /-!
 # `⟨⟨Cᶜ⟩⟩P_max`'s stage value equals `⟨⟨C⟩⟩P_min`'s
 
-**Status: confirmed by a clean `lake build`** (two harmless unused-instance lint warnings remain
-on `combine_compl`, which does not need `Fintype`/`DecidableEq` on the action types). Second and
+**Status: confirmed by a clean `lake build`.** `combine_compl` needs none of the per-player
+`Fintype`/`Nonempty`/`DecidableEq` instances, so it carries an explicit `omit` for them. Second and
 larger of the two pieces
 `Csg/Coalition.lean`'s own docstring named as missing (`MatrixGameCongr.lean` was the first): the
 complement bookkeeping, and the one place it actually needs `value_relabelRow` rather than pure
@@ -51,7 +51,8 @@ own docstring noted.
   on membership in an arbitrary, uninstantiated `Finset` (as `combine`'s `dite` on `i ∈ C` is here),
   the `Decidable` instance has nothing concrete to compute down to, so the kernel can't reduce the
   `dite` by `whnf`, and `show` (which needs definitional, not just propositional, equality) fails.
-  Use `dif_pos`/`dif_neg` as *propositional* rewrite lemmas fed to `simp` instead -- `simp` can also
+  Use `dite_eq_left`/`dite_eq_right` as *propositional* rewrite lemmas fed to `simp` instead --
+  `simp` can also
   unfold surrounding `abbrev`s (here, `complCoalitionEquiv`) and close a residual
   proof-irrelevance equality automatically.
 - The `ext` *tactic* only fires when a type has an auto-registered `@[ext]` lemma; `MatrixGame` has
@@ -75,7 +76,7 @@ variable (C : Finset Players)
     `Finset.compl_compl`, from `Finset.mem_compl` applied twice rather than an equality of
     `Finset`s, so it can drive a `Subtype` reindexing directly with no `cast`/`Eq.rec` anywhere. -/
 theorem mem_compl_compl (i : Players) : i ∈ (C : Finset Players)ᶜᶜ ↔ i ∈ C := by
-  simp [Finset.mem_compl]
+  simp
 
 /-- A coalition's joint action and its complement-of-complement's joint action are the same thing,
     named two different ways: the identity on the underlying player, only the attached membership
@@ -87,6 +88,7 @@ def complCoalitionEquiv : ComplementAction A Cᶜ ≃ CoalitionAction A C where
   left_inv _ := rfl
   right_inv _ := rfl
 
+omit [∀ i, Fintype (A i)] [∀ i, Nonempty (A i)] [∀ i, DecidableEq (A i)] in
 /-- `combine`, run on `C` and on its complement, rebuilds the exact same joint action either way --
     the case split is on the same fact (`i ∈ C` versus `i ∈ Cᶜ`) either way, `Finset.mem_compl`
     deciding one `dite`'s condition from the other's in each branch, closing by the same
@@ -96,9 +98,9 @@ theorem combine_compl (y : ComplementAction A C) (x : ComplementAction A Cᶜ) :
   funext i
   by_cases h : i ∈ C
   · have h' : i ∉ Cᶜ := by simp [h]
-    simp [combine, complCoalitionEquiv, dif_pos h, dif_neg h']
+    simp [combine, complCoalitionEquiv, dite_eq_left h]
   · have h' : i ∈ Cᶜ := by simp [h]
-    simp [combine, dif_neg h, dif_pos h']
+    simp [combine, dite_eq_right h]
 
 variable (G : NCSG S Players A)
 
@@ -121,7 +123,7 @@ theorem reduceMin_stageValue_eq (s : S) (v : S → ℝ) :
   have hA : ((G.reduceMax Cᶜ).stageGame s v).A =
       (((G.reduceMin C).stageGame s v).relabelRow (complCoalitionEquiv C)).A := by
     funext x y
-    show G.r s (combine Cᶜ y x) +
+    change G.r s (combine Cᶜ y x) +
         ∑ s', (G.K s (combine Cᶜ y x) s').toReal * v s' =
       G.r s (combine C (complCoalitionEquiv C x) y) +
         ∑ s', (G.K s (combine C (complCoalitionEquiv C x) y) s').toReal * v s'

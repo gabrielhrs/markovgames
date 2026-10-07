@@ -108,9 +108,9 @@ theorem buchiInnerOpFun_mono (U : S → Prop) [DecidablePred U]
   intro x1 x2 hx s
   by_cases h : U s
   · have heq : C.buchiInnerOpFun U hr y x1 s = C.buchiInnerOpFun U hr y x2 s := by
-      simp only [buchiInnerOpFun, if_pos h]
+      simp only [buchiInnerOpFun, ite_eq_left h]
     exact heq.le
-  · simp only [buchiInnerOpFun, if_neg h]
+  · simp only [buchiInnerOpFun, ite_eq_right h]
     exact C.stageValue_mono fun s' => hx s'
 
 /-- The inner Bellman step, bundled as an `OrderHom` for a fixed outer candidate `y` --
@@ -133,10 +133,10 @@ theorem buchiInnerOpFun_mono_y (U : S → Prop) [DecidablePred U]
     C.buchiInnerOpFun U hr y1 x ≤ C.buchiInnerOpFun U hr y2 x := by
   intro s
   by_cases h : U s
-  · simp only [buchiInnerOpFun, if_pos h]
+  · simp only [buchiInnerOpFun, ite_eq_left h]
     exact C.stageValue_mono fun s' => hy s'
   · have heq : C.buchiInnerOpFun U hr y1 x s = C.buchiInnerOpFun U hr y2 x s := by
-      simp only [buchiInnerOpFun, if_neg h]
+      simp only [buchiInnerOpFun, ite_eq_right h]
     exact heq.le
 
 /-- **The payoff.** The Büchi Bellman operator, `y ↦ μx.buchiInnerOpFun U y x`, bundled as an
@@ -148,7 +148,7 @@ noncomputable def buchiOp (U : S → Prop) [DecidablePred U]
     (hr : ∀ s a1 a2, C.r s a1 a2 = 0) :
     (S → Set.Icc (0 : ℝ) 1) →o (S → Set.Icc (0 : ℝ) 1) where
   toFun y := (C.buchiInnerOp U hr y).lfp
-  monotone' := fun y1 y2 hy =>
+  monotone' := fun _y1 _y2 hy =>
     OrderHom.lfp_mono_of_le (fun x => C.buchiInnerOpFun_mono_y U hr hy x)
 
 end CSG
