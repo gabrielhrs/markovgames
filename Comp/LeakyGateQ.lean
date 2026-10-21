@@ -65,59 +65,63 @@ namespace LeakyGate
     the projections -- `nStates` is `states.length`, so there is one more layer here than with a
     stored count. -/
 abbrev gate : ModelData where
-  nRow := 2
-  nCol := 2
+  nAct1 := 2
+  nAct2 := 2
   states :=
     [ -- state 0: action 0 holds the pair, action 1 risks the sink
-      ⟨0, [[⟨[(0, 1/2), (1, 1/2)], 0⟩, ⟨[(1, 1)], 0⟩],
-           [⟨[(3, 1)], 1⟩, ⟨[(0, 1)], 0⟩]]⟩,
+      ⟨0, [⟨0, 0, [(0, 1/2), (1, 1/2)], 0⟩, ⟨0, 1, [(1, 1)], 0⟩,
+           ⟨1, 0, [(3, 1)], 1⟩,             ⟨1, 1, [(0, 1)], 0⟩]⟩,
       -- state 1: same shape, mirrored
-      ⟨0, [[⟨[(0, 1/2), (1, 1/2)], 0⟩, ⟨[(0, 1)], 0⟩],
-           [⟨[(3, 1)], 1⟩, ⟨[(1, 1)], 0⟩]]⟩,
+      ⟨0, [⟨0, 0, [(0, 1/2), (1, 1/2)], 0⟩, ⟨0, 1, [(0, 1)], 0⟩,
+           ⟨1, 0, [(3, 1)], 1⟩,             ⟨1, 1, [(1, 1)], 0⟩]⟩,
       -- state 2: the leak -- every row action can be answered into the sink
-      ⟨0, [[⟨[(2, 1/2), (3, 1/2)], 0⟩, ⟨[(2, 1)], 0⟩],
-           [⟨[(3, 1)], 1⟩, ⟨[(2, 1)], 0⟩]]⟩,
+      ⟨0, [⟨0, 0, [(2, 1/2), (3, 1/2)], 0⟩, ⟨0, 1, [(2, 1)], 0⟩,
+           ⟨1, 0, [(3, 1)], 1⟩,             ⟨1, 1, [(2, 1)], 0⟩]⟩,
       -- state 3: the sink, and the only state with a reward
-      ⟨1, [[⟨[(3, 1)], 0⟩, ⟨[(3, 1)], 0⟩],
-           [⟨[(3, 1)], 0⟩, ⟨[(3, 1)], 0⟩]]⟩ ]
+      ⟨1, [⟨0, 0, [(3, 1)], 0⟩, ⟨0, 1, [(3, 1)], 0⟩,
+           ⟨1, 0, [(3, 1)], 0⟩, ⟨1, 1, [(3, 1)], 0⟩]⟩ ]
 
 instance : NeZero gate.nStates := ⟨by decide⟩
 
-instance : NeZero gate.nRow := ⟨by decide⟩
+instance : NeZero gate.nAct1 := ⟨by decide⟩
 
-instance : NeZero gate.nCol := ⟨by decide⟩
+instance : NeZero gate.nAct2 := ⟨by decide⟩
 
 /-! ## Validity: the only rational arithmetic in the file
 
-Three conditions, each a finite collection of facts about literal weights. `InRange` is pure `ℕ` and
-goes by `decide`; the other three mention the weights and so go by `norm_num`, which is the whole
-rational content of this instance. -/
+Four conditions, each a finite collection of facts about this model's transitions. `Shape` is pure
+`ℕ` and goes by `decide`; the other three mention the weights and so go by `norm_num`, which is the
+whole rational content of this instance. -/
 
-/-- Every successor index is a state. Pure `ℕ`. -/
-theorem gate_inRange : gate.InRange := by decide
+/-- Every structural condition: actions and successors in range, no repeated joint action, and the
+    enabled set a product. Pure `ℕ`, so one `decide`. -/
+theorem gate_shape : gate.Shape := by decide
 
 /-- No weight is negative. -/
 theorem gate_nonneg : gate.Nonneg := by
-  intro s a1 a2
-  fin_cases s <;> fin_cases a1 <;> fin_cases a2 <;>
-    norm_num [ModelData.rowAt, ModelData.stateAt]
+  intro s
+  fin_cases s <;>
+    norm_num [ModelData.transOf, ModelData.stateAt, or_imp, and_imp, forall_and,
+      forall_eq']
 
 /-- No weight is zero -- so a row's keys are its support, which is what keeps the kernel out of
     the rationals. -/
 theorem gate_nonzero : gate.Nonzero := by
-  intro s a1 a2
-  fin_cases s <;> fin_cases a1 <;> fin_cases a2 <;>
-    norm_num [ModelData.rowAt, ModelData.stateAt]
+  intro s
+  fin_cases s <;>
+    norm_num [ModelData.transOf, ModelData.stateAt, or_imp, and_imp, forall_and,
+      forall_eq']
 
 /-- Every row is a distribution -- the condition the fractional weights have to meet. -/
 theorem gate_stochastic : gate.Stochastic := by
-  intro s a1 a2
-  fin_cases s <;> fin_cases a1 <;> fin_cases a2 <;>
-    norm_num [ModelData.rowAt, ModelData.stateAt]
+  intro s
+  fin_cases s <;>
+    norm_num [ModelData.transOf, ModelData.stateAt, or_imp, and_imp, forall_and,
+      forall_eq']
 
 /-- …and hence a well-formed game. -/
 theorem gate_wf : gate.toCsgQ.WellFormed :=
-  gate.wellFormed gate_inRange gate_stochastic
+  gate.wellFormed gate_shape gate_stochastic
 
 /-! ## Running it -/
 
@@ -127,28 +131,28 @@ def gateSafe : Finset (Fin gate.nStates) := {0, 1, 2}
 /-- The answer: the pair the row player can hold. -/
 def gateGood : Finset (Fin gate.nStates) := {0, 1}
 
-#eval decide gate.InRange
+#eval decide gate.Shape
 -- expect: true
 
 #eval decide gate.Stochastic
 -- expect: true        (compiled code has no trouble with the halves)
 
-#eval gate.supportOf gate_inRange 0 0 0
+#eval gate.supportOf gate_shape 0 0 0
 -- expect: {0, 1}      the coin flip's two outcomes, read off the row
 
-#eval gate.supportOf gate_inRange 2 0 0
+#eval gate.supportOf gate_shape 2 0 0
 -- expect: {2, 3}      the leak
 
-#eval gate.gStepOf gate_inRange gateSafe Finset.univ
+#eval gate.gStepOf gate_shape gateSafe Finset.univ
 -- expect: {0, 1, 2}   one step only removes the sink
 
-#eval (gate.gStepOf gate_inRange gateSafe)^[2] Finset.univ
+#eval (gate.gStepOf gate_shape gateSafe)^[2] Finset.univ
 -- expect: {0, 1}      and the second removes the leak
 
-#eval (gate.gStepOf gate_inRange gateSafe)^[3] Finset.univ
+#eval (gate.gStepOf gate_shape gateSafe)^[3] Finset.univ
 -- expect: {0, 1}      stabilised
 
-#eval gate.gRegion gate_inRange gateSafe
+#eval gate.gRegion gate_shape gateSafe
 -- expect: {0, 1}      and the same, without being told how many steps to take
 
 /-! ## The answer -/
@@ -165,14 +169,14 @@ def gateGood : Finset (Fin gate.nStates) := {0, 1}
     states only which region came back and the `#eval`s above are illustrative. -/
 theorem gate_answers :
     gate.toCsgQ.Answers gate_wf (Objective.sureSafe gateSafe) (Answer.region gateGood) :=
-  gate.answers_sureSafe_of_fix gate_inRange gate_stochastic gate_nonzero gateSafe gateGood
+  gate.answers_sureSafe_of_fix gate_shape gate_stochastic gate_nonzero gateSafe gateGood
     (by decide)
 
 /-- The same statement by way of `answers_sureSafe_of_data`, the counted interface, which takes the
     step count as an argument. -/
 theorem gate_answers_counted :
     gate.toCsgQ.Answers gate_wf (Objective.sureSafe gateSafe) (Answer.region gateGood) :=
-  gate.answers_sureSafe_of_data gate_inRange gate_stochastic gate_nonzero gateSafe gateGood 2
+  gate.answers_sureSafe_of_data gate_shape gate_stochastic gate_nonzero gateSafe gateGood 2
     (by decide) (by decide)
 
 /-! ## A second objective: almost-sure reachability
@@ -192,32 +196,32 @@ The outer descent takes one step (`univ`, then `{0, 1}`, then stop) and each inn
 /-- Reaching state `0`. -/
 def gateTarget : Finset (Fin gate.nStates) := {0}
 
-#eval gate.afStepOf gate_inRange gateTarget Finset.univ ∅
+#eval gate.afStepOf gate_shape gateTarget Finset.univ ∅
 -- expect: {0}         the target itself, after one inner step
 
-#eval (gate.afStepOf gate_inRange gateTarget Finset.univ)^[2] ∅
+#eval (gate.afStepOf gate_shape gateTarget Finset.univ)^[2] ∅
 -- expect: {1, 0}      and state 1 joins it, via the coin
 
-#eval (gate.afStepOf gate_inRange gateTarget gateGood)^[2] ∅
+#eval (gate.afStepOf gate_shape gateTarget gateGood)^[2] ∅
 -- expect: {1, 0}      the outer chain has already stabilised
 
 -- (printed in the order the computation inserted them, which is not the order `gateGood`'s own
 -- literal is written in; the `Finset`s are equal, as `gate_answers_AF` below records.)
 
-#eval gate.afRegion gate_inRange gateTarget
+#eval gate.afRegion gate_shape gateTarget
 -- expect: {1, 0}      both loops, run to termination, with no counts supplied
 
 /-- The first outer step's inner `μX` fixed point, at `Finset.univ`. -/
 theorem gate_afInner_at_univ :
     ((gate.toCsgQ.toCSG gate_wf).AFInner ↑gateTarget
         ↑(Finset.univ : Finset (Fin gate.nStates))).lfp = (↑gateGood : Set (Fin gate.nStates)) :=
-  gate.afInner_eq_of_data gate_inRange gate_stochastic gate_nonzero gateTarget Finset.univ
+  gate.afInner_eq_of_data gate_shape gate_stochastic gate_nonzero gateTarget Finset.univ
     gateGood 2 (by decide) (by decide)
 
 /-- …so `{0, 1}` bounds `AF` from above. -/
 theorem gate_AF_le_good :
     (gate.toCsgQ.toCSG gate_wf).AF ↑gateTarget ≤ (↑gateGood : Set (Fin gate.nStates)) :=
-  gate.AF_le_of_data_step gate_inRange gate_stochastic gate_nonzero gateTarget Finset.univ
+  gate.AF_le_of_data_step gate_shape gate_stochastic gate_nonzero gateTarget Finset.univ
     gateGood 2 (by decide) (by decide) (CsgQ.AF_le_univ gate.toCsgQ gate_wf gateTarget)
 
 /-- **Almost-sure reachability, computed from the model.** `{0, 1}` is its own inner `μX` fixed
@@ -229,7 +233,7 @@ theorem gate_AF_le_good :
     same run through the counted interface. -/
 theorem gate_answers_AF :
     gate.toCsgQ.Answers gate_wf (Objective.almostReach gateTarget) (Answer.region gateGood) :=
-  gate.answers_almostReach_of_fix gate_inRange gate_stochastic gate_nonzero gateTarget gateGood
+  gate.answers_almostReach_of_fix gate_shape gate_stochastic gate_nonzero gateTarget gateGood
     (by decide)
 
 end LeakyGate
