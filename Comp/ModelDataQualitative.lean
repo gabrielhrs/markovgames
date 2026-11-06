@@ -9,9 +9,14 @@ import Comp.FixLoop
 /-!
 # The qualitative operators, computed from sparse data
 
-**Status: confirmed by a clean `lake build`.** The operators quantify over the whole action
-namespace rather than a state's enabled actions; `ModelData.enabled1`/`enabled2` and the
-padding invariance lemmas are in place for that change but are not yet used here.
+**Status: confirmed by a clean `lake build`.**
+
+Two families of operators live here. The `*Of` ones quantify over the whole action namespace and
+are what the `answers_*` entry points still use. The `*Tr` ones -- `aTr`, `bTr`, `lStepTr`,
+`apre1Tr`, `lpre1Tr` -- quantify over a state's enabled actions instead, and are related to the
+dense ones by `∩ enabled`, with pad-saturation as the side condition. The transfer lemmas are
+proved; rewiring the entry points to use them is not done, so the narrowing is not yet realised in
+anything a model actually runs.
 
 `Comp/ModelData.lean` ends with `supportF_eq`: a model's support, read off its sparse row instead of
 found by scanning the states. That lemma is where the cost goes away, but on its own it changes
@@ -89,7 +94,11 @@ theorem mem_pre1Of (hs : d.Shape) (x : Finset (Fin d.nStates)) (s : Fin d.nState
   simp only [pre1Of, Finset.mem_filter, Finset.mem_univ, true_and]
 
 /-- The transfer lemma: the general operator and the row-based one agree. `supportF_eq` rewritten
-    under the two quantifiers, which is all there is to it -- both have the same shape. -/
+    under the two quantifiers, which is all there is to it -- both have the same shape.
+
+    Note what this does *not* do: narrow the action quantifiers to the state's enabled actions.
+    That is sound for this operator but not piecewise for `aOf`/`bOf`, so all three modes are left
+    with the same shape; see `Comp/ModelData.lean`'s `exists_forall_enabled_iff`. -/
 theorem pre1F_eq [NeZero d.nAct1] [NeZero d.nAct2] (hs : d.Shape) (hnn : d.Nonneg)
     (hnz : d.Nonzero) (x : Finset (Fin d.nStates)) :
     d.toCsgQ.pre1F x = d.pre1Of hs x := by
@@ -183,6 +192,274 @@ theorem answers_sureSafe_of_fix [NeZero d.nAct1] [NeZero d.nAct2] (hs : d.Shape)
     d.toCsgQ.Answers (d.wellFormed hs h2) (Objective.sureSafe safe) (Answer.region c) := by
   subst hc
   exact .sureSafe (d.G_eq_coe_gRegion hs h2 hnz safe)
+
+/-! ## Pad-saturation
+
+The invariant that makes the action quantifiers narrowable. A set of actions is *pad-saturated* at
+`s` when it cannot tell an action from its padded representative -- equivalently, when it is the
+preimage of its own enabled part under `pad`.
+
+Why it is the right condition, and why `⊆ enabled` is not: narrowing `aF`'s inner `∀ a2` evaluates
+the disjunct `a2 ∈ v2` at the *raw* `a2`. A disabled `a2` is outside any `v2 ⊆ enabled2`, but its
+representative may be inside, so the dense form demands a support condition the narrowed form skips
+and the two disagree. Pad-saturation is exactly what rules that out.
+
+The two lemmas below are what make the invariant free rather than a burden: `aF` and `bF` both
+*produce* pad-saturated sets, unconditionally, because the support cannot see either coordinate's
+padding. So along the chain `∅ → bF → aF → bF → …` the hypothesis is discharged at `∅` and carried
+by these two from then on. -/
+
+/-- A set of row actions that cannot distinguish an action from its padded representative. -/
+def PadSat1 (hs : d.Shape) (s : Fin d.nStates) (v : Finset (Fin d.nAct1)) : Prop :=
+  ∀ a1, a1 ∈ v ↔ d.padFin1 hs s a1 ∈ v
+
+/-- The column player's. -/
+def PadSat2 (hs : d.Shape) (s : Fin d.nStates) (v : Finset (Fin d.nAct2)) : Prop :=
+  ∀ a2, a2 ∈ v ↔ d.padFin2 hs s a2 ∈ v
+
+@[simp]
+theorem padSat1_empty (hs : d.Shape) (s : Fin d.nStates) : d.PadSat1 hs s ∅ := by
+  intro a1; simp
+
+@[simp]
+theorem padSat2_empty (hs : d.Shape) (s : Fin d.nStates) : d.PadSat2 hs s ∅ := by
+  intro a2; simp
+
+/-- **`aF` produces pad-saturated sets**, for any `v2` at all. Only the support term mentions the
+    row action, and the support does not see its padding. -/
+theorem padSat1_aF [NeZero d.nAct1] [NeZero d.nAct2] (hs : d.Shape) (hnn : d.Nonneg)
+    (hnz : d.Nonzero) (v2 : Finset (Fin d.nAct2)) (y : Finset (Fin d.nStates))
+    (s : Fin d.nStates) : d.PadSat1 hs s (d.toCsgQ.aF v2 y s) := by
+  intro a1
+  simp only [CsgQ.mem_aF, d.supportF_eq hs hnn hnz, d.supportOf_padFin1 hs s]
+
+/-- **And `bF` does too**, for any `v1`. Same reason, on the other coordinate. -/
+theorem padSat2_bF [NeZero d.nAct1] [NeZero d.nAct2] (hs : d.Shape) (hnn : d.Nonneg)
+    (hnz : d.Nonzero) (v1 : Finset (Fin d.nAct1)) (x : Finset (Fin d.nStates))
+    (s : Fin d.nStates) : d.PadSat2 hs s (d.toCsgQ.bF v1 x s) := by
+  intro a2
+  simp only [CsgQ.mem_bF, d.supportF_eq hs hnn hnz, d.supportOf_padFin2 hs s]
+
+/-! ## `A` and `B` over a state's transitions
+
+The narrowed counterparts of `aOf`/`bOf`: they range over the actions the state enables, so their
+cost is `|enabled1 s| · |enabled2 s|` rather than `|A1| · |A2|`.
+
+Each is the dense operator restricted to the enabled set, but the two restrictions are not
+symmetric, and the asymmetry is the whole content of this section. `bTr` quantifies over the *same*
+`v1` as `bF`, so the correspondence is unconditional. `aTr` narrows its inner `∀ a2`, and that is
+sound exactly when `v2` is pad-saturated -- which `padSat2_bF` supplies wherever `v2` comes from a
+`bF`, and `padSat2_empty` at the base of the chain. -/
+
+/-- `aF` over the state's own actions. -/
+def aTr (hs : d.Shape) (v2 : Finset (Fin d.nAct2)) (y : Finset (Fin d.nStates))
+    (s : Fin d.nStates) : Finset (Fin d.nAct1) :=
+  (d.enabled1 hs s).filter fun a1 =>
+    ∀ a2 ∈ d.enabled2 hs s, a2 ∈ v2 ∨ d.supportOf hs s a1 a2 ⊆ y
+
+/-- `bF` over the state's own actions. -/
+def bTr (hs : d.Shape) (v1 : Finset (Fin d.nAct1)) (x : Finset (Fin d.nStates))
+    (s : Fin d.nStates) : Finset (Fin d.nAct2) :=
+  (d.enabled2 hs s).filter fun a2 => ∃ a1 ∈ v1, (d.supportOf hs s a1 a2 ∩ x).Nonempty
+
+@[simp]
+theorem mem_aTr (hs : d.Shape) (v2 : Finset (Fin d.nAct2)) (y : Finset (Fin d.nStates))
+    (s : Fin d.nStates) (a1 : Fin d.nAct1) :
+    a1 ∈ d.aTr hs v2 y s ↔
+      a1 ∈ d.enabled1 hs s ∧ ∀ a2 ∈ d.enabled2 hs s, a2 ∈ v2 ∨ d.supportOf hs s a1 a2 ⊆ y := by
+  simp only [aTr, Finset.mem_filter]
+
+@[simp]
+theorem mem_bTr (hs : d.Shape) (v1 : Finset (Fin d.nAct1)) (x : Finset (Fin d.nStates))
+    (s : Fin d.nStates) (a2 : Fin d.nAct2) :
+    a2 ∈ d.bTr hs v1 x s ↔
+      a2 ∈ d.enabled2 hs s ∧ ∃ a1 ∈ v1, (d.supportOf hs s a1 a2 ∩ x).Nonempty := by
+  simp only [bTr, Finset.mem_filter]
+
+/-- **`bTr` is `bF` restricted to the enabled columns.** Unconditional: the `∃ a1 ∈ v1` is the
+    same on both sides, so only the support substitution is involved. -/
+theorem bTr_eq [NeZero d.nAct1] [NeZero d.nAct2] (hs : d.Shape) (hnn : d.Nonneg)
+    (hnz : d.Nonzero) (v1 : Finset (Fin d.nAct1)) (x : Finset (Fin d.nStates))
+    (s : Fin d.nStates) :
+    d.bTr hs v1 x s = d.toCsgQ.bF v1 x s ∩ d.enabled2 hs s := by
+  ext a2
+  simp only [mem_bTr, Finset.mem_inter, CsgQ.mem_bF, d.supportF_eq hs hnn hnz]
+  tauto
+
+/-- **`aTr` is `aF` restricted to the enabled rows** -- and here pad-saturation earns its keep. The
+    inner `∀ a2` is narrowed to the enabled columns, which needs `v2` unable to tell a column
+    action from its representative: otherwise the dense form demands a support condition at a
+    disabled `a2` that the narrowed form never asks about. -/
+theorem aTr_eq [NeZero d.nAct1] [NeZero d.nAct2] (hs : d.Shape) (hnn : d.Nonneg)
+    (hnz : d.Nonzero) (s : Fin d.nStates) (v2 : Finset (Fin d.nAct2))
+    (hv2 : d.PadSat2 hs s v2) (y : Finset (Fin d.nStates)) :
+    d.aTr hs v2 y s = d.toCsgQ.aF v2 y s ∩ d.enabled1 hs s := by
+  ext a1
+  simp only [mem_aTr, Finset.mem_inter, CsgQ.mem_aF, d.supportF_eq hs hnn hnz]
+  constructor
+  · rintro ⟨hm, h⟩
+    refine ⟨fun a2 => ?_, hm⟩
+    rcases h (d.padFin2 hs s a2) (d.padFin2_mem hs s a2) with hv | hsub
+    · exact Or.inl ((hv2 a2).mpr hv)
+    · rw [d.supportOf_padFin2 hs s a1 a2] at hsub
+      exact Or.inr hsub
+  · rintro ⟨h, hm⟩
+    exact ⟨hm, fun a2 _ => h a2⟩
+
+/-- **`bTr` sees its argument only through its enabled part**, which is what keeps the chain
+    narrow: the row-action sets the iteration carries are subsets of `enabled1`, while the dense
+    chain's are pad-saturated. Needs pad-saturation, since a disabled row action in `v1` mirrors
+    its representative and pad-saturation is the guarantee that the representative is there too. -/
+theorem bTr_inter_enabled1 (hs : d.Shape) (s : Fin d.nStates) (v1 : Finset (Fin d.nAct1))
+    (hv1 : d.PadSat1 hs s v1) (x : Finset (Fin d.nStates)) :
+    d.bTr hs (v1 ∩ d.enabled1 hs s) x s = d.bTr hs v1 x s := by
+  ext a2
+  simp only [mem_bTr, Finset.mem_inter]
+  constructor
+  · rintro ⟨hm, a1, ⟨h1, -⟩, hne⟩
+    exact ⟨hm, a1, h1, hne⟩
+  · rintro ⟨hm, a1, h1, hne⟩
+    refine ⟨hm, d.padFin1 hs s a1, ⟨(hv1 a1).mp h1, d.padFin1_mem hs s a1⟩, ?_⟩
+    rwa [d.supportOf_padFin1 hs s a1 a2]
+
+/-- **The test the operators actually consume.** `apre1Of` and `lpre1Of` ask whether every column
+    action is answered; over transitions that becomes whether every *enabled* one is. The two agree
+    because `bF`'s output is pad-saturated, so a disabled column action is in it exactly when its
+    representative is. -/
+theorem bF_eq_univ_iff [NeZero d.nAct1] [NeZero d.nAct2] (hs : d.Shape) (hnn : d.Nonneg)
+    (hnz : d.Nonzero) (s : Fin d.nStates) (v1 : Finset (Fin d.nAct1))
+    (x : Finset (Fin d.nStates)) :
+    d.toCsgQ.bF v1 x s = Finset.univ ↔ d.bTr hs v1 x s = d.enabled2 hs s := by
+  rw [d.bTr_eq hs hnn hnz v1 x s]
+  constructor
+  · intro h
+    rw [h, Finset.univ_inter]
+  · intro h
+    ext a2
+    simp only [Finset.mem_univ, iff_true]
+    rw [d.padSat2_bF hs hnn hnz v1 x s a2]
+    have hmem : d.padFin2 hs s a2 ∈ d.toCsgQ.bF v1 x s ∩ d.enabled2 hs s := by
+      rw [h]
+      exact d.padFin2_mem hs s a2
+    exact (Finset.mem_inter.mp hmem).1
+
+/-- **`aTr` sees its `v2` only through the enabled columns.** No hypothesis needed, and the
+    contrast with `bTr_inter_enabled1` is the point: restricting a `∀` range that is already
+    restricted to `enabled2` is free, whereas restricting an `∃` witness set can lose a witness
+    unless pad-saturation guarantees its representative is also there. -/
+theorem aTr_inter_enabled2 (hs : d.Shape) (s : Fin d.nStates) (v2 : Finset (Fin d.nAct2))
+    (y : Finset (Fin d.nStates)) :
+    d.aTr hs (v2 ∩ d.enabled2 hs s) y s = d.aTr hs v2 y s := by
+  ext a1
+  simp only [mem_aTr, Finset.mem_inter]
+  constructor
+  · rintro ⟨hm, h⟩
+    refine ⟨hm, fun a2 ha2 => ?_⟩
+    rcases h a2 ha2 with ⟨hv, -⟩ | hsub
+    · exact Or.inl hv
+    · exact Or.inr hsub
+  · rintro ⟨hm, h⟩
+    refine ⟨hm, fun a2 ha2 => ?_⟩
+    rcases h a2 ha2 with hv | hsub
+    · exact Or.inl ⟨hv, ha2⟩
+    · exact Or.inr hsub
+
+/-! ## The inner `μW` climb over a state's transitions
+
+`LW` is the one place the narrowing has to survive a fixed point rather than a single step, and the
+two chains do not climb through the same sets: the dense one carries pad-saturated sets of row
+actions, the narrowed one carries subsets of `enabled1 s`. They correspond under `∩ enabled1` at
+every stage, which is what `lStepTr_iterate_eq` says.
+
+The dense side's invariant is free, since `lStepF` is an `aF` and `padSat1_aF` is unconditional. -/
+
+/-- One turn of the inner climb, over the state's own actions. -/
+def lStepTr (hs : d.Shape) (x y : Finset (Fin d.nStates)) (s : Fin d.nStates)
+    (w : Finset (Fin d.nAct1)) : Finset (Fin d.nAct1) :=
+  d.aTr hs (d.bTr hs w x s) y s
+
+/-- Every stage of the dense climb is pad-saturated -- the invariant the correspondence needs,
+    and it costs nothing because each stage is an `aF`. -/
+theorem padSat1_lStepF_iterate [NeZero d.nAct1] [NeZero d.nAct2] (hs : d.Shape) (hnn : d.Nonneg)
+    (hnz : d.Nonzero) (x y : Finset (Fin d.nStates)) (s : Fin d.nStates) (k : ℕ) :
+    d.PadSat1 hs s ((d.toCsgQ.lStepF x y s)^[k] ∅) := by
+  induction k with
+  | zero =>
+      rw [Function.iterate_zero_apply]
+      exact d.padSat1_empty hs s
+  | succ k _ =>
+      rw [Function.iterate_succ_apply']
+      exact d.padSat1_aF hs hnn hnz _ y s
+
+/-- **The two inner climbs correspond, stage by stage.** One step of the chain: `bTr` drops the
+    disabled rows (`bTr_inter_enabled1`, on the dense stage's pad-saturation), `aTr` ignores the
+    disabled columns it is handed (`aTr_inter_enabled2`), and `aTr_eq` then identifies the result
+    with the dense step restricted -- its pad-saturation hypothesis discharged by `padSat2_bF`. -/
+theorem lStepTr_iterate_eq [NeZero d.nAct1] [NeZero d.nAct2] (hs : d.Shape) (hnn : d.Nonneg)
+    (hnz : d.Nonzero) (x y : Finset (Fin d.nStates)) (s : Fin d.nStates) (k : ℕ) :
+    (d.lStepTr hs x y s)^[k] ∅
+      = (d.toCsgQ.lStepF x y s)^[k] ∅ ∩ d.enabled1 hs s := by
+  induction k with
+  | zero =>
+      rw [Function.iterate_zero_apply, Function.iterate_zero_apply, Finset.empty_inter]
+  | succ k ih =>
+      rw [Function.iterate_succ_apply', Function.iterate_succ_apply', ih]
+      unfold lStepTr
+      rw [d.bTr_inter_enabled1 hs s _ (d.padSat1_lStepF_iterate hs hnn hnz x y s k) x,
+        d.bTr_eq hs hnn hnz _ x s, d.aTr_inter_enabled2 hs s _ y,
+        d.aTr_eq hs hnn hnz s _ (d.padSat2_bF hs hnn hnz _ x s) y]
+      rfl
+
+/-! ## `Apre1` and `Lpre1` over a state's transitions
+
+The two places the operators ask "is every column action answered?". Over transitions that becomes
+"is every *enabled* column action answered?", and `bF_eq_univ_iff` is what makes the two the same
+question. -/
+
+/-- `Apre1` over the state's own actions. -/
+def apre1Tr (hs : d.Shape) (x y : Finset (Fin d.nStates)) : Finset (Fin d.nStates) :=
+  Finset.univ.filter fun s => d.bTr hs (d.aTr hs ∅ y s) x s = d.enabled2 hs s
+
+@[simp]
+theorem mem_apre1Tr (hs : d.Shape) (x y : Finset (Fin d.nStates)) (s : Fin d.nStates) :
+    s ∈ d.apre1Tr hs x y ↔ d.bTr hs (d.aTr hs ∅ y s) x s = d.enabled2 hs s := by
+  simp only [apre1Tr, Finset.mem_filter, Finset.mem_univ, true_and]
+
+/-- **`Apre1`, narrowed.** Three steps and every side condition is free: `aTr_eq` at `v2 = ∅`
+    (pad-saturated by `padSat2_empty`), `bTr_inter_enabled1` on the pad-saturation of an `aF`
+    output, and `bF_eq_univ_iff` to trade `= Finset.univ` for `= enabled2 s`. -/
+theorem apre1Tr_eq [NeZero d.nAct1] [NeZero d.nAct2] (hs : d.Shape) (hnn : d.Nonneg)
+    (hnz : d.Nonzero) (x y : Finset (Fin d.nStates)) :
+    d.apre1Tr hs x y = d.toCsgQ.apre1F x y := by
+  ext s
+  rw [mem_apre1Tr, CsgQ.mem_apre1F,
+    d.aTr_eq hs hnn hnz s ∅ (d.padSat2_empty hs s) y,
+    d.bTr_inter_enabled1 hs s _ (d.padSat1_aF hs hnn hnz ∅ y s) x]
+  exact (d.bF_eq_univ_iff hs hnn hnz s _ x).symm
+
+/-- `Lpre1` over the state's own actions, given a narrowed witness family. -/
+def lpre1Tr (hs : d.Shape) (w : Fin d.nStates → Finset (Fin d.nAct1))
+    (x : Finset (Fin d.nStates)) : Finset (Fin d.nStates) :=
+  Finset.univ.filter fun s => d.bTr hs (w s) x s = d.enabled2 hs s
+
+@[simp]
+theorem mem_lpre1Tr (hs : d.Shape) (w : Fin d.nStates → Finset (Fin d.nAct1))
+    (x : Finset (Fin d.nStates)) (s : Fin d.nStates) :
+    s ∈ d.lpre1Tr hs w x ↔ d.bTr hs (w s) x s = d.enabled2 hs s := by
+  simp only [lpre1Tr, Finset.mem_filter, Finset.mem_univ, true_and]
+
+/-- **`Lpre1`, narrowed.** The witness family is given twice -- the dense one the specification
+    talks about and the narrow one the computation carries -- related by `∩ enabled1` at every
+    state. The dense family must be pad-saturated, which `padSat1_lStepF_iterate` supplies for the
+    family that actually arises. -/
+theorem lpre1Tr_eq [NeZero d.nAct1] [NeZero d.nAct2] (hs : d.Shape) (hnn : d.Nonneg)
+    (hnz : d.Nonzero) (wF wTr : Fin d.nStates → Finset (Fin d.nAct1))
+    (hw : ∀ s, wTr s = wF s ∩ d.enabled1 hs s) (hpad : ∀ s, d.PadSat1 hs s (wF s))
+    (x : Finset (Fin d.nStates)) :
+    d.lpre1Tr hs wTr x = d.toCsgQ.lpre1F wF x := by
+  ext s
+  rw [mem_lpre1Tr, CsgQ.mem_lpre1F, hw s, d.bTr_inter_enabled1 hs s _ (hpad s) x]
+  exact (d.bF_eq_univ_iff hs hnn hnz s _ x).symm
 
 /-! ## `A` and `B`, from the rows
 

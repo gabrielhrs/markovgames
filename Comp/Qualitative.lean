@@ -5,6 +5,7 @@ Authors: Gabriel Santos
 -/
 import Comp.Basic
 import Csg.QualitativeSure
+import Comp.Lattice
 
 /-!
 # The qualitative line, rationally: supports, `Pre1`, and exact fixed points
@@ -50,29 +51,6 @@ the same pattern at increasing nesting depth -- a rational restatement, a decida
 a bridge each -- and they all reduce to `supportQ`. `LF` in particular is what pins the value-1 set
 for probabilistic reachability, limit-sure being the correct notion there rather than almost-sure.
 -/
-
-/-- A fixed point that is also below `f.lfp` *is* `f.lfp`. The second hypothesis is what an iterate
-    from `⊥` supplies (`OrderHom.le_lfp_of_step`); the first is a decidable check on a finite
-    lattice. Together they pin a least fixed point exactly, with no minimality argument and no
-    bound on how many steps stabilisation takes. -/
-theorem OrderHom.eq_lfp_of_fixed_of_le {α : Type*} [CompleteLattice α] (f : α →o α) {a : α}
-    (hfix : f a = a) (hle : a ≤ f.lfp) : a = f.lfp :=
-  le_antisymm hle (f.lfp_le hfix.le)
-
-/-- The dual: a fixed point that is also above `f.gfp` *is* `f.gfp`, the second hypothesis coming
-    from an iterate downward from `⊤`. -/
-theorem OrderHom.eq_gfp_of_fixed_of_ge {α : Type*} [CompleteLattice α] (f : α →o α) {a : α}
-    (hfix : f a = a) (hge : f.gfp ≤ a) : a = f.gfp :=
-  le_antisymm (f.le_gfp hfix.ge) hge
-
-/-- One step preserves being above the greatest fixed point, so iterating down from `⊤` gives a
-    chain of upper bounds on a `gfp`. The mirror of `Comp/Reach.lean`'s `OrderHom.le_lfp_of_step`,
-    and what supplies `eq_gfp_of_fixed_of_ge`'s second hypothesis. -/
-theorem OrderHom.gfp_le_of_step {α : Type*} [CompleteLattice α] (f : α →o α) {a b : α}
-    (ha : f.gfp ≤ a) (hb : b = f a) : f.gfp ≤ b := by
-  subst hb
-  calc f.gfp = f f.gfp := f.map_gfp.symm
-    _ ≤ f a := f.monotone ha
 
 namespace Comp
 

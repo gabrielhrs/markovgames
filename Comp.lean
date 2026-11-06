@@ -1,3 +1,4 @@
+import Comp.Lattice
 import Comp.Basic
 import Comp.MatrixGameQ
 import Comp.Search

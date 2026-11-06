@@ -3,8 +3,8 @@ Copyright (c) 2026 Gabriel Santos. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Gabriel Santos
 -/
-import Comp.Qualitative
-import Comp.Reach
+import Comp.Lattice
+import Mathlib.Data.Fintype.Card
 
 /-!
 # The fixpoint loop: apply, compare, stop
@@ -75,6 +75,25 @@ theorem fixAux_zero (f : Finset S → Finset S) (x : Finset S) : fixAux f 0 x = 
 
 theorem fixAux_succ (f : Finset S → Finset S) (n : ℕ) (x : Finset S) :
     fixAux f (n + 1) x = if f x = x then x else fixAux f n (f x) := rfl
+
+/-- **The loop is exactly the `n`-th iterate.** The early exit does not change *what* is computed,
+    only how much of it is unfolded: once `f x = x` every later iterate is `x` too. Unconditional,
+    and it is what lets facts about `Function.iterate` transfer to `fixFrom` without reasoning
+    about where the loop stopped. -/
+theorem fixAux_eq_iterate (f : Finset S → Finset S) (n : ℕ) (x : Finset S) :
+    fixAux f n x = f^[n] x := by
+  induction n generalizing x with
+  | zero => rw [fixAux_zero, Function.iterate_zero_apply]
+  | succ n ih =>
+      rw [fixAux_succ]
+      split_ifs with h
+      · have hfix : ∀ k, f^[k] x = x := by
+          intro k
+          induction k with
+          | zero => rw [Function.iterate_zero_apply]
+          | succ k ihk => rw [Function.iterate_succ_apply', ihk, h]
+        rw [hfix (n + 1)]
+      · rw [ih (f x), Function.iterate_succ_apply]
 
 /-! ## The loop never overshoots
 

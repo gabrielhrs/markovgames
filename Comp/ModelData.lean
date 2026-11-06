@@ -648,6 +648,58 @@ theorem ModelData.transAt_padFin (d : ModelData) (hs : d.Shape) (s : Fin d.nStat
     d.transAt s (d.padFin1 hs s a1) (d.padFin2 hs s a2) = d.transAt s a1 a2 :=
   d.transAt_pad s a1 a2
 
+/-! ### Padding one coordinate at a time
+
+`transAt_pad` pads both coordinates. The qualitative operators need each separately, because `aF`
+varies its row action with the column action fixed and `bF` does the reverse. Both hold because
+`transAt` pads the two coordinates independently and each padding is idempotent. The support-level
+versions, `supportOf_padFin1` and `supportOf_padFin2`, are with `supportOf` below. -/
+
+/-- Padding the row action alone leaves the transition alone. -/
+theorem ModelData.transAt_pad1 (d : ModelData) (s a1 a2 : ℕ) :
+    d.transAt s (d.pad1 s a1) a2 = d.transAt s a1 a2 := by
+  unfold ModelData.transAt
+  rw [d.pad1_idem s a1]
+
+/-- And the column action alone. -/
+theorem ModelData.transAt_pad2 (d : ModelData) (s a1 a2 : ℕ) :
+    d.transAt s a1 (d.pad2 s a2) = d.transAt s a1 a2 := by
+  unfold ModelData.transAt
+  rw [d.pad2_idem s a2]
+
+
+/-! ### The quantifier swap
+
+**The payoff of carrying actions on transitions.** Every qualitative operator in this library has
+the shape `∃ a1, ∀ a2, P a1 a2` over the *global* action namespaces. This says such a quantifier may
+be restricted to a state's own enabled actions, provided `P` cannot tell a joint action from its
+padded representative -- which `supportOf_padFin` supplies, since `P` always factors through the
+support.
+
+The argument is that `pad` is a retraction onto the enabled set. Forwards, a witness `a1` is
+replaced by `padFin1 a1`, which is enabled and which `P` cannot distinguish from it, and an enabled
+`a2` is its own representative. Backwards, an enabled witness serves unchanged, and an arbitrary
+`a2` is handled by its representative, which is enabled. Nothing here is specific to `Pre1`; the
+other five operators instantiate the same lemma. -/
+
+/-- Restricting `∃ a1, ∀ a2` to the actions a state actually enables. -/
+theorem ModelData.exists_forall_enabled_iff (d : ModelData) (hs : d.Shape) (s : Fin d.nStates)
+    (P : Fin d.nAct1 → Fin d.nAct2 → Prop)
+    (hP : ∀ a1 a2, P (d.padFin1 hs s a1) (d.padFin2 hs s a2) ↔ P a1 a2) :
+    (∃ a1, ∀ a2, P a1 a2) ↔ (∃ a1 ∈ d.enabled1 hs s, ∀ a2 ∈ d.enabled2 hs s, P a1 a2) := by
+  constructor
+  · rintro ⟨a1, ha1⟩
+    refine ⟨d.padFin1 hs s a1, d.padFin1_mem hs s a1, fun a2 ha2 => ?_⟩
+    have h2 := d.padFin2_eq_self hs s ha2
+    have hgot := (hP a1 a2).mpr (ha1 a2)
+    rwa [h2] at hgot
+  · rintro ⟨a1, hm1, ha1⟩
+    refine ⟨a1, fun a2 => ?_⟩
+    have hgot := ha1 (d.padFin2 hs s a2) (d.padFin2_mem hs s a2)
+    have hiff := hP a1 a2
+    rw [d.padFin1_eq_self hs s hm1] at hiff
+    exact hiff.mp hgot
+
 /-! ## The game a model denotes -/
 
 /-- The rational game a `ModelData` denotes. Total by construction; whether it is a *game* is
@@ -684,6 +736,20 @@ theorem ModelData.supportOf_padFin (d : ModelData) (hs : d.Shape) (s : Fin d.nSt
     d.supportOf hs s (d.padFin1 hs s a1) (d.padFin2 hs s a2) = d.supportOf hs s a1 a2 := by
   unfold ModelData.supportOf
   simp only [ModelData.transAt_padFin]
+/-- The support does not see a row action's padding. Stated with `padFin1` on the left so that it
+    rewrites in the direction the operator proofs need. -/
+theorem ModelData.supportOf_padFin1 (d : ModelData) (hs : d.Shape) (s : Fin d.nStates)
+    (a1 : Fin d.nAct1) (a2 : Fin d.nAct2) :
+    d.supportOf hs s (d.padFin1 hs s a1) a2 = d.supportOf hs s a1 a2 := by
+  unfold ModelData.supportOf
+  simp only [ModelData.padFin1, ModelData.transAt_pad1]
+
+/-- Nor a column action's. -/
+theorem ModelData.supportOf_padFin2 (d : ModelData) (hs : d.Shape) (s : Fin d.nStates)
+    (a1 : Fin d.nAct1) (a2 : Fin d.nAct2) :
+    d.supportOf hs s a1 (d.padFin2 hs s a2) = d.supportOf hs s a1 a2 := by
+  unfold ModelData.supportOf
+  simp only [ModelData.padFin2, ModelData.transAt_pad2]
 
 /-- **The bridge, and the quarantine.** `Comp/QualitativeFinset.lean`'s `supportF` -- a filter over
     every state, with a rational disequality in it -- is the padded transition's own key set.
