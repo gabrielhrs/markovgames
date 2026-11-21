@@ -233,39 +233,11 @@ theorem pointCol_mem (m : ColMove) : pointCol m ∈ stdSimplex ℝ ColMove := by
 
 /-! ## `stageValue`, computed at every state -/
 
-/-- At a state where every joint action gives the same payoff `c`, the stage value is `c` --
-    every strategy pair is trivially a saddle point. -/
+/-- At a state where every joint action gives the same payoff `c`, the stage value is `c`. -/
 theorem cbStageValue_const (v : CBState → ℝ) (s : CBState) (c : ℝ)
     (hc : ∀ (i : RowMove) (j : ColMove), (cbCSG.stageGame s v).A i j = c) :
-    cbCSG.stageValue s v = c := by
-  change (cbCSG.stageGame s v).value = c
-  have hp0 := pointRow_mem .b
-  have hq0 := pointCol_mem .c
-  have hpay : ∀ (p : RowMove → ℝ) (q : ColMove → ℝ), p ∈ stdSimplex ℝ RowMove →
-      q ∈ stdSimplex ℝ ColMove → (cbCSG.stageGame s v).payoff p q = c := by
-    intro p q hp hq
-    rw [MatrixGame.payoff_eq_sum_mul, rowMove_sum]
-    have h1 : ∑ j, (cbCSG.stageGame s v).A .b j * q j = c := by
-      have : ∀ j, (cbCSG.stageGame s v).A .b j * q j = c * q j := fun j => by
-        rw [hc .b j]
-      rw [colMove_sum, this .c, this .d, ← mul_add, ← colMove_sum q, hq.2, mul_one]
-    have h2 : ∑ j, (cbCSG.stageGame s v).A .d j * q j = c := by
-      have : ∀ j, (cbCSG.stageGame s v).A .d j * q j = c * q j := fun j => by
-        rw [hc .d j]
-      rw [colMove_sum, this .c, this .d, ← mul_add, ← colMove_sum q, hq.2, mul_one]
-    have hsum : p .b + p .d = 1 := by have := hp.2; rwa [rowMove_sum] at this
-    rw [h1, h2, ← add_mul, hsum, one_mul]
-  have huu := hpay _ _ hp0 hq0
-  have hrow : ∀ p' ∈ stdSimplex ℝ RowMove,
-      (cbCSG.stageGame s v).payoff (pointRow .b) (pointCol .c) ≤
-        (cbCSG.stageGame s v).payoff p' (pointCol .c) := fun p' hp' =>
-    le_of_eq (huu.trans (hpay p' _ hp' hq0).symm)
-  have hcol : ∀ q' ∈ stdSimplex ℝ ColMove,
-      (cbCSG.stageGame s v).payoff (pointRow .b) q' ≤
-        (cbCSG.stageGame s v).payoff (pointRow .b) (pointCol .c) := fun q' hq' =>
-    le_of_eq ((hpay _ q' hp0 hq').trans huu.symm)
-  have hval := (cbCSG.stageGame s v).value_unique hp0 hq0 hrow hcol
-  rw [← hval]; exact huu
+    cbCSG.stageValue s v = c :=
+  (cbCSG.stageGame s v).value_eq_of_forall_eq hc
 
 theorem cbStageValue_t1 (v : CBState → ℝ) : cbCSG.stageValue .t1 v = v .t1 := by
   apply cbStageValue_const
@@ -295,72 +267,31 @@ theorem cbT2A (i : RowMove) (j : ColMove) (v : CBState → ℝ) :
   · rw [cbExpect_t2b]; simp
   · rw [cbExpect_t2d]; simp
 
-/-- The payoff at `t2`, for an arbitrary row strategy `p` and any column strategy `q` in the
-    simplex -- the column player has no influence at all. -/
-theorem cbT2_payoff (v : CBState → ℝ) (p : RowMove → ℝ) (q : ColMove → ℝ)
-    (hq : q ∈ stdSimplex ℝ ColMove) :
-    (cbCSG.stageGame .t2 v).payoff p q = p .b * v .t2 + p .d * ((v .t1 + v .t3) / 2) := by
-  rw [MatrixGame.payoff_eq_sum_mul, rowMove_sum]
-  have hb : ∑ j, (cbCSG.stageGame .t2 v).A .b j * q j = v .t2 := by
-    have : ∀ j, (cbCSG.stageGame .t2 v).A .b j * q j = v .t2 * q j := fun j => by
-      rw [cbT2A]; simp
-    rw [colMove_sum, this .c, this .d, ← mul_add, ← colMove_sum q, hq.2, mul_one]
-  have hd : ∑ j, (cbCSG.stageGame .t2 v).A .d j * q j = (v .t1 + v .t3) / 2 := by
-    have : ∀ j, (cbCSG.stageGame .t2 v).A .d j * q j = (v .t1 + v .t3) / 2 * q j := fun j => by
-      rw [cbT2A]; simp
-    rw [colMove_sum, this .c, this .d, ← mul_add, ← colMove_sum q, hq.2, mul_one]
-  rw [hb, hd]
-
+/-- The stage value at `t2`, where only the row player's move matters (`cbT2A`): the smaller of
+    its two certain payoffs. The certificate is the pure row move attaining the minimum, against
+    the pure column move `c`. -/
 theorem cbStageValue_t2 (v : CBState → ℝ) :
     cbCSG.stageValue .t2 v = min (v .t2) ((v .t1 + v .t3) / 2) := by
   change (cbCSG.stageGame .t2 v).value = min (v .t2) ((v .t1 + v .t3) / 2)
-  have hp0 := pointRow_mem .b
-  have hp0' := pointRow_mem .d
-  have hq0 := pointCol_mem .c
   rcases le_total (v .t2) ((v .t1 + v .t3) / 2) with h | h
   · rw [min_eq_left h]
-    have huu : (cbCSG.stageGame .t2 v).payoff (pointRow .b) (pointCol .c) = v .t2 := by
-      rw [cbT2_payoff _ _ _ hq0]; simp [pointRow]
-    have hrow : ∀ p' ∈ stdSimplex ℝ RowMove,
-        (cbCSG.stageGame .t2 v).payoff (pointRow .b) (pointCol .c) ≤
-          (cbCSG.stageGame .t2 v).payoff p' (pointCol .c) := by
-      intro p' hp'
-      rw [huu, cbT2_payoff _ _ _ hq0]
-      have hsum : p' .b + p' .d = 1 := by have := hp'.2; rwa [rowMove_sum] at this
-      have hb_eq : p' .b = 1 - p' .d := by linarith
-      have key : p' .d * v .t2 ≤ p' .d * ((v .t1 + v .t3) / 2) :=
-        mul_le_mul_of_nonneg_left h (hp'.1 .d)
-      rw [hb_eq]
-      nlinarith [key]
-    have hcol : ∀ q' ∈ stdSimplex ℝ ColMove,
-        (cbCSG.stageGame .t2 v).payoff (pointRow .b) q' ≤
-          (cbCSG.stageGame .t2 v).payoff (pointRow .b) (pointCol .c) := by
-      intro q' hq'
-      rw [huu, cbT2_payoff _ _ _ hq']; simp [pointRow]
-    have hval := (cbCSG.stageGame .t2 v).value_unique hp0 hq0 hrow hcol
-    rw [← hval]; exact huu
+    refine (cbCSG.stageGame .t2 v).value_eq_of_certificate (pointRow_mem .b) (pointCol_mem .c)
+      (fun j => ?_) (fun i => ?_)
+    · rw [rowMove_sum]
+      simp [cbT2A, pointRow]
+    · rw [colMove_sum]
+      cases i
+      · simp [cbT2A, pointCol]
+      · simpa [cbT2A, pointCol] using h
   · rw [min_eq_right h]
-    have huu : (cbCSG.stageGame .t2 v).payoff (pointRow .d) (pointCol .c) =
-        (v .t1 + v .t3) / 2 := by
-      rw [cbT2_payoff _ _ _ hq0]; simp [pointRow]
-    have hrow : ∀ p' ∈ stdSimplex ℝ RowMove,
-        (cbCSG.stageGame .t2 v).payoff (pointRow .d) (pointCol .c) ≤
-          (cbCSG.stageGame .t2 v).payoff p' (pointCol .c) := by
-      intro p' hp'
-      rw [huu, cbT2_payoff _ _ _ hq0]
-      have hsum : p' .b + p' .d = 1 := by have := hp'.2; rwa [rowMove_sum] at this
-      have hd_eq : p' .d = 1 - p' .b := by linarith
-      have key : p' .b * ((v .t1 + v .t3) / 2) ≤ p' .b * v .t2 :=
-        mul_le_mul_of_nonneg_left h (hp'.1 .b)
-      rw [hd_eq]
-      nlinarith [key]
-    have hcol : ∀ q' ∈ stdSimplex ℝ ColMove,
-        (cbCSG.stageGame .t2 v).payoff (pointRow .d) q' ≤
-          (cbCSG.stageGame .t2 v).payoff (pointRow .d) (pointCol .c) := by
-      intro q' hq'
-      rw [huu, cbT2_payoff _ _ _ hq']; simp [pointRow]
-    have hval := (cbCSG.stageGame .t2 v).value_unique hp0' hq0 hrow hcol
-    rw [← hval]; exact huu
+    refine (cbCSG.stageGame .t2 v).value_eq_of_certificate (pointRow_mem .d) (pointCol_mem .c)
+      (fun j => ?_) (fun i => ?_)
+    · rw [rowMove_sum]
+      simp [cbT2A, pointRow]
+    · rw [colMove_sum]
+      cases i
+      · simpa [cbT2A, pointCol] using h
+      · simp [cbT2A, pointCol]
 
 /-- The column player's own certain payoff at `t3`, playing `j` against *any* row action -- `v .t3`
     for `c`, the average `(v .t2 + v .t4) / 2` for `d`. -/
@@ -372,72 +303,31 @@ theorem cbT3A (i : RowMove) (j : ColMove) (v : CBState → ℝ) :
   · rw [cbExpect_t3c]; simp
   · rw [cbExpect_t3d]; simp
 
-/-- The payoff at `t3`, for an arbitrary column strategy `q` and any row strategy `p` in the
-    simplex -- the row player has no influence at all. -/
-theorem cbT3_payoff (v : CBState → ℝ) (p : RowMove → ℝ) (q : ColMove → ℝ)
-    (hp : p ∈ stdSimplex ℝ RowMove) :
-    (cbCSG.stageGame .t3 v).payoff p q = q .c * v .t3 + q .d * ((v .t2 + v .t4) / 2) := by
-  rw [MatrixGame.payoff_eq_sum_mul', colMove_sum]
-  have hc : ∑ i, p i * (cbCSG.stageGame .t3 v).A i .c = v .t3 := by
-    have : ∀ i, p i * (cbCSG.stageGame .t3 v).A i .c = p i * v .t3 := fun i => by
-      rw [cbT3A]; simp
-    rw [rowMove_sum, this .b, this .d, ← add_mul, ← rowMove_sum p, hp.2, one_mul]
-  have hd : ∑ i, p i * (cbCSG.stageGame .t3 v).A i .d = (v .t2 + v .t4) / 2 := by
-    have : ∀ i, p i * (cbCSG.stageGame .t3 v).A i .d = p i * ((v .t2 + v .t4) / 2) := fun i => by
-      rw [cbT3A]; simp
-    rw [rowMove_sum, this .b, this .d, ← add_mul, ← rowMove_sum p, hp.2, one_mul]
-  rw [hc, hd]; ring
-
+/-- The stage value at `t3`, where only the column player's move matters (`cbT3A`): the larger of
+    its two certain payoffs. The certificate is the pure column move attaining the maximum,
+    against the pure row move `b`. -/
 theorem cbStageValue_t3 (v : CBState → ℝ) :
     cbCSG.stageValue .t3 v = max (v .t3) ((v .t2 + v .t4) / 2) := by
   change (cbCSG.stageGame .t3 v).value = max (v .t3) ((v .t2 + v .t4) / 2)
-  have hp0 := pointRow_mem .b
-  have hq0 := pointCol_mem .c
-  have hq0' := pointCol_mem .d
   rcases le_total (v .t3) ((v .t2 + v .t4) / 2) with h | h
   · rw [max_eq_right h]
-    have huu : (cbCSG.stageGame .t3 v).payoff (pointRow .b) (pointCol .d) =
-        (v .t2 + v .t4) / 2 := by
-      rw [cbT3_payoff _ _ _ hp0]; simp [pointCol]
-    have hrow : ∀ p' ∈ stdSimplex ℝ RowMove,
-        (cbCSG.stageGame .t3 v).payoff (pointRow .b) (pointCol .d) ≤
-          (cbCSG.stageGame .t3 v).payoff p' (pointCol .d) := by
-      intro p' hp'
-      rw [huu, cbT3_payoff _ _ _ hp']; simp [pointCol]
-    have hcol : ∀ q' ∈ stdSimplex ℝ ColMove,
-        (cbCSG.stageGame .t3 v).payoff (pointRow .b) q' ≤
-          (cbCSG.stageGame .t3 v).payoff (pointRow .b) (pointCol .d) := by
-      intro q' hq'
-      rw [huu, cbT3_payoff _ _ _ hp0]
-      have hsum : q' .c + q' .d = 1 := by have := hq'.2; rwa [colMove_sum] at this
-      have hd_eq : q' .d = 1 - q' .c := by linarith
-      have key : q' .c * v .t3 ≤ q' .c * ((v .t2 + v .t4) / 2) :=
-        mul_le_mul_of_nonneg_left h (hq'.1 .c)
-      rw [hd_eq]
-      nlinarith [key]
-    have hval := (cbCSG.stageGame .t3 v).value_unique hp0 hq0' hrow hcol
-    rw [← hval]; exact huu
+    refine (cbCSG.stageGame .t3 v).value_eq_of_certificate (pointRow_mem .b) (pointCol_mem .d)
+      (fun j => ?_) (fun i => ?_)
+    · rw [rowMove_sum]
+      cases j
+      · simpa [cbT3A, pointRow] using h
+      · simp [cbT3A, pointRow]
+    · rw [colMove_sum]
+      simp [cbT3A, pointCol]
   · rw [max_eq_left h]
-    have huu : (cbCSG.stageGame .t3 v).payoff (pointRow .b) (pointCol .c) = v .t3 := by
-      rw [cbT3_payoff _ _ _ hp0]; simp [pointCol]
-    have hrow : ∀ p' ∈ stdSimplex ℝ RowMove,
-        (cbCSG.stageGame .t3 v).payoff (pointRow .b) (pointCol .c) ≤
-          (cbCSG.stageGame .t3 v).payoff p' (pointCol .c) := by
-      intro p' hp'
-      rw [huu, cbT3_payoff _ _ _ hp']; simp [pointCol]
-    have hcol : ∀ q' ∈ stdSimplex ℝ ColMove,
-        (cbCSG.stageGame .t3 v).payoff (pointRow .b) q' ≤
-          (cbCSG.stageGame .t3 v).payoff (pointRow .b) (pointCol .c) := by
-      intro q' hq'
-      rw [huu, cbT3_payoff _ _ _ hp0]
-      have hsum : q' .c + q' .d = 1 := by have := hq'.2; rwa [colMove_sum] at this
-      have hc_eq : q' .c = 1 - q' .d := by linarith
-      have key : q' .d * ((v .t2 + v .t4) / 2) ≤ q' .d * v .t3 :=
-        mul_le_mul_of_nonneg_left h (hq'.1 .d)
-      rw [hc_eq]
-      nlinarith [key]
-    have hval := (cbCSG.stageGame .t3 v).value_unique hp0 hq0 hrow hcol
-    rw [← hval]; exact huu
+    refine (cbCSG.stageGame .t3 v).value_eq_of_certificate (pointRow_mem .b) (pointCol_mem .c)
+      (fun j => ?_) (fun i => ?_)
+    · rw [rowMove_sum]
+      cases j
+      · simp [cbT3A, pointRow]
+      · simpa [cbT3A, pointRow] using h
+    · rw [colMove_sum]
+      simp [cbT3A, pointCol]
 
 /-! ## The candidate value, and the inner `gfp`'s closed form -/
 

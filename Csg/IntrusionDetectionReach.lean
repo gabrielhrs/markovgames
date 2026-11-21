@@ -50,7 +50,7 @@ arbitrary pre-fixed point `b`, `compromised`'s stage game against continuation `
 the symmetric matrix `[[b healthy, b compromised], [b compromised, b healthy]]` (from `idsNext`'s
 own structure), and the *same* uniform strategy pins this matrix's value down to exactly
 `(b healthy + b compromised) / 2` -- both players' own uniform strategies make the opponent's
-response irrelevant, the same two-sided `value_unique` argument
+response irrelevant, the same two-sided certificate
 `RockPaperScissors.lean`'s `rpsCSG_stageValue_initial` already uses. Combined with the pre-fixed-
 point inequality and `b healthy = 1` (forced by goal absorption), this forces `b compromised ≥ 1`,
 hence `= 1`.
@@ -98,74 +98,22 @@ noncomputable def idsUnifQ : AttackAction → ℝ := fun _ => 1 / 2
 theorem idsUnifQ_mem : idsUnifQ ∈ stdSimplex ℝ AttackAction :=
   ⟨fun a => by cases a <;> norm_num [idsUnifQ], by simp only [attackAction_sum, idsUnifQ]; norm_num⟩
 
-/-- Against `idsUnifQ`, *every* row strategy pays exactly `(b healthy + b compromised) / 2` at
-    `compromised`'s stage game against continuation `b` -- `idsUnifQ` equalises the two pure row
-    actions' payoffs (each is `(b healthy + b compromised) / 2`, checked directly by cases), so any
-    weighted average of them is that same constant. Mirrors
-    `RockPaperScissors.lean`'s `rpsCSG_stageGame_initial_payoff_row`. -/
-theorem idsGameCSG_compromised_payoff_row (b : IDSState → Set.Icc (0 : ℝ) 1)
-    {p' : PolicyAction → ℝ} (hp' : p' ∈ stdSimplex ℝ PolicyAction) :
-    (idsGameCSG.stageGame .compromised (fun s' => (b s' : ℝ))).payoff p' idsUnifQ =
-      ((b .healthy : ℝ) + (b .compromised : ℝ)) / 2 := by
-  have hinner : ∀ a1, ∑ a2,
-      (idsGameCSG.stageGame .compromised (fun s' => (b s' : ℝ))).A a1 a2 * idsUnifQ a2 =
-        ((b .healthy : ℝ) + (b .compromised : ℝ)) / 2 := by
-    intro a1
-    rw [attackAction_sum]
-    cases a1 <;> simp [idsGameCSG_stageGame_A, idsNext, idsUnifQ] <;> ring
-  rw [MatrixGame.payoff_eq_sum_mul]
-  calc ∑ a1, p' a1 * ∑ a2,
-        (idsGameCSG.stageGame .compromised (fun s' => (b s' : ℝ))).A a1 a2 * idsUnifQ a2
-      = ∑ a1, p' a1 * (((b .healthy : ℝ) + (b .compromised : ℝ)) / 2) :=
-        Finset.sum_congr rfl fun a1 _ => by rw [hinner a1]
-    _ = (∑ a1, p' a1) * (((b .healthy : ℝ) + (b .compromised : ℝ)) / 2) := by
-        rw [← Finset.sum_mul]
-    _ = ((b .healthy : ℝ) + (b .compromised : ℝ)) / 2 := by rw [hp'.2, one_mul]
-
-/-- Symmetric counterpart of `idsGameCSG_compromised_payoff_row` for the column player: fixing the
-    row at `idsUnifP` makes *every* column strategy pay the same constant. -/
-theorem idsGameCSG_compromised_payoff_col (b : IDSState → Set.Icc (0 : ℝ) 1)
-    {q' : AttackAction → ℝ} (hq' : q' ∈ stdSimplex ℝ AttackAction) :
-    (idsGameCSG.stageGame .compromised (fun s' => (b s' : ℝ))).payoff idsUnifP q' =
-      ((b .healthy : ℝ) + (b .compromised : ℝ)) / 2 := by
-  have hinner : ∀ a2, ∑ a1, idsUnifP a1 *
-      (idsGameCSG.stageGame .compromised (fun s' => (b s' : ℝ))).A a1 a2 =
-        ((b .healthy : ℝ) + (b .compromised : ℝ)) / 2 := by
-    intro a2
-    rw [policyAction_sum]
-    cases a2 <;> simp [idsGameCSG_stageGame_A, idsNext, idsUnifP] <;> ring
-  rw [MatrixGame.payoff_eq_sum_mul']
-  calc ∑ a2, (∑ a1, idsUnifP a1 *
-        (idsGameCSG.stageGame .compromised (fun s' => (b s' : ℝ))).A a1 a2) * q' a2
-      = ∑ a2, (((b .healthy : ℝ) + (b .compromised : ℝ)) / 2) * q' a2 :=
-        Finset.sum_congr rfl fun a2 _ => by rw [hinner a2]
-    _ = (((b .healthy : ℝ) + (b .compromised : ℝ)) / 2) * ∑ a2, q' a2 := by
-        rw [← Finset.mul_sum]
-    _ = ((b .healthy : ℝ) + (b .compromised : ℝ)) / 2 := by rw [hq'.2, mul_one]
-
 /-- **The payoff.** `compromised`'s stage value against *any* continuation `b` is exactly the
-    average of `b`'s two values -- the two payoff lemmas above, fed into `value_unique` the same
-    way `RockPaperScissors.lean`'s `rpsCSG_stageValue_initial` uses `unif3` on both sides. -/
+    average of `b`'s two values. `idsUnifP` and `idsUnifQ` are the certificate
+    (`MatrixGame.value_eq_of_certificate`): each makes both of the opponent's pure actions pay
+    `(b healthy + b compromised) / 2`, checked by cases, the same way
+    `RockPaperScissors.lean`'s `rpsCSG_stageValue_initial` uses `unif3` on both sides. -/
 theorem idsGameCSG_compromised_stageValue (b : IDSState → Set.Icc (0 : ℝ) 1) :
     idsGameCSG.stageValue .compromised (fun s' => (b s' : ℝ)) =
       ((b .healthy : ℝ) + (b .compromised : ℝ)) / 2 := by
-  have huu : (idsGameCSG.stageGame .compromised (fun s' => (b s' : ℝ))).payoff idsUnifP idsUnifQ =
-      ((b .healthy : ℝ) + (b .compromised : ℝ)) / 2 :=
-    idsGameCSG_compromised_payoff_row b idsUnifP_mem
-  have hrow : ∀ p' ∈ stdSimplex ℝ PolicyAction,
-      (idsGameCSG.stageGame .compromised (fun s' => (b s' : ℝ))).payoff idsUnifP idsUnifQ ≤
-        (idsGameCSG.stageGame .compromised (fun s' => (b s' : ℝ))).payoff p' idsUnifQ :=
-    fun p' hp' => le_of_eq (huu.trans (idsGameCSG_compromised_payoff_row b hp').symm)
-  have hcol : ∀ q' ∈ stdSimplex ℝ AttackAction,
-      (idsGameCSG.stageGame .compromised (fun s' => (b s' : ℝ))).payoff idsUnifP q' ≤
-        (idsGameCSG.stageGame .compromised (fun s' => (b s' : ℝ))).payoff idsUnifP idsUnifQ :=
-    fun q' hq' => le_of_eq ((idsGameCSG_compromised_payoff_col b hq').trans huu.symm)
-  have hval := (idsGameCSG.stageGame .compromised (fun s' => (b s' : ℝ))).value_unique
-    idsUnifP_mem idsUnifQ_mem hrow hcol
   change (idsGameCSG.stageGame .compromised (fun s' => (b s' : ℝ))).value =
     ((b .healthy : ℝ) + (b .compromised : ℝ)) / 2
-  rw [← hval]
-  exact huu
+  refine (idsGameCSG.stageGame .compromised (fun s' => (b s' : ℝ))).value_eq_of_certificate
+    idsUnifP_mem idsUnifQ_mem (fun a2 => le_of_eq ?_) (fun a1 => le_of_eq (Eq.symm ?_))
+  · rw [policyAction_sum]
+    cases a2 <;> simp [idsGameCSG_stageGame_A, idsNext, idsUnifP] <;> ring
+  · rw [attackAction_sum]
+    cases a1 <;> simp [idsGameCSG_stageGame_A, idsNext, idsUnifQ] <;> ring
 
 /-- The guessed least-fixed-point candidate: `1` at *both* states -- `healthy` because it is the
     goal itself, `compromised` because the defender's uniform strategy guarantees reaching

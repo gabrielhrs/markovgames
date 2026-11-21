@@ -28,11 +28,11 @@ reproving von Neumann from scratch, the way `Mdp/` avoids reproving Banach.
 itself. `Basic.lean` only defines `CSG`/`stageGame`/`stageValue`, importing `value` from here like
 any other consumer.
 
-Four further sections below -- `value`'s monotonicity and boundedness in the payoff matrix,
-invariance under relabelling the row player's action type, invariance under relabelling the column
-player's action type, and `value` as a linear program -- likewise state facts about `MatrixGame`
-alone, with no `CSG` content, and so are gathered here alongside the rest of the `MatrixGame` API
-rather than living in their own files. Each keeps its own section heading and design rationale
+Three further sections below -- `value`'s monotonicity and boundedness in the payoff matrix,
+`value` as a linear program together with the certificate lemmas that read a value off a pair of
+strategies, and invariance of `value` under reindexing either player's action type along a
+surjection -- likewise state facts about `MatrixGame` alone, with no `CSG` content, and so are
+gathered here alongside the rest of the `MatrixGame` API. Each keeps its own section heading
 below.
 
 Convention: the row player picks `i : I` and *minimizes* the payoff `A i j`; the column player
@@ -217,14 +217,7 @@ theorem value_col_optimal : ∀ q' ∈ stdSimplex ℝ J, G.payoff G.optimalRow q
     `payoff p q = value`, not just the particular pair `value` was built from via
     `Classical.choose`. Standard minimax fact (the *value* of a zero-sum game is unique even when
     optimal strategies are not), proved directly from `value_row_optimal`/`value_col_optimal` by
-    chaining both pairs' optimality conditions against each other.
-
-    `value_add_const` below and the worked instances both use it: a general fact about `value`
-    that doesn't depend on anything `CSG`- or worked-example-specific belongs beside `value` and
-    `exists_optimal_strategies` themselves, in the file that owns `MatrixGame`, not in a file about
-    a different structure built on top of it. Pure relocation, second hop -- the statement and
-    proof are unchanged from `Basic.lean`'s copy, which was itself unchanged from
-    `MatchingPennies.lean`'s original. -/
+    chaining both pairs' optimality conditions against each other. -/
 theorem value_unique {p : I → ℝ} {q : J → ℝ} (hp : p ∈ stdSimplex ℝ I) (hq : q ∈ stdSimplex ℝ J)
     (hrow : ∀ p' ∈ stdSimplex ℝ I, G.payoff p q ≤ G.payoff p' q)
     (hcol : ∀ q' ∈ stdSimplex ℝ J, G.payoff p q' ≤ G.payoff p q) :
@@ -234,6 +227,19 @@ theorem value_unique {p : I → ℝ} {q : J → ℝ} (hp : p ∈ stdSimplex ℝ 
       _ ≤ G.value := G.value_col_optimal q hq
   · calc G.value ≤ G.payoff p G.optimalCol := G.value_row_optimal p hp
       _ ≤ G.payoff p q := hcol G.optimalCol G.optimalCol_mem
+
+/-- One row strategy bounds the value from above: if `p` keeps the payoff at or below `t` against
+    every column strategy, then `value ≤ t`. The upper half of `value_unique`, with no column
+    strategy to exhibit. `value_le_of_col_le` below asks for the bound at pure columns only. -/
+theorem value_le_of_forall_payoff_le {p : I → ℝ} (hp : p ∈ stdSimplex ℝ I) {t : ℝ}
+    (h : ∀ q ∈ stdSimplex ℝ J, G.payoff p q ≤ t) : G.value ≤ t :=
+  (G.value_row_optimal p hp).trans (h G.optimalCol G.optimalCol_mem)
+
+/-- One column strategy bounds the value from below. Mirror of `value_le_of_forall_payoff_le`;
+    `le_value_of_row_ge` below asks for the bound at pure rows only. -/
+theorem le_value_of_forall_le_payoff {q : J → ℝ} (hq : q ∈ stdSimplex ℝ J) {t : ℝ}
+    (h : ∀ p ∈ stdSimplex ℝ I, t ≤ G.payoff p q) : t ≤ G.value :=
+  (h G.optimalRow G.optimalRow_mem).trans (G.value_col_optimal q hq)
 
 /-! ## Monotonicity and boundedness of `value`
 
@@ -334,6 +340,13 @@ theorem le_value_of_forall_le {c : ℝ} (h : ∀ i j, c ≤ G.A i j) : c ≤ G.v
   unfold value
   exact G.le_payoff_of_forall_le G.optimalRow_mem G.optimalCol_mem h
 
+/-- A constant payoff matrix has that constant as its value: `value_le_of_forall_le` and
+    `le_value_of_forall_le` at the same constant. This is the stage game of any state whose
+    reward and transition ignore the joint action. -/
+theorem value_eq_of_forall_eq {c : ℝ} (h : ∀ i j, G.A i j = c) : G.value = c :=
+  le_antisymm (G.value_le_of_forall_le fun i j => (h i j).le)
+    (G.le_value_of_forall_le fun i j => (h i j).ge)
+
 /-- Shifting every entry of a payoff matrix by the same constant shifts the payoff at any fixed
     strategy pair by that constant -- both players' weights sum to `1`, so the shift factors
     straight out. The per-state building block `value_add_const` below chains against. -/
@@ -356,29 +369,21 @@ theorem payoff_add_const {G G' : MatrixGame I J} (c : ℝ) (h : ∀ i j, G'.A i 
     _ = (∑ i, x i * ∑ j, G.A i j * y j) + c := by rw [← Finset.sum_mul, hx.2, one_mul]
 
 /-- **The payoff.** Shifting every entry of a payoff matrix by a constant shifts the *value* by
-    that same constant -- `G`'s own optimal strategy pair still witnesses a saddle point of the
-    shifted game `G'` (`payoff_add_const` turns each of `G`'s no-unilateral-improvement facts into
-    `G'`'s), so `value_unique` pins `G'`'s value down to `G.value + c` on the nose, rather than
-    just bounding it. Together with `value_mono`, this is what makes `MatrixGame.value` a genuine
-    Lipschitz (not just monotone) function of the payoff matrix -- see `abs_value_sub_le` below. -/
+    that same constant. `G`'s optimal row strategy holds the shifted game `G'` to `G.value + c`
+    against every column strategy, and `G`'s optimal column strategy secures `G.value + c` against
+    every row strategy (`payoff_add_const` carries each of `G`'s two optimality facts across), so
+    `G'.value` is bounded on both sides. Together with `value_mono`, this is what makes
+    `MatrixGame.value` a genuine Lipschitz (not just monotone) function of the payoff matrix --
+    see `abs_value_sub_le` below. -/
 theorem value_add_const {G G' : MatrixGame I J} (c : ℝ) (h : ∀ i j, G'.A i j = G.A i j + c) :
     G'.value = G.value + c := by
-  have hpayoff : G'.payoff G.optimalRow G.optimalCol = G.value + c := by
-    unfold value
-    exact payoff_add_const c h G.optimalRow_mem G.optimalCol_mem
-  have hrow : ∀ p' ∈ stdSimplex ℝ I,
-      G'.payoff G.optimalRow G.optimalCol ≤ G'.payoff p' G.optimalCol := by
-    intro p' hp'
-    rw [hpayoff, payoff_add_const c h hp' G.optimalCol_mem]
-    linarith [G.value_row_optimal p' hp']
-  have hcol : ∀ q' ∈ stdSimplex ℝ J,
-      G'.payoff G.optimalRow q' ≤ G'.payoff G.optimalRow G.optimalCol := by
-    intro q' hq'
-    rw [hpayoff, payoff_add_const c h G.optimalRow_mem hq']
-    linarith [G.value_col_optimal q' hq']
-  have hunique := G'.value_unique G.optimalRow_mem G.optimalCol_mem hrow hcol
-  rw [hpayoff] at hunique
-  exact hunique.symm
+  apply le_antisymm
+  · refine G'.value_le_of_forall_payoff_le G.optimalRow_mem fun q hq => ?_
+    rw [payoff_add_const c h G.optimalRow_mem hq]
+    linarith [G.value_col_optimal q hq]
+  · refine G'.le_value_of_forall_le_payoff G.optimalCol_mem fun p hp => ?_
+    rw [payoff_add_const c h hp G.optimalCol_mem]
+    linarith [G.value_row_optimal p hp]
 
 /-- One direction of the Lipschitz bound: if `G'`'s entries never exceed `G`'s by more than `ε`,
     `G'`'s value doesn't either. Assembled from `value_mono` (comparing `G'` against the *shifted*
@@ -407,194 +412,6 @@ theorem abs_value_sub_le {G G' : MatrixGame I J} {ε : ℝ}
   have h1 : G'.value ≤ G.value + ε := value_le_add_of_forall_le hub
   have h2 : G.value ≤ G'.value + ε := value_le_add_of_forall_le hlb
   exact abs_le.mpr ⟨by linarith, by linarith⟩
-
-/-! ## `value` is invariant under relabelling the row player's action type
-
-**Status: confirmed by a clean `lake build`.** A matrix game's value does not depend on how the
-row player's action type is labelled, only on what it is in bijection with.
-`mem_stdSimplex_comp`/`_symm` need only `Fintype` on the relabelled type, so each carries an `omit`
-for the `Nonempty`/`DecidableEq` instances the surrounding `variable` block would otherwise
-attach.
-
-In the FMSD paper (Kwiatkowska, Norman, Parker, Santos, "Automatic verification of concurrent
-stochastic systems"), Definition 13 (the coalition-game construction reducing an `n`-player CSG to
-two-player form for a coalition `C`) reduces to exactly this shape once its `⊥`/idle-action
-machinery (Definition 7's per-state *partial* action availability -- some players can have no
-enabled action at some states) is set aside. `CSG`/`NCSG` make that simplification everywhere
-(every action available in every state, as in `DiscountedMDP`), so under it Definition 13's
-`A_C1`/`A_C2` -- built there as `(A_1 ∪ {⊥}) × ⋯ × (A_n' ∪ {⊥}) \ {(⊥,…,⊥)}` to handle a coalition
-whose members might all be idling -- degenerate to the plain product
-`Csg.Coalition.CoalitionAction`/`ComplementAction`, with no exclusion needed. The paper also
-states the resulting zero-sum identity `⟨⟨C⟩⟩P_max=?[ψ] ≡ ⟨⟨N∖C⟩⟩P_min=?[ψ]` without proof, "as a
-consequence of CSG determinacy"; the relabelling-level fact behind it is what this section proves.
-`SkirmishFeintCoalition.lean`'s `reduceMax_ne_reduceMin` is a worked instance of
-`⟨⟨C⟩⟩P_max ≠ ⟨⟨C⟩⟩P_min` built on this and the `value_relabelCol` section below.
-
-The column side follows below (`value_relabelCol`).
-
-**The technique.** `value_unique` (above) already says any saddle point's payoff equals the
-value, not just the one `Classical.choose` happened to pick. So: push `G.optimalRow` forward along
-the relabelling equivalence `e : I' ≃ I` to get a strategy on `I'`, show it is still optimal for
-the relabelled game (against the *same* `G.optimalCol`, since the column type is untouched), and
-`value_unique` reads the relabelled game's value straight off as the same number -- no new
-saddle-point existence argument needed. The only computation anywhere is reindexing a single
-`Finset.sum` along a bijection (`Equiv.sum_comp`), both for `payoff` itself and for `stdSimplex`
-membership.
-
-**Note.** `rw`'s trailing automatic `rfl` check does not always unfold a plain `noncomputable def`
-far enough to close a goal that is true only by that definition (as in `hpayoff` below, which is
-`G.payoff G.optimalRow G.optimalCol = G.value` -- true directly from `value`'s definition, but not
-closed by `rw` alone): when a `rw` leaves behind a goal that looks like it should already hold by
-`rfl`, append an explicit `rfl` line rather than assuming the rewrite itself is wrong.
--/
-
-variable {I' : Type*} [Fintype I'] [Nonempty I'] [DecidableEq I']
-
-/-- Relabel the row player's action type along a bijection, leaving the column side untouched:
-    `i'` plays exactly as `e i'` would have. -/
-noncomputable def relabelRow (e : I' ≃ I) : MatrixGame I' J where
-  A i' j := G.A (e i') j
-
-omit [Nonempty I] [DecidableEq I] [Nonempty I'] [DecidableEq I'] in
-/-- A strategy on the relabelled row type transports to one on the original, by pushing along
-    `e.symm`. Needed below to check that a strategy is optimal for the *original* game once it's
-    been pulled back from a candidate on `I'`.
-
-    Pure `stdSimplex`-membership bookkeeping (a nonnegativity fact plus a reindexed sum), needing
-    only `Fintype I`/`Fintype I'` for `Equiv.sum_comp` -- the `Nonempty`/`DecidableEq` instance
-    arguments on both action types go unused here, which is what the `omit` above drops. -/
-theorem mem_stdSimplex_comp_symm (e : I' ≃ I) {x' : I' → ℝ} (hx' : x' ∈ stdSimplex ℝ I') :
-    x' ∘ ⇑e.symm ∈ stdSimplex ℝ I := by
-  obtain ⟨hnonneg, hsum⟩ := hx'
-  exact ⟨fun i => hnonneg (e.symm i), (Equiv.sum_comp e.symm x').trans hsum⟩
-
-omit [Nonempty I] [DecidableEq I] [Nonempty I'] [DecidableEq I'] in
-/-- The other direction of `mem_stdSimplex_comp_symm`: pushing a strategy on `I` forward along `e`
-    lands back in `I'`'s own simplex. Needed below to turn `G.optimalRow` (a strategy on `I`) into
-    a candidate strategy on `I'` in the first place. Same unused instances, and the same `omit`,
-    as `mem_stdSimplex_comp_symm`. -/
-theorem mem_stdSimplex_comp (e : I' ≃ I) {x : I → ℝ} (hx : x ∈ stdSimplex ℝ I) :
-    x ∘ ⇑e ∈ stdSimplex ℝ I' := by
-  obtain ⟨hnonneg, hsum⟩ := hx
-  exact ⟨fun i' => hnonneg (e i'), (Equiv.sum_comp e x).trans hsum⟩
-
-/-- The relabelled game's payoff at any strategy pair is the original game's payoff at the row
-    strategy pulled back through `e.symm` -- the one computation everything else here reduces to,
-    a single reindexed `Finset.sum` (`Equiv.sum_comp`) inside `payoff_eq_sum_mul`'s already-summed
-    form. -/
-theorem payoff_relabelRow (e : I' ≃ I) (x' : I' → ℝ) (y : J → ℝ) :
-    (G.relabelRow e).payoff x' y = G.payoff (x' ∘ ⇑e.symm) y := by
-  rw [payoff_eq_sum_mul, payoff_eq_sum_mul,
-    ← Equiv.sum_comp e (fun i => (x' ∘ ⇑e.symm) i * ∑ j, G.A i j * y j)]
-  refine Finset.sum_congr rfl fun i' _ => ?_
-  simp only [relabelRow, Function.comp_apply, Equiv.symm_apply_apply]
-
-/-- **The payoff.** `MatrixGame.value` doesn't change under a bijective relabelling of the row
-    player's action type: `G.optimalRow` pushed forward along `e` is still an optimal row strategy
-    for the relabelled game, against the very same `G.optimalCol`, so `value_unique` reads the
-    relabelled value off directly. -/
-theorem value_relabelRow (e : I' ≃ I) : (G.relabelRow e).value = G.value := by
-  have hcomp : (fun i' => G.optimalRow (e i')) ∘ ⇑e.symm = G.optimalRow := by
-    funext i
-    simp
-  have hp'_mem : (fun i' => G.optimalRow (e i')) ∈ stdSimplex ℝ I' :=
-    mem_stdSimplex_comp e G.optimalRow_mem
-  have hpayoff : (G.relabelRow e).payoff (fun i' => G.optimalRow (e i')) G.optimalCol =
-      G.value := by
-    rw [payoff_relabelRow, hcomp]
-    rfl
-  have hrow : ∀ p'' ∈ stdSimplex ℝ I', (G.relabelRow e).payoff
-      (fun i' => G.optimalRow (e i')) G.optimalCol ≤ (G.relabelRow e).payoff p'' G.optimalCol := by
-    intro p'' hp''
-    rw [hpayoff, payoff_relabelRow]
-    exact G.value_row_optimal _ (mem_stdSimplex_comp_symm e hp'')
-  have hcol : ∀ q' ∈ stdSimplex ℝ J, (G.relabelRow e).payoff
-      (fun i' => G.optimalRow (e i')) q' ≤
-      (G.relabelRow e).payoff (fun i' => G.optimalRow (e i')) G.optimalCol := by
-    intro q' hq'
-    rw [payoff_relabelRow, hcomp, hpayoff]
-    exact G.value_col_optimal q' hq'
-  have hval := (G.relabelRow e).value_unique hp'_mem G.optimalCol_mem hrow hcol
-  rw [hpayoff] at hval
-  exact hval.symm
-
-/-! ## `value` is invariant under relabelling the column player's action type
-
-**Status: confirmed by a clean `lake build`.** The mirror image of the row-relabelling section
-above. `SkirmishFeintCoalition.lean` relabels *both* sides of a stage game at once: the row and
-column index types coming out of `NCSG.reduceMin`/`reduceMax` (`CoalitionAction`/
-`ComplementAction`, dependent products over a `Finset` subtype) are each only in bijection with,
-not literally equal to, the bare per-player action types a hand-built `CSG` uses.
-`value_relabelRow` above handles one side and this section the other, so the two can be composed
-(in either order -- they touch disjoint fields of `MatrixGame.A`) to relabel a whole `MatrixGame`.
-
-Every theorem below is `value_relabelRow`'s own proof (above) with `I ↔ J`, row ↔ column,
-`optimalRow`/`value_row_optimal` ↔ `optimalCol`/`value_col_optimal` swapped throughout -- same
-technique (`value_unique` reads a pushed-forward saddle point's payoff off directly, `payoff`
-reindexed along a single bijection via `Equiv.sum_comp`), same reason it works (`value_unique`
-doesn't care which side of the saddle condition is being checked). No new mathematical content;
-only `payoff_eq_sum_mul'` (the column-pulled-out regrouping of `payoff`) is used instead of
-`payoff_eq_sum_mul`, matching which side is being relabelled.
--/
-
-variable {J' : Type*} [Fintype J'] [Nonempty J'] [DecidableEq J']
-
-/-- Relabel the column player's action type along a bijection, leaving the row side untouched:
-    `j'` plays exactly as `e j'` would have. Mirror of `relabelRow`. -/
-noncomputable def relabelCol (e : J' ≃ J) : MatrixGame I J' where
-  A i j' := G.A i (e j')
-
-omit [Nonempty J] [DecidableEq J] [Nonempty J'] [DecidableEq J'] in
-/-- Mirror of `mem_stdSimplex_comp_symm`, for the column side. -/
-theorem mem_stdSimplex_comp_symm' (e : J' ≃ J) {y' : J' → ℝ} (hy' : y' ∈ stdSimplex ℝ J') :
-    y' ∘ ⇑e.symm ∈ stdSimplex ℝ J := by
-  obtain ⟨hnonneg, hsum⟩ := hy'
-  exact ⟨fun j => hnonneg (e.symm j), (Equiv.sum_comp e.symm y').trans hsum⟩
-
-omit [Nonempty J] [DecidableEq J] [Nonempty J'] [DecidableEq J'] in
-/-- Mirror of `mem_stdSimplex_comp`, for the column side. -/
-theorem mem_stdSimplex_comp' (e : J' ≃ J) {y : J → ℝ} (hy : y ∈ stdSimplex ℝ J) :
-    y ∘ ⇑e ∈ stdSimplex ℝ J' := by
-  obtain ⟨hnonneg, hsum⟩ := hy
-  exact ⟨fun j' => hnonneg (e j'), (Equiv.sum_comp e y).trans hsum⟩
-
-/-- The relabelled game's payoff at any strategy pair is the original game's payoff at the column
-    strategy pulled back through `e.symm` -- mirror of `payoff_relabelRow`, via
-    `payoff_eq_sum_mul'` instead of `payoff_eq_sum_mul`. -/
-theorem payoff_relabelCol (e : J' ≃ J) (x : I → ℝ) (y' : J' → ℝ) :
-    (G.relabelCol e).payoff x y' = G.payoff x (y' ∘ ⇑e.symm) := by
-  rw [payoff_eq_sum_mul', payoff_eq_sum_mul',
-    ← Equiv.sum_comp e (fun j => (∑ i, x i * G.A i j) * (y' ∘ ⇑e.symm) j)]
-  refine Finset.sum_congr rfl fun j' _ => ?_
-  simp only [relabelCol, Function.comp_apply, Equiv.symm_apply_apply]
-
-/-- **The payoff.** `MatrixGame.value` doesn't change under a bijective relabelling of the column
-    player's action type -- mirror of `value_relabelRow`, with `G.optimalRow` held fixed this time
-    and `G.optimalCol` pushed forward along `e`. -/
-theorem value_relabelCol (e : J' ≃ J) : (G.relabelCol e).value = G.value := by
-  have hcomp : (fun j' => G.optimalCol (e j')) ∘ ⇑e.symm = G.optimalCol := by
-    funext j
-    simp
-  have hq'_mem : (fun j' => G.optimalCol (e j')) ∈ stdSimplex ℝ J' :=
-    mem_stdSimplex_comp' e G.optimalCol_mem
-  have hpayoff : (G.relabelCol e).payoff G.optimalRow (fun j' => G.optimalCol (e j')) =
-      G.value := by
-    rw [payoff_relabelCol, hcomp]
-    rfl
-  have hrow : ∀ p' ∈ stdSimplex ℝ I, (G.relabelCol e).payoff
-      G.optimalRow (fun j' => G.optimalCol (e j')) ≤
-      (G.relabelCol e).payoff p' (fun j' => G.optimalCol (e j')) := by
-    intro p' hp'
-    rw [hpayoff, payoff_relabelCol, hcomp]
-    exact G.value_row_optimal p' hp'
-  have hcol : ∀ q'' ∈ stdSimplex ℝ J', (G.relabelCol e).payoff G.optimalRow q'' ≤
-      (G.relabelCol e).payoff G.optimalRow (fun j' => G.optimalCol (e j')) := by
-    intro q'' hq''
-    rw [hpayoff, payoff_relabelCol]
-    exact G.value_col_optimal _ (mem_stdSimplex_comp_symm' e hq'')
-  have hval := (G.relabelCol e).value_unique G.optimalRow_mem hq'_mem hrow hcol
-  rw [hpayoff] at hval
-  exact hval.symm
 
 /-! ## `value` as a linear program, for any action counts
 
@@ -629,12 +446,12 @@ already established above (`value_row_optimal`, `value_col_optimal`) plus one of
 lemmas below, chained with `le_antisymm`'s two halves packaged as `IsLeast`/`IsGreatest` instead.
 
 **Where this is reused, and what it doesn't do.** A worked instance needing an explicit `value`
-(`SkirmishFeint.lean`'s, for one) has a route besides `value_unique`: exhibit a `p`/`q` pair
-achieving the *same*
-number as both an element of `rowLPFeasible`/`colLPFeasible` and a lower/upper bound of it, and
-`le_antisymm` between the two `IsLeast`/`IsGreatest` facts pins the value directly, with the
-LP-shaped bookkeeping handled once, here, rather than re-derived per example. It also gives the
-cleanest possible hook for later, more ambitious infrastructure: the cached Mathlib source has both
+has a route besides `value_unique`: `value_eq_of_certificate` below takes a row strategy `p`, a
+column strategy `q` and a number `t`, and asks for one inequality per pure column (`p` holds the
+payoff to at most `t`) and one per pure row (`q` secures at least `t`). The payoff at the pair
+`(p, q)` is not computed and no mixed deviation is quantified over. `value_le_of_col_le` and
+`le_value_of_row_ge` are its two halves, and the two LP characterizations are restatements of
+them. The characterization is also a hook for more ambitious infrastructure: Mathlib has both
 `Sion.minimax`/`Sion.minimax'` (`Mathlib/Topology/Sion.lean`, a minimax *equality*, unused anywhere
 in this project so far since `exists_optimal_strategies` only needed the saddle-point *existence*
 half) and a genuine formalised Farkas' lemma (`ProperCone.hyperplane_separation`,
@@ -693,6 +510,41 @@ theorem payoff_le_of_col_le (x : I → ℝ) (m : ℝ) (h : ∀ j, (∑ i, x i * 
       ≤ ∑ j, m * y j := Finset.sum_le_sum fun j _ => mul_le_mul_of_nonneg_right (h j) (hnonneg j)
     _ = m := by rw [← Finset.mul_sum, hsum, mul_one]
 
+/-- `optimalRow` holds the payoff to at most `value` against every pure column:
+    `value_col_optimal` at the pure column strategy `j`, read through `payoff_single_right`. -/
+theorem optimalRow_col_le (j : J) : ∑ i, G.optimalRow i * G.A i j ≤ G.value := by
+  have h := G.value_col_optimal (Pi.single j 1) (single_mem_stdSimplex ℝ j)
+  rwa [payoff_single_right] at h
+
+/-- `optimalCol` secures at least `value` against every pure row. Mirror of
+    `optimalRow_col_le`. -/
+theorem le_optimalCol_row (i : I) : G.value ≤ ∑ j, G.A i j * G.optimalCol j := by
+  have h := G.value_row_optimal (Pi.single i 1) (single_mem_stdSimplex ℝ i)
+  rwa [payoff_single_left] at h
+
+/-- **The certificate, upper half.** A row strategy whose payoff against each *pure* column is at
+    most `t` bounds the value by `t`: one inequality per column, with no mixed column strategy
+    quantified over (`payoff_le_of_col_le` extends the bound to those). -/
+theorem value_le_of_col_le {p : I → ℝ} (hp : p ∈ stdSimplex ℝ I) {t : ℝ}
+    (h : ∀ j, ∑ i, p i * G.A i j ≤ t) : G.value ≤ t :=
+  G.value_le_of_forall_payoff_le hp (G.payoff_le_of_col_le p t h)
+
+/-- **The certificate, lower half.** A column strategy whose payoff against each pure row is at
+    least `t` bounds the value below by `t`. Mirror of `value_le_of_col_le`. -/
+theorem le_value_of_row_ge {q : J → ℝ} (hq : q ∈ stdSimplex ℝ J) {t : ℝ}
+    (h : ∀ i, t ≤ ∑ j, G.A i j * q j) : t ≤ G.value :=
+  G.le_value_of_forall_le_payoff hq (G.payoff_ge_of_row_ge q t h)
+
+/-- **The value certificate.** A row strategy `p`, a column strategy `q` and a number `t`, with
+    `p` holding every pure column to at most `t` and `q` securing at least `t` against every pure
+    row, determine the value: `value = t`. The hypotheses are `|J| + |I|` inequalities between
+    finite sums, so for a concrete game each one is a computation; neither the payoff at `(p, q)`
+    nor any mixed deviation appears. -/
+theorem value_eq_of_certificate {p : I → ℝ} {q : J → ℝ} (hp : p ∈ stdSimplex ℝ I)
+    (hq : q ∈ stdSimplex ℝ J) {t : ℝ} (hle : ∀ j, ∑ i, p i * G.A i j ≤ t)
+    (hge : ∀ i, t ≤ ∑ j, G.A i j * q j) : G.value = t :=
+  le_antisymm (G.value_le_of_col_le hp hle) (G.le_value_of_row_ge hq hge)
+
 /-- The primal LP's feasible bounds: real numbers the row (minimising) player can guarantee not to
     exceed, uniformly over the column player's *pure* responses, by some fixed mixed strategy `p`.
     A genuine finite conjunction of linear inequalities in `p` (and `t`) for any `I`, `J` -- no
@@ -706,31 +558,178 @@ def colLPFeasible (G : MatrixGame I J) : Set ℝ :=
   {t : ℝ | ∃ q ∈ stdSimplex ℝ J, ∀ i, t ≤ (∑ j, G.A i j * q j)}
 
 /-- **The payoff, primal side.** `G.value` is exactly the *least* element of `rowLPFeasible G` --
-    the textbook LP for a zero-sum game's value, from the minimising player's side. Membership
-    comes from `value_col_optimal` applied at each pure column strategy in turn (via
-    `payoff_single_right`); the lower-bound half is `payoff_le_of_col_le` chained with
-    `value_row_optimal`. -/
+    the textbook LP for a zero-sum game's value, from the minimising player's side. Membership is
+    `optimalRow_col_le`; the lower-bound half is `value_le_of_col_le`. -/
 theorem value_isLeast_rowLPFeasible : IsLeast (G.rowLPFeasible) G.value := by
   constructor
-  · refine ⟨G.optimalRow, G.optimalRow_mem, fun j => ?_⟩
-    have h := G.value_col_optimal (Pi.single j 1) (single_mem_stdSimplex ℝ j)
-    rwa [payoff_single_right] at h
+  · exact ⟨G.optimalRow, G.optimalRow_mem, G.optimalRow_col_le⟩
   · rintro t ⟨p, hp, ht⟩
-    calc G.value ≤ G.payoff p G.optimalCol := G.value_row_optimal p hp
-      _ ≤ t := G.payoff_le_of_col_le p t ht G.optimalCol G.optimalCol_mem
+    exact G.value_le_of_col_le hp ht
 
 /-- **The payoff, dual side.** `G.value` is exactly the *greatest* element of `colLPFeasible G` --
-    the mirror-image LP, from the maximising player's side. Membership comes from
-    `value_row_optimal` applied at each pure row strategy (via `payoff_single_left`); the
-    upper-bound half is `payoff_ge_of_row_ge` chained with `value_col_optimal`. -/
+    the mirror-image LP, from the maximising player's side. Membership is `le_optimalCol_row`; the
+    upper-bound half is `le_value_of_row_ge`. -/
 theorem value_isGreatest_colLPFeasible : IsGreatest (G.colLPFeasible) G.value := by
   constructor
-  · refine ⟨G.optimalCol, G.optimalCol_mem, fun i => ?_⟩
-    have h := G.value_row_optimal (Pi.single i 1) (single_mem_stdSimplex ℝ i)
-    rwa [payoff_single_left] at h
+  · exact ⟨G.optimalCol, G.optimalCol_mem, G.le_optimalCol_row⟩
   · rintro t ⟨q, hq, ht⟩
-    calc t ≤ G.payoff G.optimalRow q := G.payoff_ge_of_row_ge q t ht G.optimalRow G.optimalRow_mem
-      _ ≤ G.value := G.value_col_optimal q hq
+    exact G.le_value_of_row_ge hq ht
+
+/-! ## `value` under reindexing the action types
+
+**Status: confirmed by a clean `lake build`.** `comapRow f` replaces the row player's action type
+`I` by `I'` along a map `f : I' → I`: row `i'` plays as `f i'` would have. `comapCol` does the same
+for the column player. Two facts hold on each side.
+
+* For any `f`, the reindexed player can do no better than before. The row player minimises, so
+  `G.value ≤ (G.comapRow f).value` (`value_le_value_comapRow`); the column player maximises, so
+  `(G.comapCol f).value ≤ G.value` (`value_comapCol_le_value`). The certificate is the *other*
+  player's optimal strategy for `G`, since every row of `G.comapRow f` is a row of `G`.
+* When `f` is surjective the value is unchanged (`value_comapRow`, `value_comapCol`): duplicate
+  actions change nothing. The certificate is `G`'s optimal strategy pushed forward along a section
+  of `f` (`pushStrat`), which puts each action's weight on one chosen preimage.
+
+A bijection is the special case `relabelRow`/`relabelCol`, with `value_relabelRow`/
+`value_relabelCol` as corollaries. All four value theorems go through the certificate lemmas of
+the previous section, so the only computation is `sum_pushStrat_mul`: pairing a pushed-forward
+weight vector with `c` is pairing the original with `c ∘ g`.
+
+In the FMSD paper (Kwiatkowska, Norman, Parker, Santos, "Automatic verification of concurrent
+stochastic systems"), Definition 13 (the coalition-game construction reducing an `n`-player CSG to
+two-player form for a coalition `C`) reduces to a relabelling of this shape once its `⊥`/idle-action
+machinery (Definition 7's per-state *partial* action availability -- some players can have no
+enabled action at some states) is set aside. `CSG`/`NCSG` make that simplification everywhere
+(every action available in every state, as in `DiscountedMDP`), so under it Definition 13's
+`A_C1`/`A_C2` -- built there as `(A_1 ∪ {⊥}) × ⋯ × (A_n' ∪ {⊥}) \ {(⊥,…,⊥)}` to handle a coalition
+whose members might all be idling -- degenerate to the plain product
+`Csg.Coalition.CoalitionAction`/`ComplementAction`, with no exclusion needed. The paper also
+states the resulting zero-sum identity `⟨⟨C⟩⟩P_max=?[ψ] ≡ ⟨⟨N∖C⟩⟩P_min=?[ψ]` without proof, "as a
+consequence of CSG determinacy"; the relabelling-level fact behind it is `value_relabelRow`.
+`SkirmishFeintCoalition.lean` relabels *both* sides of a stage game at once: the row and column
+index types coming out of `NCSG.reduceMin`/`reduceMax` (`CoalitionAction`/`ComplementAction`,
+dependent products over a `Finset` subtype) are each only in bijection with, not literally equal
+to, the bare per-player action types a hand-built `CSG` uses. `relabelRow` and `relabelCol` touch
+disjoint arguments of `MatrixGame.A`, so they compose in either order.
+-/
+
+section Reindex
+
+/-- Push a weight vector forward along `g`: `b` receives the total weight of the `a` with
+    `g a = b`. -/
+noncomputable def pushStrat {α β : Type*} [Fintype α] [DecidableEq β] (g : α → β) (x : α → ℝ) :
+    β → ℝ :=
+  fun b => ∑ a, if g a = b then x a else 0
+
+/-- Pairing a pushed-forward weight vector with `c` is pairing the original with `c ∘ g`. -/
+theorem sum_pushStrat_mul {α β : Type*} [Fintype α] [Fintype β] [DecidableEq β] (g : α → β)
+    (x : α → ℝ) (c : β → ℝ) : ∑ b, pushStrat g x b * c b = ∑ a, x a * c (g a) := by
+  simp only [pushStrat, Finset.sum_mul]
+  rw [Finset.sum_comm]
+  refine Finset.sum_congr rfl fun a _ => ?_
+  simp [ite_mul]
+
+/-- `sum_pushStrat_mul` with the factors in the other order. -/
+theorem sum_mul_pushStrat {α β : Type*} [Fintype α] [Fintype β] [DecidableEq β] (g : α → β)
+    (x : α → ℝ) (c : β → ℝ) : ∑ b, c b * pushStrat g x b = ∑ a, c (g a) * x a :=
+  calc ∑ b, c b * pushStrat g x b = ∑ b, pushStrat g x b * c b :=
+        Finset.sum_congr rfl fun b _ => mul_comm _ _
+    _ = ∑ a, x a * c (g a) := sum_pushStrat_mul g x c
+    _ = ∑ a, c (g a) * x a := Finset.sum_congr rfl fun a _ => mul_comm _ _
+
+/-- The push-forward of a mixed strategy is a mixed strategy. -/
+theorem pushStrat_mem {α β : Type*} [Fintype α] [Fintype β] [DecidableEq β] (g : α → β)
+    {x : α → ℝ} (hx : x ∈ stdSimplex ℝ α) : pushStrat g x ∈ stdSimplex ℝ β := by
+  refine ⟨fun b => ?_, ?_⟩
+  · show 0 ≤ ∑ a, if g a = b then x a else 0
+    refine Finset.sum_nonneg fun a _ => ?_
+    split_ifs
+    · exact hx.1 a
+    · exact le_rfl
+  · calc ∑ b, pushStrat g x b = ∑ b, pushStrat g x b * 1 := by simp only [mul_one]
+      _ = ∑ a, x a * 1 := sum_pushStrat_mul g x fun _ => 1
+      _ = ∑ a, x a := by simp only [mul_one]
+      _ = 1 := hx.2
+
+variable {I' : Type*} [Fintype I'] [Nonempty I'] [DecidableEq I']
+
+/-- Reindex the row player's action type along `f`, leaving the column side untouched: `i'` plays
+    exactly as `f i'` would have. `f` need not be injective (several `i'` may play the same row)
+    or surjective (some rows of `G` may go unplayed). -/
+noncomputable def comapRow (f : I' → I) : MatrixGame I' J where
+  A i' j := G.A (f i') j
+
+/-- Reindexing the rows can only raise the value: every row of `G.comapRow f` is a row of `G`, so
+    `G.optimalCol` still secures `G.value` against each of them. -/
+theorem value_le_value_comapRow (f : I' → I) : G.value ≤ (G.comapRow f).value := by
+  refine (G.comapRow f).le_value_of_row_ge G.optimalCol_mem fun i' => ?_
+  exact G.le_optimalCol_row (f i')
+
+/-- **The payoff.** Reindexing the rows along a surjection leaves the value unchanged.
+    `G.optimalRow`, pushed forward along a section `g` of `f`, holds every pure column of
+    `G.comapRow f` to exactly what `G.optimalRow` holds it to in `G`. -/
+theorem value_comapRow {f : I' → I} (hf : Function.Surjective f) :
+    (G.comapRow f).value = G.value := by
+  refine le_antisymm ?_ (G.value_le_value_comapRow f)
+  obtain ⟨g, hg⟩ := hf.hasRightInverse
+  refine (G.comapRow f).value_le_of_col_le (pushStrat_mem g G.optimalRow_mem) fun j => ?_
+  have hsum : ∑ i', pushStrat g G.optimalRow i' * (G.comapRow f).A i' j =
+      ∑ i, G.optimalRow i * G.A i j := by
+    refine (sum_pushStrat_mul g G.optimalRow fun i' => (G.comapRow f).A i' j).trans ?_
+    refine Finset.sum_congr rfl fun i _ => ?_
+    show G.optimalRow i * G.A (f (g i)) j = G.optimalRow i * G.A i j
+    rw [hg i]
+  exact hsum.le.trans (G.optimalRow_col_le j)
+
+/-- Relabel the row player's action type along a bijection, leaving the column side untouched:
+    `i'` plays exactly as `e i'` would have. This is `comapRow` at `e`. -/
+noncomputable def relabelRow (e : I' ≃ I) : MatrixGame I' J where
+  A i' j := G.A (e i') j
+
+/-- **The payoff.** `MatrixGame.value` doesn't change under a bijective relabelling of the row
+    player's action type: `value_comapRow` at the surjection `e`. -/
+theorem value_relabelRow (e : I' ≃ I) : (G.relabelRow e).value = G.value :=
+  G.value_comapRow e.surjective
+
+variable {J' : Type*} [Fintype J'] [Nonempty J'] [DecidableEq J']
+
+/-- Reindex the column player's action type along `f`, leaving the row side untouched. Mirror of
+    `comapRow`. -/
+noncomputable def comapCol (f : J' → J) : MatrixGame I J' where
+  A i j' := G.A i (f j')
+
+/-- Reindexing the columns can only lower the value: every column of `G.comapCol f` is a column
+    of `G`, so `G.optimalRow` still holds each of them to `G.value`. Mirror of
+    `value_le_value_comapRow`. -/
+theorem value_comapCol_le_value (f : J' → J) : (G.comapCol f).value ≤ G.value := by
+  refine (G.comapCol f).value_le_of_col_le G.optimalRow_mem fun j' => ?_
+  exact G.optimalRow_col_le (f j')
+
+/-- **The payoff.** Reindexing the columns along a surjection leaves the value unchanged. Mirror
+    of `value_comapRow`, with `G.optimalCol` pushed forward along a section of `f`. -/
+theorem value_comapCol {f : J' → J} (hf : Function.Surjective f) :
+    (G.comapCol f).value = G.value := by
+  refine le_antisymm (G.value_comapCol_le_value f) ?_
+  obtain ⟨g, hg⟩ := hf.hasRightInverse
+  refine (G.comapCol f).le_value_of_row_ge (pushStrat_mem g G.optimalCol_mem) fun i => ?_
+  have hsum : ∑ j', (G.comapCol f).A i j' * pushStrat g G.optimalCol j' =
+      ∑ j, G.A i j * G.optimalCol j := by
+    refine (sum_mul_pushStrat g G.optimalCol fun j' => (G.comapCol f).A i j').trans ?_
+    refine Finset.sum_congr rfl fun j _ => ?_
+    show G.A i (f (g j)) * G.optimalCol j = G.A i j * G.optimalCol j
+    rw [hg j]
+  exact (G.le_optimalCol_row i).trans hsum.ge
+
+/-- Relabel the column player's action type along a bijection, leaving the row side untouched:
+    `j'` plays exactly as `e j'` would have. Mirror of `relabelRow`. -/
+noncomputable def relabelCol (e : J' ≃ J) : MatrixGame I J' where
+  A i j' := G.A i (e j')
+
+/-- **The payoff.** `MatrixGame.value` doesn't change under a bijective relabelling of the column
+    player's action type: `value_comapCol` at the surjection `e`. -/
+theorem value_relabelCol (e : J' ≃ J) : (G.relabelCol e).value = G.value :=
+  G.value_comapCol e.surjective
+
+end Reindex
 
 end MatrixGame
 

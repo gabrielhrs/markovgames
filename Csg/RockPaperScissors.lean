@@ -28,15 +28,15 @@ reward-accumulation one.
 
 Three pieces:
 
-1. `MatrixGame.value_eq_of_forall_eq`: a one-line corollary of `MatrixGame.lean`'s two
-   sandwich lemmas -- a *constant* payoff matrix has that constant as its value. This is exactly
+1. `MatrixGame.value_eq_of_forall_eq` (`MatrixGame.lean`): a *constant* payoff matrix has that
+   constant as its value, by the two sandwich lemmas there. This is exactly
    what makes `win1` and `draw`'s stage games trivial: their transition doesn't depend on the joint
    action at all, so the payoff matrix is constant in both arguments.
 2. `rpsCSG_stageValue_win1`/`_draw`/`_initial`: the stage-game value at each state, for an
    *arbitrary* continuation `v` -- `win1`'s is `v win1` (dead end, self-loop), `draw`'s is
    `v initial` (deterministic pass-through), and `initial`'s is the interesting one,
-   `(v win1 + v win2 + v draw) / 3`, via the *same* `value_unique` + uniform-strategy argument
-   `MatchingPennies.lean` used for matching pennies, generalised from a `2`-way zero-sum payoff to a
+   `(v win1 + v win2 + v draw) / 3`, via the same uniform-strategy certificate
+   `MatchingPennies.lean` uses for matching pennies, generalised from a `2`-way zero-sum payoff to a
    `3`-way cyclic one: against uniform play, every fixed action of the other player sees exactly one
    losing, one winning, and one drawing response, so the payoff is the same constant regardless of
    what either player does -- the same "row/column sums are balanced" fact matching pennies relied
@@ -50,21 +50,6 @@ Three pieces:
    textbook `x_n \to 1/2`), each now appearing at two consecutive `k`. The exact `k \to \infty`
    limit is not proved here; `RockPaperScissorsLfp.lean` computes it through `OrderHom.lfp`.
 -/
-
-namespace Csg.MatrixGame
-
-variable {I J : Type*} [Fintype I] [Fintype J] [Nonempty I] [Nonempty J] [DecidableEq I]
-  [DecidableEq J] (G : MatrixGame I J)
-
-/-- A constant payoff matrix has that constant as its value -- immediate from sandwiching `value`
-    between the same constant from both sides (`MatrixGame.lean`). Exactly what makes a
-    self-looping / deterministically-passing-through state's stage game trivial to evaluate below:
-    its payoff matrix doesn't depend on the joint action at all. -/
-theorem value_eq_of_forall_eq {c : ℝ} (h : ∀ i j, G.A i j = c) : G.value = c :=
-  le_antisymm (G.value_le_of_forall_le fun i j => (h i j).le)
-    (G.le_value_of_forall_le fun i j => (h i j).ge)
-
-end Csg.MatrixGame
 
 namespace Csg
 
@@ -202,63 +187,25 @@ noncomputable def unif3 : RPSAction → ℝ := fun _ => 1 / 3
 theorem unif3_mem : unif3 ∈ stdSimplex ℝ RPSAction :=
   ⟨fun a => by simp only [unif3]; norm_num, by simp only [unif3, rpsAction_sum]; norm_num⟩
 
-/-- Against the uniform column strategy, *every* row strategy pays exactly `(win1+win2+draw)/3` --
-    `outcome_row_sum` says the inner sum is this constant regardless of the row action, so the
-    outer weighted average (any weights summing to `1`) is the same constant too. -/
-theorem rpsCSG_stageGame_initial_payoff_row (v : RPSState → ℝ) {p' : RPSAction → ℝ}
-    (hp' : p' ∈ stdSimplex ℝ RPSAction) :
-    (rpsCSG.stageGame .initial v).payoff p' unif3 = (v .win1 + v .win2 + v .draw) / 3 := by
-  have hinner : ∀ a1, ∑ a2, (rpsCSG.stageGame .initial v).A a1 a2 * unif3 a2 =
-      (v .win1 + v .win2 + v .draw) / 3 := by
-    intro a1
-    have hsum := outcome_row_sum a1 v
-    rw [rpsAction_sum]
-    simp only [rpsCSG_stageGame_initial_A, unif3]
-    linarith [hsum]
-  rw [MatrixGame.payoff_eq_sum_mul]
-  calc ∑ a1, p' a1 * ∑ a2, (rpsCSG.stageGame .initial v).A a1 a2 * unif3 a2
-      = ∑ a1, p' a1 * ((v .win1 + v .win2 + v .draw) / 3) :=
-        Finset.sum_congr rfl fun a1 _ => by rw [hinner a1]
-    _ = (∑ a1, p' a1) * ((v .win1 + v .win2 + v .draw) / 3) := by rw [← Finset.sum_mul]
-    _ = (v .win1 + v .win2 + v .draw) / 3 := by rw [hp'.2, one_mul]
-
-/-- Symmetric counterpart of `rpsCSG_stageGame_initial_payoff_row` for the column player. -/
-theorem rpsCSG_stageGame_initial_payoff_col (v : RPSState → ℝ) {q' : RPSAction → ℝ}
-    (hq' : q' ∈ stdSimplex ℝ RPSAction) :
-    (rpsCSG.stageGame .initial v).payoff unif3 q' = (v .win1 + v .win2 + v .draw) / 3 := by
-  have hinner : ∀ a2, ∑ a1, unif3 a1 * (rpsCSG.stageGame .initial v).A a1 a2 =
-      (v .win1 + v .win2 + v .draw) / 3 := by
-    intro a2
-    have hsum := outcome_col_sum a2 v
-    rw [rpsAction_sum]
-    simp only [rpsCSG_stageGame_initial_A, unif3]
-    linarith [hsum]
-  rw [MatrixGame.payoff_eq_sum_mul']
-  calc ∑ a2, (∑ a1, unif3 a1 * (rpsCSG.stageGame .initial v).A a1 a2) * q' a2
-      = ∑ a2, ((v .win1 + v .win2 + v .draw) / 3) * q' a2 :=
-        Finset.sum_congr rfl fun a2 _ => by rw [hinner a2]
-    _ = ((v .win1 + v .win2 + v .draw) / 3) * ∑ a2, q' a2 := by rw [← Finset.mul_sum]
-    _ = (v .win1 + v .win2 + v .draw) / 3 := by rw [hq'.2, mul_one]
-
 /-- **The payoff.** `initial`'s stage-game value, for *any* continuation `v`: the average of `v` at
-    the three possible outcomes. Same `value_unique` + uniform-strategy-is-a-saddle-point argument
-    `MatchingPennies.lean` used, generalised from two actions to three. -/
+    the three possible outcomes. `unif3` on each side is the certificate
+    (`MatrixGame.value_eq_of_certificate`): against a fixed column action the three row actions
+    realise `win1`, `win2` and `draw` once each (`outcome_col_sum`), so uniform row play holds
+    every pure column to exactly the average, and `outcome_row_sum` gives the same for uniform
+    column play against every pure row. -/
 theorem rpsCSG_stageValue_initial (v : RPSState → ℝ) :
     rpsCSG.stageValue .initial v = (v .win1 + v .win2 + v .draw) / 3 := by
-  have huu : (rpsCSG.stageGame .initial v).payoff unif3 unif3 =
-      (v .win1 + v .win2 + v .draw) / 3 := rpsCSG_stageGame_initial_payoff_row v unif3_mem
-  have hrow : ∀ p' ∈ stdSimplex ℝ RPSAction,
-      (rpsCSG.stageGame .initial v).payoff unif3 unif3 ≤
-        (rpsCSG.stageGame .initial v).payoff p' unif3 := fun p' hp' =>
-    le_of_eq (huu.trans (rpsCSG_stageGame_initial_payoff_row v hp').symm)
-  have hcol : ∀ q' ∈ stdSimplex ℝ RPSAction,
-      (rpsCSG.stageGame .initial v).payoff unif3 q' ≤
-        (rpsCSG.stageGame .initial v).payoff unif3 unif3 := fun q' hq' =>
-    le_of_eq ((rpsCSG_stageGame_initial_payoff_col v hq').trans huu.symm)
-  have hval := (rpsCSG.stageGame .initial v).value_unique unif3_mem unif3_mem hrow hcol
   change (rpsCSG.stageGame .initial v).value = (v .win1 + v .win2 + v .draw) / 3
-  rw [← hval]
-  exact huu
+  refine (rpsCSG.stageGame .initial v).value_eq_of_certificate unif3_mem unif3_mem
+    (fun a2 => le_of_eq ?_) (fun a1 => le_of_eq (Eq.symm ?_))
+  · have hsum := outcome_col_sum a2 v
+    rw [rpsAction_sum]
+    simp only [rpsCSG_stageGame_initial_A, unif3]
+    linarith [hsum]
+  · have hsum := outcome_row_sum a1 v
+    rw [rpsAction_sum]
+    simp only [rpsCSG_stageGame_initial_A, unif3]
+    linarith [hsum]
 
 /-- The property being computed: reachability of `win2`, i.e. plain step-bounded reachability
     `F<=k win2` (see `BoundedReachability.lean`). An `abbrev`, not a `def`:

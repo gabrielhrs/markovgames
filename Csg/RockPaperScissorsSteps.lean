@@ -103,67 +103,23 @@ theorem rpsCSGSteps_stageGame_initial_A (a1 a2 : RPSAction) (v : RPSState → �
   rw [rpsCSGSteps_expect_initial]
   simp [rpsCSGSteps]
 
-/-- Against uniform column play, every row action pays exactly `1 + (v win1 + v win2 + v draw)/3`
-    -- `outcome_row_sum` (now public, see `RockPaperScissors.lean`'s own note) says the sum over
-    the three responses is the same constant regardless of the row action, same as
-    `rpsCSG_stageGame_initial_payoff_row`'s argument, shifted by the constant step cost. -/
-theorem rpsCSGSteps_stageGame_initial_payoff_row (v : RPSState → ℝ) {p' : RPSAction → ℝ}
-    (hp' : p' ∈ stdSimplex ℝ RPSAction) :
-    (rpsCSGSteps.stageGame .initial v).payoff p' unif3 =
-      1 + (v .win1 + v .win2 + v .draw) / 3 := by
-  have hinner : ∀ a1, ∑ a2, (rpsCSGSteps.stageGame .initial v).A a1 a2 * unif3 a2 =
-      1 + (v .win1 + v .win2 + v .draw) / 3 := by
-    intro a1
-    have hsum := outcome_row_sum a1 v
-    rw [rpsAction_sum]
-    simp only [rpsCSGSteps_stageGame_initial_A, unif3]
-    linarith [hsum]
-  rw [MatrixGame.payoff_eq_sum_mul]
-  calc ∑ a1, p' a1 * ∑ a2, (rpsCSGSteps.stageGame .initial v).A a1 a2 * unif3 a2
-      = ∑ a1, p' a1 * (1 + (v .win1 + v .win2 + v .draw) / 3) :=
-        Finset.sum_congr rfl fun a1 _ => by rw [hinner a1]
-    _ = (∑ a1, p' a1) * (1 + (v .win1 + v .win2 + v .draw) / 3) := by rw [← Finset.sum_mul]
-    _ = 1 + (v .win1 + v .win2 + v .draw) / 3 := by rw [hp'.2, one_mul]
-
-/-- Symmetric counterpart of `rpsCSGSteps_stageGame_initial_payoff_row`, for the column player. -/
-theorem rpsCSGSteps_stageGame_initial_payoff_col (v : RPSState → ℝ) {q' : RPSAction → ℝ}
-    (hq' : q' ∈ stdSimplex ℝ RPSAction) :
-    (rpsCSGSteps.stageGame .initial v).payoff unif3 q' =
-      1 + (v .win1 + v .win2 + v .draw) / 3 := by
-  have hinner : ∀ a2, ∑ a1, unif3 a1 * (rpsCSGSteps.stageGame .initial v).A a1 a2 =
-      1 + (v .win1 + v .win2 + v .draw) / 3 := by
-    intro a2
-    have hsum := outcome_col_sum a2 v
-    rw [rpsAction_sum]
-    simp only [rpsCSGSteps_stageGame_initial_A, unif3]
-    linarith [hsum]
-  rw [MatrixGame.payoff_eq_sum_mul']
-  calc ∑ a2, (∑ a1, unif3 a1 * (rpsCSGSteps.stageGame .initial v).A a1 a2) * q' a2
-      = ∑ a2, (1 + (v .win1 + v .win2 + v .draw) / 3) * q' a2 :=
-        Finset.sum_congr rfl fun a2 _ => by rw [hinner a2]
-    _ = (1 + (v .win1 + v .win2 + v .draw) / 3) * ∑ a2, q' a2 := by rw [← Finset.mul_sum]
-    _ = 1 + (v .win1 + v .win2 + v .draw) / 3 := by rw [hq'.2, mul_one]
-
 /-- **The payoff.** `initial`'s stage-game value, for *any* continuation `v`: `1` (this step's
-    cost) plus the average of `v` at the three possible outcomes -- the same
-    `value_unique` + uniform-strategy-is-a-saddle-point argument every other stage game in this
-    line has used, unaffected by the reward shift. -/
+    cost) plus the average of `v` at the three possible outcomes. The same `unif3` certificate as
+    `rpsCSG_stageValue_initial`, through `RockPaperScissors.lean`'s `outcome_col_sum` and
+    `outcome_row_sum`, with every entry shifted by the constant step cost. -/
 theorem rpsCSGSteps_stageValue_initial (v : RPSState → ℝ) :
     rpsCSGSteps.stageValue .initial v = 1 + (v .win1 + v .win2 + v .draw) / 3 := by
-  have huu : (rpsCSGSteps.stageGame .initial v).payoff unif3 unif3 =
-      1 + (v .win1 + v .win2 + v .draw) / 3 := rpsCSGSteps_stageGame_initial_payoff_row v unif3_mem
-  have hrow : ∀ p' ∈ stdSimplex ℝ RPSAction,
-      (rpsCSGSteps.stageGame .initial v).payoff unif3 unif3 ≤
-        (rpsCSGSteps.stageGame .initial v).payoff p' unif3 := fun p' hp' =>
-    le_of_eq (huu.trans (rpsCSGSteps_stageGame_initial_payoff_row v hp').symm)
-  have hcol : ∀ q' ∈ stdSimplex ℝ RPSAction,
-      (rpsCSGSteps.stageGame .initial v).payoff unif3 q' ≤
-        (rpsCSGSteps.stageGame .initial v).payoff unif3 unif3 := fun q' hq' =>
-    le_of_eq ((rpsCSGSteps_stageGame_initial_payoff_col v hq').trans huu.symm)
-  have hval := (rpsCSGSteps.stageGame .initial v).value_unique unif3_mem unif3_mem hrow hcol
   change (rpsCSGSteps.stageGame .initial v).value = 1 + (v .win1 + v .win2 + v .draw) / 3
-  rw [← hval]
-  exact huu
+  refine (rpsCSGSteps.stageGame .initial v).value_eq_of_certificate unif3_mem unif3_mem
+    (fun a2 => le_of_eq ?_) (fun a1 => le_of_eq (Eq.symm ?_))
+  · have hsum := outcome_col_sum a2 v
+    rw [rpsAction_sum]
+    simp only [rpsCSGSteps_stageGame_initial_A, unif3]
+    linarith [hsum]
+  · have hsum := outcome_row_sum a1 v
+    rw [rpsAction_sum]
+    simp only [rpsCSGSteps_stageGame_initial_A, unif3]
+    linarith [hsum]
 
 /-- The bespoke expected-steps-to-absorption Bellman step: `win1`/`win2` are hard-pinned to `0`
     (the round is already decided, nothing further accumulates) *regardless of what `v` says*,

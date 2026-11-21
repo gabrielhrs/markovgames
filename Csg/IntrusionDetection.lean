@@ -146,7 +146,7 @@ noncomputable def idsV1 : IDSState → ℝ
 
 /-- The defender's mixed strategy that equalises the attacker's two pure-strategy payoffs at
     *both* states simultaneously -- `defend1` with probability `1/3`, `defend2` with probability
-    `2/3`. Optimal for the one-round-remaining stage game at either state (`idsCSG_payoff_col`
+    `2/3`. Optimal for the one-round-remaining stage game at either state (`idsCSG_stageValue`
     below), the same role `unif3` plays for rock-paper-scissors, but not uniform. -/
 noncomputable def idsP : PolicyAction → ℝ
   | .defend1 => 1 / 3
@@ -157,7 +157,7 @@ theorem idsP_mem : idsP ∈ stdSimplex ℝ PolicyAction :=
 
 /-- Symmetric counterpart of `idsP` for the attacker: `attack1` with probability `2/3`, `attack2`
     with probability `1/3`. Equalises the defender's two pure-strategy payoffs at both states
-    simultaneously (`idsCSG_payoff_row` below). -/
+    simultaneously (`idsCSG_stageValue` below). -/
 noncomputable def idsQ : AttackAction → ℝ
   | .attack1 => 2 / 3
   | .attack2 => 1 / 3
@@ -165,56 +165,18 @@ noncomputable def idsQ : AttackAction → ℝ
 theorem idsQ_mem : idsQ ∈ stdSimplex ℝ AttackAction :=
   ⟨fun a => by cases a <;> norm_num [idsQ], by simp only [attackAction_sum, idsQ]; norm_num⟩
 
-/-- Against `idsQ`, *every* row strategy pays exactly `idsV1 s` -- `idsQ` equalises the two pure
-    row actions' payoffs at whichever state `s` is (checked directly, by cases, since there are
-    only two of each), so any weighted average of them is that same constant. Mirrors
-    `RockPaperScissors.lean`'s `rpsCSG_stageGame_initial_payoff_row`, generalised from the uniform
-    `unif3` to the non-uniform `idsQ`. -/
-theorem idsCSG_payoff_row (s : IDSState) {p' : PolicyAction → ℝ}
-    (hp' : p' ∈ stdSimplex ℝ PolicyAction) :
-    (idsCSG.stageGame s (fun _ => 0)).payoff p' idsQ = idsV1 s := by
-  have hinner : ∀ a1, ∑ a2, (idsCSG.stageGame s (fun _ => 0)).A a1 a2 * idsQ a2 = idsV1 s := by
-    intro a1
-    rw [attackAction_sum]
-    cases s <;> cases a1 <;> simp [idsCSG_stageGame_A, idsR, idsQ, idsV1] <;> norm_num
-  rw [MatrixGame.payoff_eq_sum_mul]
-  calc ∑ a1, p' a1 * ∑ a2, (idsCSG.stageGame s (fun _ => 0)).A a1 a2 * idsQ a2
-      = ∑ a1, p' a1 * idsV1 s := Finset.sum_congr rfl fun a1 _ => by rw [hinner a1]
-    _ = (∑ a1, p' a1) * idsV1 s := by rw [← Finset.sum_mul]
-    _ = idsV1 s := by rw [hp'.2, one_mul]
-
-/-- Symmetric counterpart of `idsCSG_payoff_row` for the column player. -/
-theorem idsCSG_payoff_col (s : IDSState) {q' : AttackAction → ℝ}
-    (hq' : q' ∈ stdSimplex ℝ AttackAction) :
-    (idsCSG.stageGame s (fun _ => 0)).payoff idsP q' = idsV1 s := by
-  have hinner : ∀ a2, ∑ a1, idsP a1 * (idsCSG.stageGame s (fun _ => 0)).A a1 a2 = idsV1 s := by
-    intro a2
-    rw [policyAction_sum]
-    cases s <;> cases a2 <;> simp [idsCSG_stageGame_A, idsR, idsP, idsV1] <;> norm_num
-  rw [MatrixGame.payoff_eq_sum_mul']
-  calc ∑ a2, (∑ a1, idsP a1 * (idsCSG.stageGame s (fun _ => 0)).A a1 a2) * q' a2
-      = ∑ a2, idsV1 s * q' a2 := Finset.sum_congr rfl fun a2 _ => by rw [hinner a2]
-    _ = idsV1 s * ∑ a2, q' a2 := by rw [← Finset.mul_sum]
-    _ = idsV1 s := by rw [hq'.2, mul_one]
-
 /-- **The payoff.** The one-round-remaining stage-game value at either state, matching `idsV1`.
-    Same `value_unique` + shared-saddle-point argument `RockPaperScissors.lean`'s
-    `rpsCSG_stageValue_initial` uses, with `idsP`/`idsQ` in place of the uniform `unif3`. -/
+    `idsP` and `idsQ` are the certificate (`MatrixGame.value_eq_of_certificate`): `idsP` makes
+    both pure attacks pay exactly `idsV1 s` and `idsQ` makes both pure defences pay exactly
+    `idsV1 s`, at whichever state `s` is -- eight finite sums, checked by cases. -/
 theorem idsCSG_stageValue (s : IDSState) : idsCSG.stageValue s (fun _ => 0) = idsV1 s := by
-  have huu : (idsCSG.stageGame s (fun _ => 0)).payoff idsP idsQ = idsV1 s :=
-    idsCSG_payoff_row s idsP_mem
-  have hrow : ∀ p' ∈ stdSimplex ℝ PolicyAction,
-      (idsCSG.stageGame s (fun _ => 0)).payoff idsP idsQ ≤
-        (idsCSG.stageGame s (fun _ => 0)).payoff p' idsQ := fun p' hp' =>
-    le_of_eq (huu.trans (idsCSG_payoff_row s hp').symm)
-  have hcol : ∀ q' ∈ stdSimplex ℝ AttackAction,
-      (idsCSG.stageGame s (fun _ => 0)).payoff idsP q' ≤
-        (idsCSG.stageGame s (fun _ => 0)).payoff idsP idsQ := fun q' hq' =>
-    le_of_eq ((idsCSG_payoff_col s hq').trans huu.symm)
-  have hval := (idsCSG.stageGame s (fun _ => 0)).value_unique idsP_mem idsQ_mem hrow hcol
   change (idsCSG.stageGame s (fun _ => 0)).value = idsV1 s
-  rw [← hval]
-  exact huu
+  refine (idsCSG.stageGame s (fun _ => 0)).value_eq_of_certificate idsP_mem idsQ_mem
+    (fun a2 => le_of_eq ?_) (fun a1 => le_of_eq (Eq.symm ?_))
+  · rw [policyAction_sum]
+    cases s <;> cases a2 <;> simp [idsCSG_stageGame_A, idsR, idsP, idsV1] <;> norm_num
+  · rw [attackAction_sum]
+    cases s <;> cases a1 <;> simp [idsCSG_stageGame_A, idsR, idsQ, idsV1] <;> norm_num
 
 /-- **The headline result.** One round remaining, `bwInd`'s recursive step applied once to the
     all-zero terminal reward: `idsV1`. -/
@@ -308,54 +270,19 @@ noncomputable def idsQ2 : AttackAction → ℝ
 theorem idsQ2_mem : idsQ2 ∈ stdSimplex ℝ AttackAction :=
   ⟨fun a => by cases a <;> norm_num [idsQ2], by simp only [attackAction_sum, idsQ2]; norm_num⟩
 
-/-- Against `idsQ2`, every row strategy pays exactly `idsV2 s`, for the two-rounds-remaining stage
-    game (continuation `idsV1`). Same technique as `idsCSG_payoff_row`, via `idsCSG_stageGame_A'`
-    in place of `idsCSG_stageGame_A`. -/
-theorem idsCSG_payoff_row_two (s : IDSState) {p' : PolicyAction → ℝ}
-    (hp' : p' ∈ stdSimplex ℝ PolicyAction) :
-    (idsCSG.stageGame s idsV1).payoff p' idsQ2 = idsV2 s := by
-  have hinner : ∀ a1, ∑ a2, (idsCSG.stageGame s idsV1).A a1 a2 * idsQ2 a2 = idsV2 s := by
-    intro a1
-    rw [attackAction_sum]
-    cases s <;> cases a1 <;>
-      simp [idsCSG_stageGame_A', idsR, idsNext, idsQ2, idsV1, idsV2] <;> norm_num
-  rw [MatrixGame.payoff_eq_sum_mul]
-  calc ∑ a1, p' a1 * ∑ a2, (idsCSG.stageGame s idsV1).A a1 a2 * idsQ2 a2
-      = ∑ a1, p' a1 * idsV2 s := Finset.sum_congr rfl fun a1 _ => by rw [hinner a1]
-    _ = (∑ a1, p' a1) * idsV2 s := by rw [← Finset.sum_mul]
-    _ = idsV2 s := by rw [hp'.2, one_mul]
-
-/-- Symmetric counterpart of `idsCSG_payoff_row_two` for the column player. -/
-theorem idsCSG_payoff_col_two (s : IDSState) {q' : AttackAction → ℝ}
-    (hq' : q' ∈ stdSimplex ℝ AttackAction) :
-    (idsCSG.stageGame s idsV1).payoff idsP2 q' = idsV2 s := by
-  have hinner : ∀ a2, ∑ a1, idsP2 a1 * (idsCSG.stageGame s idsV1).A a1 a2 = idsV2 s := by
-    intro a2
-    rw [policyAction_sum]
+/-- **The payoff.** The two-rounds-remaining stage-game value at either state, matching `idsV2`.
+    Same certificate argument as `idsCSG_stageValue`, with `idsP2`/`idsQ2` against the
+    continuation `idsV1` and `idsCSG_stageGame_A'` in place of `idsCSG_stageGame_A`. -/
+theorem idsCSG_stageValue_two (s : IDSState) : idsCSG.stageValue s idsV1 = idsV2 s := by
+  change (idsCSG.stageGame s idsV1).value = idsV2 s
+  refine (idsCSG.stageGame s idsV1).value_eq_of_certificate idsP2_mem idsQ2_mem
+    (fun a2 => le_of_eq ?_) (fun a1 => le_of_eq (Eq.symm ?_))
+  · rw [policyAction_sum]
     cases s <;> cases a2 <;>
       simp [idsCSG_stageGame_A', idsR, idsNext, idsP2, idsV1, idsV2] <;> norm_num
-  rw [MatrixGame.payoff_eq_sum_mul']
-  calc ∑ a2, (∑ a1, idsP2 a1 * (idsCSG.stageGame s idsV1).A a1 a2) * q' a2
-      = ∑ a2, idsV2 s * q' a2 := Finset.sum_congr rfl fun a2 _ => by rw [hinner a2]
-    _ = idsV2 s * ∑ a2, q' a2 := by rw [← Finset.mul_sum]
-    _ = idsV2 s := by rw [hq'.2, mul_one]
-
-/-- **The payoff.** The two-rounds-remaining stage-game value at either state, matching `idsV2`. -/
-theorem idsCSG_stageValue_two (s : IDSState) : idsCSG.stageValue s idsV1 = idsV2 s := by
-  have huu : (idsCSG.stageGame s idsV1).payoff idsP2 idsQ2 = idsV2 s :=
-    idsCSG_payoff_row_two s idsP2_mem
-  have hrow : ∀ p' ∈ stdSimplex ℝ PolicyAction,
-      (idsCSG.stageGame s idsV1).payoff idsP2 idsQ2 ≤
-        (idsCSG.stageGame s idsV1).payoff p' idsQ2 := fun p' hp' =>
-    le_of_eq (huu.trans (idsCSG_payoff_row_two s hp').symm)
-  have hcol : ∀ q' ∈ stdSimplex ℝ AttackAction,
-      (idsCSG.stageGame s idsV1).payoff idsP2 q' ≤
-        (idsCSG.stageGame s idsV1).payoff idsP2 idsQ2 := fun q' hq' =>
-    le_of_eq ((idsCSG_payoff_col_two s hq').trans huu.symm)
-  have hval := (idsCSG.stageGame s idsV1).value_unique idsP2_mem idsQ2_mem hrow hcol
-  change (idsCSG.stageGame s idsV1).value = idsV2 s
-  rw [← hval]
-  exact huu
+  · rw [attackAction_sum]
+    cases s <;> cases a1 <;>
+      simp [idsCSG_stageGame_A', idsR, idsNext, idsQ2, idsV1, idsV2] <;> norm_num
 
 /-- **The headline result.** Two rounds remaining: `bwInd`'s recursive step applied to `idsV1`
     (itself the one-round-remaining `bwInd` value, not the raw terminal reward) -- the first place
