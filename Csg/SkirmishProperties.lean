@@ -7,6 +7,7 @@ import Csg.Skirmish
 import Csg.QualitativeSure
 import Csg.QualitativeAlmostSure
 import Csg.QualitativeLimitSure
+import Csg.QualitativeDet
 
 /-!
 # Plain SKIRMISH: the 14 `skirmish.prism.props` sure/almost/limit facts
@@ -151,6 +152,12 @@ it is wanted.
 
 namespace Csg
 
+/-- SKIRMISH is deterministic, with successor function `skirmishNext`. Through
+    `CSG.IsDet.mem_Pre1`, `mem_A` and `mem_B` this turns a one-step fact at given sets into a
+    closed statement about `skirmishNext` on three positions and two moves a side, which `decide`
+    settles by enumeration. -/
+theorem skirmishCSG_isDet : skirmishCSG.IsDet skirmishNext := skirmishK_eq_pure
+
 /-! ## Section 1a: the "avoid wet" safe set, and its pre-fixed-point fact -/
 
 /-- The safety target from `skirmish.prism.props`'s `G !(s=1)`: every position except `wet`. An
@@ -161,27 +168,12 @@ abbrev skirmishSafe : Set SkirmishPos := {s | s ≠ .wet}
 
 /-- **The payoff.** `skirmishSafe` is a pre-fixed point of `Pre1`: from `hide`, staying put
     (`.hide`) keeps every sniper response inside `safe`; from `home`, *any* soldier move does,
-    since `skirmishK_support_home` lands back at `hide ∈ safe` unconditionally regardless of the
-    joint move. -/
+    since `home` returns to `hide ∈ safe` regardless of the joint move. -/
 theorem skirmishSafe_pre1 : skirmishSafe ⊆ skirmishCSG.Pre1 skirmishSafe := by
   intro s hs
-  cases s with
-  | wet => exact absurd rfl hs
-  | hide =>
-      refine ⟨.hide, ?_⟩
-      intro a2
-      cases a2 with
-      | wait =>
-          rw [skirmishK_support_hide_hide_wait]
-          exact Set.singleton_subset_iff.mpr (by decide)
-      | throw =>
-          rw [skirmishK_support_hide_hide_throw]
-          exact Set.singleton_subset_iff.mpr (by decide)
-  | home =>
-      refine ⟨.hide, ?_⟩
-      intro a2
-      rw [skirmishK_support_home]
-      exact Set.singleton_subset_iff.mpr (by decide)
+  rw [skirmishCSG_isDet.mem_Pre1]
+  revert s
+  decide
 
 /-! ## Section 1b: `G !(s=1)`, sure-mode safety collapse -/
 
@@ -221,20 +213,9 @@ theorem skirmish_hide_not_mem_G_singleton :
       skirmishCSG.Pre1 (skirmishCSG.G ({SkirmishPos.hide} : Set SkirmishPos)) := hmem.1
   have hpre' : SkirmishPos.hide ∈ skirmishCSG.Pre1 ({SkirmishPos.hide} : Set SkirmishPos) :=
     skirmishCSG.Pre1_mono hsub hpre
-  obtain ⟨a1, ha1⟩ := hpre'
-  cases a1 with
-  | hide =>
-      have hthrow := ha1 .throw
-      rw [skirmishK_support_hide_hide_throw] at hthrow
-      have hmemhide : SkirmishPos.home ∈ ({SkirmishPos.hide} : Set SkirmishPos) :=
-        Set.singleton_subset_iff.mp hthrow
-      exact absurd (Set.eq_of_mem_singleton hmemhide) (by decide)
-  | run =>
-      have hwait := ha1 .wait
-      rw [skirmishK_support_hide_run_wait] at hwait
-      have hmemhide : SkirmishPos.home ∈ ({SkirmishPos.hide} : Set SkirmishPos) :=
-        Set.singleton_subset_iff.mp hwait
-      exact absurd (Set.eq_of_mem_singleton hmemhide) (by decide)
+  rw [skirmishCSG_isDet.mem_Pre1] at hpre'
+  revert hpre'
+  decide
 
 /-! ## Section 1d: `F G !(s=1)`, sure-mode co-Büchi, a trivial regression check -/
 
@@ -251,35 +232,16 @@ theorem skirmish_SFG_safe_true : SkirmishPos.hide ∈ skirmishCSG.SFG skirmishSa
 
 /-- **The payoff.** No state -- not even `home` itself -- has a row action that forces landing
     back in `{home}` in one more step against *every* sniper response: `wet` and `home` both
-    ignore the joint move entirely and land somewhere else (`wet`/`hide` respectively, checked
-    against any witness sniper move); `hide` fails for both its own row actions (`hide` loses to
-    `(hide,wait)→hide`, `run` loses to `(run,throw)→wet`). The dual of `skirmishSafe_pre1`, which
-    showed `safe` *does* sustain itself; here `{home}` provably does not. -/
+    ignore the joint move entirely and land somewhere else (`wet`/`hide` respectively); `hide`
+    fails for both its own row actions (`hide` loses to `(hide,wait)→hide`, `run` loses to
+    `(run,throw)→wet`). The dual of `skirmishSafe_pre1`, which showed `safe` *does* sustain
+    itself; here `{home}` provably does not. -/
 theorem skirmishReachGoal_pre1_empty :
     skirmishCSG.Pre1 ({SkirmishPos.home} : Set SkirmishPos) = ∅ := by
   ext s
-  simp only [Set.mem_empty_iff_false, iff_false]
-  intro hs
-  obtain ⟨a1, ha1⟩ := hs
-  cases s with
-  | wet =>
-      have h := ha1 SniperMove.wait
-      rw [skirmishK_support_wet] at h
-      exact absurd (Set.eq_of_mem_singleton (Set.singleton_subset_iff.mp h)) (by decide)
-  | home =>
-      have h := ha1 SniperMove.wait
-      rw [skirmishK_support_home] at h
-      exact absurd (Set.eq_of_mem_singleton (Set.singleton_subset_iff.mp h)) (by decide)
-  | hide =>
-      cases a1 with
-      | hide =>
-          have h := ha1 .wait
-          rw [skirmishK_support_hide_hide_wait] at h
-          exact absurd (Set.eq_of_mem_singleton (Set.singleton_subset_iff.mp h)) (by decide)
-      | run =>
-          have h := ha1 .throw
-          rw [skirmishK_support_hide_run_throw] at h
-          exact absurd (Set.eq_of_mem_singleton (Set.singleton_subset_iff.mp h)) (by decide)
+  rw [skirmishCSG_isDet.mem_Pre1]
+  revert s
+  decide
 
 /-! ## Section 2b: `F s=2`, sure-mode reachability collapse -/
 
@@ -310,24 +272,14 @@ theorem skirmish_hide_not_mem_SF_home :
 
 /-! ## Section 3a: `wet` can never almost-surely escape a `wet`-free goal -/
 
-/-- **The payoff, general beyond this section.** `wet`'s transition is constant (`skirmishK_wet`):
-    whatever the joint move, the outcome is `wet` again, so its support can only ever meet a
-    target `x` that already contains `wet`. If `x` doesn't, `B _ x wet` is `∅` for *any* row-action
-    pool -- not just the specific one `A ∅ y wet` computes -- so `wet` fails `Apre1 x y`'s
-    `B (...) = univ` test outright, regardless of `y`. -/
+/-- **The payoff, general beyond this section.** `wet` is absorbing: whatever the joint move, the
+    successor is `wet` again, so no row action sends any column reply into a target `x` that does
+    not already contain `wet`. `wet` therefore fails `Apre1 x y` regardless of `y`. -/
 theorem skirmish_wet_not_mem_Apre1 (x y : Set SkirmishPos) (hx : SkirmishPos.wet ∉ x) :
     SkirmishPos.wet ∉ skirmishCSG.Apre1 x y := by
   intro hmem
-  have heq : skirmishCSG.B (skirmishCSG.A ∅ y SkirmishPos.wet) x SkirmishPos.wet
-      = (Set.univ : Set SniperMove) := hmem
-  have hW : SniperMove.wait ∈
-      skirmishCSG.B (skirmishCSG.A ∅ y SkirmishPos.wet) x SkirmishPos.wet := by
-    rw [heq]; exact Set.mem_univ _
-  obtain ⟨a1, _, y', hy'⟩ := hW
-  rw [skirmishK_support_wet] at hy'
-  have hyeq : y' = SkirmishPos.wet := Set.mem_singleton_iff.mp hy'.1
-  rw [hyeq] at hy'
-  exact hx hy'.2
+  obtain ⟨a1, -, h⟩ := skirmishCSG_isDet.mem_Apre1.mp hmem SniperMove.wait
+  cases a1 <;> exact hx h
 
 /-! ## Section 3b: `AFOuter {home}` collapses from `⊤` to `{home}` in two steps -/
 
@@ -352,36 +304,15 @@ theorem skirmish_AFOuter_top_le_safe :
   exact Set.union_subset skirmish_Apre1_safe_top_subset
     (Set.singleton_subset_iff.mpr (by decide))
 
-/-- **The payoff.** The second step down, from `skirmishSafe` to `{home}`: `wet` is excluded again
-    by `skirmish_wet_not_mem_Apre1`; `hide` needs real work -- restricting to row actions safe for
-    `skirmishSafe` (`A ∅ skirmishSafe hide`) rules out `run` outright (`(run,throw) → wet ∉
-    skirmishSafe`), leaving only `hide` itself, whose *own* outcome against `wait` is `hide`, not
-    `home` -- so `wait` can never be escaped into `{home}`, and `Apre1`'s `B (...) = univ` test
-    fails. Matches the informal check already recorded against `skirmish.prism`: `hide`'s only
+/-- **The payoff.** The second step down, from `skirmishSafe` to `{home}`, at `hide`: restricting
+    to row actions safe for `skirmishSafe` rules out `run` (`(run,throw) → wet ∉ skirmishSafe`),
+    leaving only `hide`, whose own outcome against `wait` is `hide`, not `home` -- so `wait` can
+    never be escaped into `{home}`, and `hide` fails `Apre1 {home} skirmishSafe`. `hide`'s only
     "safe" move stalls forever against a sniper who always waits. -/
 theorem skirmish_hide_not_mem_Apre1_home_safe :
     SkirmishPos.hide ∉ skirmishCSG.Apre1 ({SkirmishPos.home} : Set SkirmishPos) skirmishSafe := by
-  intro hmem
-  have hrun_not_mem : SoldierMove.run ∉ skirmishCSG.A ∅ skirmishSafe SkirmishPos.hide := by
-    intro hrun
-    rcases hrun SniperMove.throw with h | h
-    · exact h
-    · rw [skirmishK_support_hide_run_throw] at h
-      exact absurd (Set.singleton_subset_iff.mp h) (by decide)
-  have heq : skirmishCSG.B (skirmishCSG.A ∅ skirmishSafe SkirmishPos.hide)
-      ({SkirmishPos.home} : Set SkirmishPos) SkirmishPos.hide
-      = (Set.univ : Set SniperMove) := hmem
-  have hW : SniperMove.wait ∈ skirmishCSG.B (skirmishCSG.A ∅ skirmishSafe SkirmishPos.hide)
-      ({SkirmishPos.home} : Set SkirmishPos) SkirmishPos.hide := by
-    rw [heq]; exact Set.mem_univ _
-  obtain ⟨a1, ha1, y', hy'⟩ := hW
-  cases a1 with
-  | run => exact hrun_not_mem ha1
-  | hide =>
-      rw [skirmishK_support_hide_hide_wait] at hy'
-      have hyeq : y' = SkirmishPos.hide := Set.mem_singleton_iff.mp hy'.1
-      rw [hyeq] at hy'
-      exact absurd (Set.eq_of_mem_singleton hy'.2) (by decide)
+  rw [skirmishCSG_isDet.mem_Apre1]
+  decide
 
 theorem skirmish_Apre1_home_safe_subset :
     skirmishCSG.Apre1 ({SkirmishPos.home} : Set SkirmishPos) skirmishSafe
@@ -431,25 +362,16 @@ theorem skirmish_hide_not_mem_AF_home :
     land in `skirmishSafe`. The base case (`v2 = ∅`) the inner `LW` computation starts from. -/
 theorem skirmish_hide_mem_A_safe_hide :
     SoldierMove.hide ∈ skirmishCSG.A (∅ : Set SniperMove) skirmishSafe SkirmishPos.hide := by
-  intro a2
-  cases a2 with
-  | wait =>
-      right
-      rw [skirmishK_support_hide_hide_wait]
-      exact Set.singleton_subset_iff.mpr (by decide)
-  | throw =>
-      right
-      rw [skirmishK_support_hide_hide_throw]
-      exact Set.singleton_subset_iff.mpr (by decide)
+  rw [skirmishCSG_isDet.mem_A]
+  decide
 
 /-- **The payoff.** `throw` escapes into `{home}` from `hide`, using the row action `hide` alone:
     `(hide,throw) → home`. Feeds the first real step of the inner `LW` computation. -/
 theorem skirmish_throw_mem_B_singleton_hide_home :
     SniperMove.throw ∈ skirmishCSG.B ({SoldierMove.hide} : Set SoldierMove)
       ({SkirmishPos.home} : Set SkirmishPos) SkirmishPos.hide := by
-  refine ⟨SoldierMove.hide, rfl, SkirmishPos.home, ?_, rfl⟩
-  rw [skirmishK_support_hide_hide_throw]
-  rfl
+  rw [skirmishCSG_isDet.mem_B]
+  decide
 
 /-- **The payoff.** Once `throw` is excused (already known escapable), *both* row actions become
     safe for `skirmishSafe`: `hide` because `throw` is excused and `wait → hide ∈ skirmishSafe`;
@@ -459,23 +381,9 @@ theorem skirmish_univ_subset_A_throw_safe_hide :
     (Set.univ : Set SoldierMove) ⊆
       skirmishCSG.A ({SniperMove.throw} : Set SniperMove) skirmishSafe SkirmishPos.hide := by
   intro a1 _
-  cases a1 with
-  | hide =>
-      intro a2
-      cases a2 with
-      | throw => left; rfl
-      | wait =>
-          right
-          rw [skirmishK_support_hide_hide_wait]
-          exact Set.singleton_subset_iff.mpr (by decide)
-  | run =>
-      intro a2
-      cases a2 with
-      | throw => left; rfl
-      | wait =>
-          right
-          rw [skirmishK_support_hide_run_wait]
-          exact Set.singleton_subset_iff.mpr (by decide)
+  rw [skirmishCSG_isDet.mem_A]
+  revert a1
+  decide
 
 /-! ## Section 4b: the inner `LW` and `Lpre1` computations at `hide` -/
 
@@ -524,17 +432,10 @@ theorem skirmish_LW_home_safe_hide_eq_univ :
 theorem skirmish_B_univ_home_hide_eq_univ :
     skirmishCSG.B (Set.univ : Set SoldierMove) ({SkirmishPos.home} : Set SkirmishPos)
       SkirmishPos.hide = (Set.univ : Set SniperMove) := by
-  apply Set.eq_univ_of_forall
-  intro a2
-  cases a2 with
-  | wait =>
-      refine ⟨SoldierMove.run, Set.mem_univ _, SkirmishPos.home, ?_, rfl⟩
-      rw [skirmishK_support_hide_run_wait]
-      rfl
-  | throw =>
-      refine ⟨SoldierMove.hide, Set.mem_univ _, SkirmishPos.home, ?_, rfl⟩
-      rw [skirmishK_support_hide_hide_throw]
-      rfl
+  ext a2
+  rw [skirmishCSG_isDet.mem_B]
+  revert a2
+  decide
 
 /-- **The payoff.** `hide` qualifies for `Lpre1 {home} skirmishSafe` outright: its `LW` witness set
     reaches `Set.univ` (`skirmish_LW_home_safe_hide_eq_univ`), and `Set.univ` escapes into `{home}`
@@ -588,41 +489,32 @@ theorem skirmish_hide_mem_LF_home :
 /-! ## Section 5a: two exact-value facts about `A ∅ safe` at `hide`/`home` -/
 
 /-- **The payoff, the exclusion half of `skirmish_A_safe_hide_eq_singleton_hide`.** `run` is never
-    safe for `skirmishSafe` at `hide`, columns unexcused: `(run,throw) → wet ∉ skirmishSafe`. The
-    same argument already used inline inside Section 3b's `skirmish_hide_not_mem_Apre1_home_safe`,
-    extracted here as its own fact for reuse. -/
+    safe for `skirmishSafe` at `hide`, columns unexcused: `(run,throw) → wet ∉ skirmishSafe`. -/
 theorem skirmish_run_not_mem_A_safe_hide :
     SoldierMove.run ∉ skirmishCSG.A (∅ : Set SniperMove) skirmishSafe SkirmishPos.hide := by
-  intro hrun
-  rcases hrun SniperMove.throw with h | h
-  · exact h
-  · rw [skirmishK_support_hide_run_throw] at h
-    exact absurd (Set.singleton_subset_iff.mp h) (by decide)
+  rw [skirmishCSG_isDet.mem_A]
+  decide
 
-/-- **The payoff.** `A ∅ safe hide` is not merely nonempty -- it is *exactly* `{hide}`: `⊇` from
-    the already-proven `skirmish_hide_mem_A_safe_hide` (Section 4a); `⊆` from
-    `skirmish_run_not_mem_A_safe_hide` (`SoldierMove` has only two constructors, so failing `run`
-    leaves only `hide`). The exact value the `AFVStep` fixed-point check below needs -- an
-    inclusion alone would not pin `AFVStep`'s image down to `{hide}` on the nose. -/
+/-- **The payoff.** `A ∅ safe hide` is not merely nonempty -- it is *exactly* `{hide}`: `hide` is
+    safe against both sniper responses and `run` is not (`(run,throw) → wet`). The exact value the
+    `AFVStep` fixed-point check below needs -- an inclusion alone would not pin `AFVStep`'s image
+    down to `{hide}` on the nose. -/
 theorem skirmish_A_safe_hide_eq_singleton_hide :
     skirmishCSG.A (∅ : Set SniperMove) skirmishSafe SkirmishPos.hide = {SoldierMove.hide} := by
-  apply Set.eq_singleton_iff_unique_mem.mpr
-  refine ⟨skirmish_hide_mem_A_safe_hide, ?_⟩
-  intro a1 ha1
-  cases a1 with
-  | hide => rfl
-  | run => exact absurd ha1 skirmish_run_not_mem_A_safe_hide
+  ext a1
+  rw [skirmishCSG_isDet.mem_A]
+  revert a1
+  decide
 
-/-- **The payoff, no case split needed at all.** Every row action is safe for `skirmishSafe` at
-    `home`, columns unexcused: `home`'s transition (`skirmishK_support_home`) lands at `hide ∈
-    skirmishSafe` unconditionally, regardless of *either* half of the joint move. -/
+/-- **The payoff.** Every row action is safe for `skirmishSafe` at `home`, columns unexcused:
+    `home`'s transition lands at `hide ∈ skirmishSafe` regardless of *either* half of the joint
+    move. -/
 theorem skirmish_A_safe_home_eq_univ :
     skirmishCSG.A (∅ : Set SniperMove) skirmishSafe SkirmishPos.home = Set.univ := by
-  apply Set.eq_univ_of_forall
-  intro a1 a2
-  right
-  rw [skirmishK_support_home]
-  exact Set.singleton_subset_iff.mpr (by decide)
+  ext a1
+  rw [skirmishCSG_isDet.mem_A]
+  revert a1
+  decide
 
 /-! ## Section 5b: two exact-value facts about `B` feeding the `AFVStep` fixed-point checks -/
 
@@ -634,30 +526,21 @@ theorem skirmish_A_safe_home_eq_univ :
 theorem skirmish_B_singleton_hide_safe_hide_eq_univ :
     skirmishCSG.B ({SoldierMove.hide} : Set SoldierMove) skirmishSafe SkirmishPos.hide
       = (Set.univ : Set SniperMove) := by
-  apply Set.eq_univ_of_forall
-  intro a2
-  cases a2 with
-  | wait =>
-      refine ⟨SoldierMove.hide, rfl, SkirmishPos.hide, ?_, by decide⟩
-      rw [skirmishK_support_hide_hide_wait]
-      rfl
-  | throw =>
-      refine ⟨SoldierMove.hide, rfl, SkirmishPos.home, ?_, by decide⟩
-      rw [skirmishK_support_hide_hide_throw]
-      rfl
+  ext a2
+  rw [skirmishCSG_isDet.mem_B]
+  revert a2
+  decide
 
-/-- **The payoff.** Every sniper response escapes into `skirmishSafe` from `home`, for *any*
-    row-action pool containing `hide` (in particular `Set.univ`): `home`'s transition lands at
-    `hide ∈ skirmishSafe` regardless of the sniper's move, so `hide` alone already witnesses the
-    escape for every `a2`. -/
+/-- **The payoff.** Every sniper response escapes into `skirmishSafe` from `home`, with the full
+    row-action pool: `home`'s transition lands at `hide ∈ skirmishSafe` regardless of the sniper's
+    move. -/
 theorem skirmish_B_univ_safe_home_eq_univ :
     skirmishCSG.B (Set.univ : Set SoldierMove) skirmishSafe SkirmishPos.home
       = (Set.univ : Set SniperMove) := by
-  apply Set.eq_univ_of_forall
-  intro a2
-  refine ⟨SoldierMove.hide, Set.mem_univ _, SkirmishPos.hide, ?_, by decide⟩
-  rw [skirmishK_support_home]
-  rfl
+  ext a2
+  rw [skirmishCSG_isDet.mem_B]
+  revert a2
+  decide
 
 /-! ## Section 5c: `{hide}`/`Set.univ` are exact fixed points of `AFVStep safe safe safe` -/
 
@@ -1158,17 +1041,15 @@ theorem skirmish_hide_mem_LFG_safe :
 
 /-! ## Section 7a: `wet` can never sure-escape a `wet`-free goal -/
 
-/-- **The payoff, the `Pre1` sibling of `skirmish_wet_not_mem_Apre1`.** `wet`'s transition is
-    constant (`skirmishK_wet`), so its support can only ever meet a target `x` that already
-    contains `wet` -- if it doesn't, `wet` fails `Pre1`'s existential outright, using the concrete
-    witness `SniperMove.wait` rather than needing to range over every column action. -/
+/-- **The payoff, the `Pre1` sibling of `skirmish_wet_not_mem_Apre1`.** `wet` is absorbing, so
+    from `wet` no row action sends the column reply `wait` into a target `x` that does not
+    already contain `wet`, and `wet` fails `Pre1 x`. -/
 theorem skirmish_wet_not_mem_Pre1 (x : Set SkirmishPos) (hx : SkirmishPos.wet ∉ x) :
     SkirmishPos.wet ∉ skirmishCSG.Pre1 x := by
   intro hmem
-  obtain ⟨a1, ha1⟩ := hmem
+  obtain ⟨a1, ha1⟩ := skirmishCSG_isDet.mem_Pre1.mp hmem
   have h := ha1 SniperMove.wait
-  rw [skirmishK_support_wet] at h
-  exact hx (Set.singleton_subset_iff.mp h)
+  cases a1 <;> exact hx h
 
 /-! ## Section 7b: `G F s=2`, sure-mode Büchi collapse -/
 

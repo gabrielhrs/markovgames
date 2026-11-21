@@ -26,6 +26,7 @@ import Csg.CoBuchiOp
 import Csg.QualitativeSure
 import Csg.QualitativeAlmostSure
 import Csg.QualitativeLimitSure
+import Csg.QualitativeDet
 import Csg.ConcurrentCoBuchiExample
 import Csg.ReachConverge
 import Csg.Coalition

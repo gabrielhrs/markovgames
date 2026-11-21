@@ -46,9 +46,10 @@ because `CSG` requires an `r` field, never consulted by anything downstream of t
 
 **What this file does and does not contain.** Just the model (`SoldierMove`, `SniperMove`,
 `SkirmishPos`, their `Fintype`/`DecidableEq`/`Inhabited` instances, `skirmishK`/`skirmishR`/
-`skirmishCSG`) plus the six case-by-case transition equalities and their `.support` corollaries
-(`PMF.support_pure`), which is exactly the raw material every qualitative operator (`Pre1`, `A`,
-`B`, ...) unfolds to. The 14 `sure`/`almost`/`limit` facts from `skirmish.prism.props` are in
+`skirmishCSG`) plus the successor function `skirmishNext` and `skirmishK_eq_pure`, which says the
+kernel is its point mass. Every qualitative operator (`Pre1`, `A`, `B`, ...) reads only the
+kernel's support, so `skirmishNext` is all that `SkirmishProperties.lean` needs from the model
+(`QualitativeDet.lean`). The 14 `sure`/`almost`/`limit` facts from `skirmish.prism.props` are in
 `SkirmishProperties.lean`.
 -/
 
@@ -115,51 +116,21 @@ noncomputable def skirmishCSG : CSG SkirmishPos SoldierMove SniperMove where
   K := skirmishK
   r := skirmishR
 
-/-! ## The six transition cases, and their supports -/
+/-- The successor position, as a plain function: `skirmishK` without the `PMF.pure`. Every
+    transition of the game is a point mass, so this function carries the whole kernel
+    (`skirmishK_eq_pure`), and being computable it lets one-step facts be decided by
+    enumeration. -/
+def skirmishNext : SkirmishPos → SoldierMove → SniperMove → SkirmishPos
+  | .wet, _, _ => .wet
+  | .home, _, _ => .hide
+  | .hide, .hide, .wait => .hide
+  | .hide, .hide, .throw => .home
+  | .hide, .run, .wait => .home
+  | .hide, .run, .throw => .wet
 
-theorem skirmishK_wet (a1 : SoldierMove) (a2 : SniperMove) :
-    skirmishCSG.K .wet a1 a2 = PMF.pure .wet := rfl
-
-theorem skirmishK_home (a1 : SoldierMove) (a2 : SniperMove) :
-    skirmishCSG.K .home a1 a2 = PMF.pure .hide := rfl
-
-theorem skirmishK_hide_hide_wait : skirmishCSG.K .hide .hide .wait = PMF.pure .hide := rfl
-
-theorem skirmishK_hide_hide_throw : skirmishCSG.K .hide .hide .throw = PMF.pure .home := rfl
-
-theorem skirmishK_hide_run_wait : skirmishCSG.K .hide .run .wait = PMF.pure .home := rfl
-
-theorem skirmishK_hide_run_throw : skirmishCSG.K .hide .run .throw = PMF.pure .wet := rfl
-
-/-- **The payoff.** `wet`'s support, for any joint move -- the raw material `Pre1`/`A`/`B` will
-    unfold to whenever the current position is `wet`. -/
-theorem skirmishK_support_wet (a1 : SoldierMove) (a2 : SniperMove) :
-    (skirmishCSG.K .wet a1 a2).support = {SkirmishPos.wet} := by
-  rw [skirmishK_wet]; exact PMF.support_pure _
-
-/-- **The payoff.** `home`'s support, for any joint move. -/
-theorem skirmishK_support_home (a1 : SoldierMove) (a2 : SniperMove) :
-    (skirmishCSG.K .home a1 a2).support = {SkirmishPos.hide} := by
-  rw [skirmishK_home]; exact PMF.support_pure _
-
-/-- **The payoff.** `hide`'s support against `(hide,wait)`. -/
-theorem skirmishK_support_hide_hide_wait :
-    (skirmishCSG.K .hide .hide .wait).support = {SkirmishPos.hide} := by
-  rw [skirmishK_hide_hide_wait]; exact PMF.support_pure _
-
-/-- **The payoff.** `hide`'s support against `(hide,throw)`. -/
-theorem skirmishK_support_hide_hide_throw :
-    (skirmishCSG.K .hide .hide .throw).support = {SkirmishPos.home} := by
-  rw [skirmishK_hide_hide_throw]; exact PMF.support_pure _
-
-/-- **The payoff.** `hide`'s support against `(run,wait)`. -/
-theorem skirmishK_support_hide_run_wait :
-    (skirmishCSG.K .hide .run .wait).support = {SkirmishPos.home} := by
-  rw [skirmishK_hide_run_wait]; exact PMF.support_pure _
-
-/-- **The payoff.** `hide`'s support against `(run,throw)`. -/
-theorem skirmishK_support_hide_run_throw :
-    (skirmishCSG.K .hide .run .throw).support = {SkirmishPos.wet} := by
-  rw [skirmishK_hide_run_throw]; exact PMF.support_pure _
+/-- Every transition is the point mass at `skirmishNext`. -/
+theorem skirmishK_eq_pure (s : SkirmishPos) (a1 : SoldierMove) (a2 : SniperMove) :
+    skirmishCSG.K s a1 a2 = PMF.pure (skirmishNext s a1 a2) := by
+  cases s <;> cases a1 <;> cases a2 <;> rfl
 
 end Csg
