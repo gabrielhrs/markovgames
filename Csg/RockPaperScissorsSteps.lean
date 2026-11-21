@@ -56,8 +56,9 @@ fully formal a.s.-absorption/properness argument is exactly the piece reachcert'
 ranking-function machinery exists for, and is not attempted here -- matching how reachcert's own
 `R_inf` completeness theorem was left `sorry` in its source rather than treated as a solved problem.
 
-**Through the general combinator.** `rpsCSGSteps_rewardUntilOp_unique` feeds `rpsSteps_fixed` and
-`rpsSteps_unique` through `RewardUntilCertificate.lean`'s `CSG.rewardUntilOp_eq_of_certificate`,
+**Through the general combinator.** `rpsCSGSteps_rewardUntilStep_unique` feeds `rpsSteps_fixed` and
+`rpsSteps_unique` through `RewardUntilCertificate.lean`'s
+`CSG.rewardUntilStep_existsUnique_of_certificate`,
 so the combinator is exercised against this instance's own proof terms and not only in the
 abstract.
 -/
@@ -193,14 +194,15 @@ theorem rpsSteps_unique {w : RPSState → ℝ} (hw : rpsStepsStep w = w) : w = r
   | draw => simp [hw_draw, rpsSteps]
 
 /-- **The retrofit.** `rpsSteps_fixed`/`rpsSteps_unique` are exactly the `hfixed`/`huniq`
-    `CSG.rewardUntilOp_eq_of_certificate` needs, once `rpsStepsStep`'s hard-coded absorption
-    condition is read as that combinator's `goal` parameter specialised to
+    `CSG.rewardUntilStep_existsUnique_of_certificate` needs, once `rpsStepsStep`'s hard-coded
+    absorption condition is read as that combinator's `goal` parameter specialised to
     `fun s => s = win1 ∨ s = win2` -- `rpsStepsStep` and `rpsCSGSteps.rewardUntilStep` at that
     `goal` are the same `ite` definitionally, so no bridging lemma is needed between them. -/
-theorem rpsCSGSteps_rewardUntilOp_unique :
+theorem rpsCSGSteps_rewardUntilStep_unique :
     ∃! w : RPSState → ℝ,
       rpsCSGSteps.rewardUntilStep (fun s => s = RPSState.win1 ∨ s = RPSState.win2) w = w :=
-  rpsCSGSteps.rewardUntilOp_eq_of_certificate (fun s => s = RPSState.win1 ∨ s = RPSState.win2)
+  rpsCSGSteps.rewardUntilStep_existsUnique_of_certificate
+    (fun s => s = RPSState.win1 ∨ s = RPSState.win2)
     rpsSteps rpsSteps_fixed fun _w hw => rpsSteps_unique hw
 
 /-- The number the whole exercise was after: from `initial`, expected `2` raw `CSG` steps until

@@ -61,27 +61,5 @@ noncomputable def bwInd (rFin : S → ℝ) : ℕ → S → ℝ
 theorem bwInd_succ (rFin : S → ℝ) (n : ℕ) (s : S) :
     C.bwInd rFin (n + 1) s = C.stageValue s (C.bwInd rFin n) := rfl
 
-/-- **The payoff.** Backward induction actually computes the stage game's value, not just a
-    recursion that happens to type-check: with `n + 1` steps remaining, the row player cannot
-    lower the value below `bwInd rFin (n + 1) s` by unilaterally deviating from the stage game's
-    optimal row strategy while the column player holds its optimal strategy fixed. A direct
-    instantiation of `MatrixGame.value_row_optimal` at `C.stageGame s (C.bwInd rFin n)`. -/
-theorem bwInd_succ_row_optimal (rFin : S → ℝ) (n : ℕ) (s : S) :
-    ∀ p' ∈ stdSimplex ℝ A1,
-      C.bwInd rFin (n + 1) s ≤ (C.stageGame s (C.bwInd rFin n)).payoff p'
-        (C.stageGame s (C.bwInd rFin n)).optimalCol := by
-  simp only [bwInd, stageValue]
-  exact (C.stageGame s (C.bwInd rFin n)).value_row_optimal
-
-/-- Symmetric counterpart of `bwInd_succ_row_optimal`: the column player cannot raise the value
-    above `bwInd rFin (n + 1) s` by unilaterally deviating from the stage game's optimal column
-    strategy while the row player holds its optimal strategy fixed. -/
-theorem bwInd_succ_col_optimal (rFin : S → ℝ) (n : ℕ) (s : S) :
-    ∀ q' ∈ stdSimplex ℝ A2,
-      (C.stageGame s (C.bwInd rFin n)).payoff
-        (C.stageGame s (C.bwInd rFin n)).optimalRow q' ≤ C.bwInd rFin (n + 1) s := by
-  simp only [bwInd, stageValue]
-  exact (C.stageGame s (C.bwInd rFin n)).value_col_optimal
-
 end CSG
 end Csg

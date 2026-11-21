@@ -56,25 +56,28 @@ theorem expect_nonneg {s : S} {a1 : A1} {a2 : A2} {v : S → ℝ} (hv : ∀ s', 
   unfold expect
   exact Finset.sum_nonneg fun s' _ => mul_nonneg ENNReal.toReal_nonneg (hv s')
 
+/-- A transition kernel's weights sum to at most `1` as real numbers: the finite sum over `S` is
+    bounded by the `tsum`, which `PMF.tsum_coe` fixes at `1`. -/
+theorem sum_toReal_K_le_one (s : S) (a1 : A1) (a2 : A2) :
+    (∑ s' : S, (C.K s a1 a2 s').toReal) ≤ 1 := by
+  have hle : (∑ s' : S, C.K s a1 a2 s') ≤ 1 := by
+    calc ∑ s' : S, C.K s a1 a2 s' ≤ ∑' s', C.K s a1 a2 s' := ENNReal.sum_le_tsum Finset.univ
+      _ = 1 := (C.K s a1 a2).tsum_coe
+  have h1 : (∑ s' : S, C.K s a1 a2 s').toReal ≤ 1 := by
+    simpa using ENNReal.toReal_mono ENNReal.one_ne_top hle
+  rwa [ENNReal.toReal_sum fun s' _ => (C.K s a1 a2).apply_ne_top s'] at h1
+
 /-- `expect` stays `≤ 1` whenever the continuation does: bound each term by the weight itself
-    (since `v s' ≤ 1`), then the weights themselves sum to at most `1` -- a transition kernel is
-    a genuine `PMF`, `Finset.univ`'s mass can't exceed the total mass `PMF.tsum_coe` fixes at
-    `1`. -/
+    (since `v s' ≤ 1`), then the weights themselves sum to at most `1`
+    (`sum_toReal_K_le_one`). -/
 theorem expect_le_one {s : S} {a1 : A1} {a2 : A2} {v : S → ℝ} (hv : ∀ s', v s' ≤ 1) :
     C.expect s a1 a2 v ≤ 1 := by
   unfold expect
-  have hmass : (∑ s' : S, C.K s a1 a2 s').toReal ≤ 1 := by
-    have hle : (∑ s' : S, C.K s a1 a2 s') ≤ 1 := by
-      calc ∑ s' : S, C.K s a1 a2 s' ≤ ∑' s', C.K s a1 a2 s' := ENNReal.sum_le_tsum Finset.univ
-        _ = 1 := (C.K s a1 a2).tsum_coe
-    simpa using ENNReal.toReal_mono ENNReal.one_ne_top hle
   calc ∑ s' : S, (C.K s a1 a2 s').toReal * v s'
       ≤ ∑ s' : S, (C.K s a1 a2 s').toReal * 1 :=
         Finset.sum_le_sum fun s' _ => mul_le_mul_of_nonneg_left (hv s') ENNReal.toReal_nonneg
     _ = ∑ s' : S, (C.K s a1 a2 s').toReal := by simp
-    _ = (∑ s' : S, C.K s a1 a2 s').toReal :=
-        (ENNReal.toReal_sum fun s' _ => (C.K s a1 a2).apply_ne_top s').symm
-    _ ≤ 1 := hmass
+    _ ≤ 1 := C.sum_toReal_K_le_one s a1 a2
 
 /-- The stage game's payoff matrix is monotone in the continuation `v`, entrywise -- the reward
     term doesn't move, and `expect` is monotone (`expect_mono`). -/
@@ -127,19 +130,13 @@ theorem stageValue_le_one (hr : ∀ s a1 a2, C.r s a1 a2 = 0) {s : S} {v : S →
 /-- One-directional half of `expect_lipschitz`, in the `value_le_add_of_forall_le`/
     `payoff_add_const` style of `MatrixGame.lean`: shifting every state's continuation value up by
     at most `ε` shifts the expectation up by at most `ε`, since the transition weights are
-    nonnegative and sum to at most `1` (`expect_le_one`'s own `hmass` argument). Needs `0 ≤ ε`
+    nonnegative and sum to at most `1` (`sum_toReal_K_le_one`). Needs `0 ≤ ε`
     explicitly for the final `mul_le_mul_of_nonneg_right` step: without it,
     `(Σ weights) * ε ≤ 1 * ε` could point the wrong way. -/
 theorem expect_le_add_of_forall_le {s : S} {a1 : A1} {a2 : A2} {v w : S → ℝ} {ε : ℝ} (hε : 0 ≤ ε)
     (h : ∀ s', v s' ≤ w s' + ε) : C.expect s a1 a2 v ≤ C.expect s a1 a2 w + ε := by
   unfold expect
-  have hmass : (∑ s' : S, (C.K s a1 a2 s').toReal) ≤ 1 := by
-    have hle : (∑ s' : S, C.K s a1 a2 s') ≤ 1 := by
-      calc ∑ s' : S, C.K s a1 a2 s' ≤ ∑' s', C.K s a1 a2 s' := ENNReal.sum_le_tsum Finset.univ
-        _ = 1 := (C.K s a1 a2).tsum_coe
-    have h1 : (∑ s' : S, C.K s a1 a2 s').toReal ≤ 1 := by
-      simpa using ENNReal.toReal_mono ENNReal.one_ne_top hle
-    rwa [ENNReal.toReal_sum fun s' _ => (C.K s a1 a2).apply_ne_top s'] at h1
+  have hmass : (∑ s' : S, (C.K s a1 a2 s').toReal) ≤ 1 := C.sum_toReal_K_le_one s a1 a2
   calc ∑ s' : S, (C.K s a1 a2 s').toReal * v s'
       ≤ ∑ s' : S, (C.K s a1 a2 s').toReal * (w s' + ε) :=
         Finset.sum_le_sum fun s' _ => mul_le_mul_of_nonneg_left (h s') ENNReal.toReal_nonneg

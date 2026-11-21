@@ -163,25 +163,6 @@ theorem reachGameQ_stageValue (G : CsgQ S A1 A2) (h : G.WellFormed)
 
 /-! ## One certified step -/
 
-/-- `reachOp`'s coercion as a subtype-free, `ℝ`-valued `if`-`then`-`else`. Without this, `change`
-    cannot reach past the `Set.Icc` packaging: the `ite` sits on an abstract `DecidablePred goal`
-    instance and so will not reduce definitionally, whatever the ambient hypothesis says about
-    `goal s`. The fix is `Csg/BuchiOp.lean`'s own `buchiBody_coe`, verbatim --
-    `unfold`, then `split_ifs <;> rfl` -- and with it in hand `ite_eq_left`/`ite_eq_right` work as
-    ordinary rewrite lemmas, which is how `Csg/CoalitionComplementReach.lean` handles the same
-    branch.
-
-    This is a fact about `CSG`, not about `CsgQ`, and would sit more naturally beside the operator
-    in `Csg/ReachOp.lean`; it is stated here to keep the change confined to one file. -/
-theorem reachOp_coe (C : CSG S A1 A2) (goal : S → Prop) [DecidablePred goal]
-    (hr : ∀ s a1 a2, C.r s a1 a2 = 0) (v : S → Set.Icc (0 : ℝ) 1) (s : S) :
-    (((C.reachOp goal hr) v s : ℝ))
-      = if goal s then 1 else C.stageValue s (fun s' => ((v s' : ℝ))) := by
-  change ((C.reachOpFun goal hr v s : ℝ))
-    = if goal s then 1 else C.stageValue s (fun s' => ((v s' : ℝ)))
-  unfold CSG.reachOpFun
-  split_ifs <;> rfl
-
 /-- At a non-goal state, a value certificate on the rational stage game pins the operator's value
     there. Stated about the real coercion, so the subtype never appears. -/
 theorem reachOp_coe_of_valueCert (G : CsgQ S A1 A2) (h : G.WellFormed)
@@ -191,7 +172,7 @@ theorem reachOp_coe_of_valueCert (G : CsgQ S A1 A2) (h : G.WellFormed)
     (hc : (G.reachGameQ s v).ValueCert t p q) :
     ((((G.toCSG h).reachOp goal (toCSG_r_zero G h hr0)) (castIcc v h0 h1) s : ℝ))
       = ((t : ℚ) : ℝ) := by
-  rw [reachOp_coe, ite_eq_right hs, reachGameQ_stageValue G h hr0 s v h0 h1]
+  rw [CSG.reachOp_coe, ite_eq_right hs, reachGameQ_stageValue G h hr0 s v h0 h1]
   exact MatrixGameQ.value_eq_of_valueCert hc
 
 /-- At a goal state the operator is pinned to `1`, with no game to solve. -/
@@ -199,7 +180,7 @@ theorem reachOp_coe_of_goal (G : CsgQ S A1 A2) (h : G.WellFormed)
     (hr0 : ∀ s a1 a2, G.r s a1 a2 = 0) (goal : S → Prop) [DecidablePred goal]
     (v : S → ℚ) (h0 : ∀ s, 0 ≤ v s) (h1 : ∀ s, v s ≤ 1) {s : S} (hs : goal s) :
     ((((G.toCSG h).reachOp goal (toCSG_r_zero G h hr0)) (castIcc v h0 h1) s : ℝ)) = 1 := by
-  rw [reachOp_coe, ite_eq_left hs]
+  rw [CSG.reachOp_coe, ite_eq_left hs]
 
 /-- Collected per-state equalities lift to an equality of carrier vectors. This is the only place
     `Subtype.ext` is needed, and it is why everything above is stated about the coercion. -/

@@ -76,5 +76,20 @@ noncomputable def reachOp (goal : S → Prop) [DecidablePred goal]
   toFun := C.reachOpFun goal hr
   monotone' := C.reachOpFun_mono goal hr
 
+/-- `reachOp`'s coercion to `ℝ`, as a plain `if`-`then`-`else` with no subtype: `1` at a `goal`
+    state, the stage value elsewhere. Rewrite with this before reasoning about the operator's
+    value at a state. The `ite` sits on an abstract `DecidablePred goal` instance, so it does not
+    reduce by `change` whatever the context says about `goal s`; with this equation in hand
+    `ite_eq_left`/`ite_eq_right` work as ordinary rewrite lemmas. Same shape and same proof as
+    `BuchiOp.lean`'s `buchiBody_coe`. -/
+theorem reachOp_coe (goal : S → Prop) [DecidablePred goal]
+    (hr : ∀ s a1 a2, C.r s a1 a2 = 0) (v : S → Set.Icc (0 : ℝ) 1) (s : S) :
+    ((C.reachOp goal hr) v s : ℝ)
+      = if goal s then 1 else C.stageValue s (fun s' => (v s' : ℝ)) := by
+  change (C.reachOpFun goal hr v s : ℝ)
+    = if goal s then 1 else C.stageValue s (fun s' => (v s' : ℝ))
+  unfold reachOpFun
+  split_ifs <;> rfl
+
 end CSG
 end Csg

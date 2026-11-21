@@ -52,10 +52,12 @@ inductive RobotState
   | low
   deriving DecidableEq, Inhabited
 
-/-- `deriving Fintype` produces an ill-typed `Finset.univ` on this Lean/Mathlib toolchain
-    combination (a `List.Nodup`/`Multiset.Nodup` coercion mismatch inside the deriving
-    handler's generated instance, confirmed by the build error rather than guessed) — so this
-    instance is built by hand instead, sidestepping the handler entirely. -/
+/-- Written by hand: `deriving Fintype` fails on this Lean/Mathlib toolchain combination. For an
+    enum the handler builds `⟨↑enumList, enumList_nodup⟩` and then rewrites membership in it, and
+    the rewrite finds no match because that term is not type-correct at the transparency `rw`
+    checks: `enumList_nodup : enumList.Nodup` is a `List.Nodup` where the `Finset` constructor
+    expects `(↑enumList).Nodup`, a `Multiset.Nodup`. The other enums in this project follow this
+    instance for the same reason. -/
 instance : Fintype RobotState where
   elems := {RobotState.high, RobotState.low}
   complete := by intro x; cases x <;> decide

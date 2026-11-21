@@ -41,7 +41,8 @@ value-iteration-level instance of picking out the *greatest* fixed point of that
 least -- perturbing every reward to a strictly positive `epsilon` turns the tautology
 `x = min (0 + x) 1` into the genuinely-forcing `x = min (epsilon + x) 1`, whose only solution is
 `x = 1`, and seeding the true (`epsilon = 0`) iteration from that value lands on it directly rather
-than sliding down to the spurious `0`. `rewardUntilOp_eq_of_gfp_certificate` below packages the
+than sliding down to the spurious `0`. `rewardUntilStep_existsUnique_of_gfp_certificate` below
+packages the
 same idea at the certificate level: instead of asking for the *only* fixed point (false here), it
 asks for a fixed point that *dominates every other fixed point* -- provable in exactly the cases
 where `huniq` is not, since an upper bound like `v s ≤ 1` typically falls straight out of the
@@ -100,8 +101,9 @@ noncomputable def rewardUntilStep (goal : S → Prop) [DecidablePred goal] (v : 
 
     **Caveat:** sound only for models with no reachable zero-reward cycle outside `goal` --
     `huniq` is not just hard to prove but outright false otherwise (see the module docstring
-    above, and `rewardUntilOp_eq_of_gfp_certificate` below for that case). -/
-theorem rewardUntilOp_eq_of_certificate (goal : S → Prop) [DecidablePred goal] (v : S → ℝ)
+    above, and `rewardUntilStep_existsUnique_of_gfp_certificate` below for that case). -/
+theorem rewardUntilStep_existsUnique_of_certificate (goal : S → Prop) [DecidablePred goal]
+    (v : S → ℝ)
     (hfixed : C.rewardUntilStep goal v = v)
     (huniq : ∀ w : S → ℝ, C.rewardUntilStep goal w = w → w = v) :
     ∃! w : S → ℝ, C.rewardUntilStep goal w = w :=
@@ -113,9 +115,11 @@ theorem rewardUntilOp_eq_of_certificate (goal : S → Prop) [DecidablePred goal]
     here), witnesses that `v` is *the* fixed point dominating every fixed point, and that this
     dominating fixed point is unique. The order-theoretic analogue of `safetyOp`'s `.gfp`, stated
     by hand since plain `S → ℝ` has no `CompleteLattice` to hang an automatic `.gfp` on. As with
-    `rewardUntilOp_eq_of_certificate`, this combinator automates only the assembly: `hfixed` and
+    `rewardUntilStep_existsUnique_of_certificate`, this combinator automates only the assembly:
+    `hfixed` and
     `hub` are still model-specific mathematics the caller must supply. -/
-theorem rewardUntilOp_eq_of_gfp_certificate (goal : S → Prop) [DecidablePred goal] (v : S → ℝ)
+theorem rewardUntilStep_existsUnique_of_gfp_certificate (goal : S → Prop) [DecidablePred goal]
+    (v : S → ℝ)
     (hfixed : C.rewardUntilStep goal v = v)
     (hub : ∀ w : S → ℝ, C.rewardUntilStep goal w = w → w ≤ v) :
     ∃! w : S → ℝ, C.rewardUntilStep goal w = w ∧
