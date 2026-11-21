@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Gabriel Santos
 -/
 import Csg.SafetyOp
+import Csg.FixedPoints
 
 /-!
 # A reusable safety-value certificate, dual to `ReachCertificate.lean`
@@ -15,7 +16,7 @@ reward-until-absorption (`RewardUntilCertificate.lean`), and safety/always.
 `RockPaperScissorsSafety.lean` is a worked instance.
 
 As anticipated there, this came out close to a mechanical mirror. `OrderHom.gfp_eq_of_certificate`
-below is `OrderHom.lfp_eq_of_certificate` with `le_gfp`/`gfp_le` in place of `le_lfp`/`lfp_le_fixed`
+is `OrderHom.lfp_eq_of_certificate` with `le_gfp`/`gfp_le` in place of `le_lfp`/`lfp_le_fixed`
 (`Mathlib/Order/FixedPoints.lean`, checked directly) and the two hypotheses' inequalities flipped
 to match -- an upper-bound hypothesis over every *post*-fixed point (`b ≤ f b`) rather than a
 lower-bound hypothesis over every *pre*-fixed point (`f b ≤ b`), since `gfp` is the greatest such
@@ -23,16 +24,6 @@ lower-bound hypothesis over every *pre*-fixed point (`f b ≤ b`), since `gfp` i
 same one-line wrapper `CSG.reachOp_lfp_eq_of_certificate` is, specialising `f` to `C.safetyOp safe
 hr` in place of `C.reachOp goal hr`.
 -/
-
-/-- **The payoff, fully generalised, dual to `OrderHom.lfp_eq_of_certificate`.** A candidate `v` in
-    any `CompleteLattice` that is an exact fixed point of a monotone self-map `f`, and that
-    upper-bounds every post-fixed point of `f` (`b ≤ f b`), *is* `f`'s greatest fixed point --
-    Knaster-Tarski's other two pinning lemmas, `le_gfp`/`gfp_le`, assembled via `le_antisymm`, with
-    no reference to `CSG`s, `safetyOp`, or `[0, 1]`-valued functions anywhere in the statement or
-    proof, exactly as the `lfp` version has none either. -/
-theorem OrderHom.gfp_eq_of_certificate {α : Type*} [CompleteLattice α] (f : α →o α) (v : α)
-    (hfixed : f v = v) (hub : ∀ b, b ≤ f b → b ≤ v) : f.gfp = v :=
-  le_antisymm (f.gfp_le hub) (f.le_gfp hfixed.ge)
 
 namespace Csg
 namespace CSG

@@ -45,7 +45,7 @@ itself a *symbolic* (support-based) fixed-point algorithm, computable by hand ex
 was, just with two nested fixed-point layers (`AFOuter`'s `νY`, wrapping `AFInner`'s `μX`) instead
 of one. Hand-iterating `AFOuter {home}` downward from `⊤` converges in exactly two steps --
 `⊤ ↦ skirmishSafe ↦ {home}` -- and a general two-step order-theoretic fact
-(`OrderHom.gfp_le_map_map_top` below: `f.gfp ≤ f (f ⊤)`, for *any* monotone `f`, no continuity
+(`OrderHom.gfp_le_map_map_top`: `f.gfp ≤ f (f ⊤)`, for *any* monotone `f`, no continuity
 hypothesis needed) turns that hand computation directly into a Lean proof: bound each step from
 above by a single `OrderHom.lfp_le` pre-fixed-point check (`skirmish_AFOuter_top_le_safe`,
 `skirmish_AFOuter_safe_le_home`) rather than computing the inner `lfp`s exactly. The one new
@@ -61,7 +61,7 @@ The other half of the headline divergence, and genuinely the deepest proof in th
 `LF` is `true`, so no finite *downward* iteration from `⊤` can witness it the way Section 3's
 downward-to-`{home}` collapse witnessed `AF`'s `false` -- proving membership in a `gfp` needs a
 *lower* bound, the dual technique. Mirroring `OrderHom.gfp_le_map_map_top`, a second general fact
-(`OrderHom.map_map_bot_le_lfp`, added alongside it below: `f (f ⊥) ≤ f.lfp`, for any monotone `f`)
+(`OrderHom.map_map_bot_le_lfp`, beside it: `f (f ⊥) ≤ f.lfp`, for any monotone `f`)
 lower-bounds any least fixed point by two steps *up* from `⊥`, used **twice**, nested: once to
 lower-bound the inner `LW` (`lpreXY`'s own row-action witness set, a `Set A1`-valued `lfp`) at
 `hide`, showing it reaches `Set.univ` (both `SoldierMove`s) after two steps -- `∅ ↦ {hide}` (`hide`
@@ -148,37 +148,6 @@ every `skirmish.prism.props` result Sections 1-7 set out to reproduce is now pro
 generalisation remains explicitly out of scope for this file, to be taken up separately if and when
 it is wanted.
 -/
-
-/-- **A small general order-theoretic fact**, not specific to `CSG`/`Skirmish` at all: for *any*
-    monotone `f` on *any* complete lattice, `f.gfp ≤ f (f ⊤)` -- no `ωScottContinuous`/continuity
-    hypothesis needed, unlike the general Kleene-style characterisation
-    (`OrderHom.gfp_eq_sInf_iterate`). Proof: `f.gfp ≤ ⊤` trivially, so by monotonicity
-    `f (f.gfp) ≤ f ⊤`, and `f (f.gfp) = f.gfp` (`map_gfp`) turns this into `f.gfp ≤ f ⊤`; apply `f`
-    (monotone) once more and use `map_gfp` again to get `f.gfp ≤ f (f ⊤)`. Kept local to this file
-    since its only use here is bounding `AF`/`AFOuter` from above by two hand-computed steps rather
-    than needing the exact fixed point. -/
-theorem OrderHom.gfp_le_map_map_top {α : Type*} [CompleteLattice α] (f : α →o α) :
-    f.gfp ≤ f (f ⊤) := by
-  have h1 : f.gfp ≤ f ⊤ := by
-    calc f.gfp = f f.gfp := f.map_gfp.symm
-      _ ≤ f ⊤ := f.mono le_top
-  calc f.gfp = f f.gfp := f.map_gfp.symm
-    _ ≤ f (f ⊤) := f.mono h1
-
-/-- **The dual small general order-theoretic fact**, needed for Section 4 below: for *any*
-    monotone `f` on *any* complete lattice, `f (f ⊥) ≤ f.lfp` -- the mirror of
-    `OrderHom.gfp_le_map_map_top` on the `lfp` side, proved the same way with `bot_le`/`map_lfp` in
-    place of `le_top`/`map_gfp`. Where the `gfp` version *upper*-bounds a greatest fixed point by
-    iterating down from `⊤`, this one *lower*-bounds a least fixed point by iterating up from `⊥`
-    -- exactly what showing something is a *member* of a `gfp`-of-`lfp` construction like `LF`
-    needs, dual to Section 3's membership-exclusion argument. -/
-theorem OrderHom.map_map_bot_le_lfp {α : Type*} [CompleteLattice α] (f : α →o α) :
-    f (f ⊥) ≤ f.lfp := by
-  have h1 : f ⊥ ≤ f.lfp := by
-    calc f ⊥ ≤ f f.lfp := f.mono bot_le
-      _ = f.lfp := f.map_lfp
-  calc f (f ⊥) ≤ f f.lfp := f.mono h1
-    _ = f.lfp := f.map_lfp
 
 namespace Csg
 

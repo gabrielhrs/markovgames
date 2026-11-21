@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Gabriel Santos
 -/
 import Csg.CsgMonotone
+import Csg.FixedPoints
 
 /-!
 # The Büchi Bellman operator, bundled as a genuine nested fixed point
@@ -34,39 +35,13 @@ structure; `buchiOp` is the reusable machinery for the general case. This file s
 operator and its well-definedness, as `ReachOp.lean` does; no instance of `buchiOp` itself is
 worked here, and `ConcurrentCoBuchiExample.lean` works one for the dual, `coBuchiOp`.
 
-**The one genuinely new ingredient**, beyond everything `CsgMonotone.lean` already supplies:
-bundling the outer (`νy`) level as an `OrderHom` needs knowing that `y ↦ (buchiInnerOp U hr y).lfp`
-is itself monotone in `y` -- that is, that `OrderHom.lfp` is monotone *in the operator itself*, not
-just in the lattice element the operator is applied to. This isn't a named lemma in
-`Mathlib/Order/FixedPoints.lean` (checked directly), but follows in three lines from two lemmas
-that already are: `OrderHom.map_lfp` (`f a = a` becomes `g (g.lfp) = g.lfp`) and `OrderHom.lfp_le`
-(already relied on by `IntervalCertificate.lean`) -- `f ≤ g` pointwise gives
-`f (g.lfp) ≤ g (g.lfp) = g.lfp`,
-i.e. `g.lfp` is a pre-fixed point of `f`, so `f.lfp ≤ g.lfp` by `lfp_le`. `OrderHom.lfp_mono_of_le`
-below states this once, generally, the same "pull the CSG-independent lattice fact out of the
-CSG-specific file that first needed it" move `ReachCertificate.lean` made for
-`OrderHom.lfp_eq_of_certificate`.
+**The one ingredient beyond `CsgMonotone.lean`:** bundling the outer (`νy`) level as an
+`OrderHom` needs `y ↦ (buchiInnerOp U hr y).lfp` to be monotone in `y`, that is, `OrderHom.lfp` to
+be monotone *in the operator*, not just in the lattice element the operator is applied to. Mathlib
+bundles `OrderHom.lfp` as a monotone map `(α →o α) →o α`, which is this fact;
+`OrderHom.lfp_mono_of_le` (`FixedPoints.lean`) restates it with the hypothesis in the pointwise
+form `∀ a, f a ≤ g a` that `buchiInnerOpFun_mono_y` supplies.
 -/
-
-/-- **CSG-independent.** `OrderHom.lfp` is monotone in the operator itself: if `f ≤ g` pointwise,
-    then `f.lfp ≤ g.lfp`. Not a named lemma in `Mathlib/Order/FixedPoints.lean` (checked directly),
-    but a three-line consequence of two that are: `g.lfp` is a fixed point of `g`
-    (`OrderHom.map_lfp`), so `f ≤ g` pointwise makes it a *pre*-fixed point of `f` too, and
-    `OrderHom.lfp_le` then gives
-    `f.lfp ≤ g.lfp` directly, no further argument needed. -/
-theorem OrderHom.lfp_mono_of_le {α : Type*} [CompleteLattice α] {f g : α →o α}
-    (h : ∀ a, f a ≤ g a) : f.lfp ≤ g.lfp :=
-  f.lfp_le ((h g.lfp).trans (le_of_eq g.map_lfp))
-
-/-- **CSG-independent, dual.** `OrderHom.gfp` is monotone in the operator itself: if `f ≤ g`
-    pointwise, then `f.gfp ≤ g.gfp` -- the exact mirror of `lfp_mono_of_le` via `OrderHom.map_gfp`/
-    `OrderHom.le_gfp`. Not needed by `buchiOp` below (only the `lfp` direction is), but stated
-    alongside it since `co-Büchi`'s solution formula (eq. (5) of the same paper, `μx·νy·(...)`) will
-    need exactly this dual fact for its own outer level, the same way `reachOp`/`safetyOp` are
-    proved as a matched pair. -/
-theorem OrderHom.gfp_mono_of_le {α : Type*} [CompleteLattice α] {f g : α →o α}
-    (h : ∀ a, f a ≤ g a) : f.gfp ≤ g.gfp :=
-  g.le_gfp ((le_of_eq f.map_gfp.symm).trans (h f.gfp))
 
 namespace Csg
 namespace CSG

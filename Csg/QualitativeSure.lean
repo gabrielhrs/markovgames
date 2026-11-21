@@ -3,7 +3,8 @@ Copyright (c) 2026 Gabriel Santos. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Gabriel Santos
 -/
-import Csg.BuchiOp
+import Csg.Basic
+import Csg.FixedPoints
 
 /-!
 # Qualitative winning regions: sure mode
@@ -154,8 +155,7 @@ theorem SGFInnerFun_mono_y (b : Set S) {y1 y2 : Set S} (hy : y1 ≤ y2) (x : Set
   · exact Or.inr ⟨C.Pre1_mono hy h.1, h.2⟩
 
 /-- **The payoff.** The `SGF` Bellman operator, `Y ↦ μX.SGFInnerFun b Y X`, bundled as an
-    `OrderHom` on `Set S` via `OrderHom.lfp_mono_of_le` applied to `SGFInnerFun_mono_y` -- imported
-    unchanged from `Csg.BuchiOp`, no re-proof needed. -/
+    `OrderHom` on `Set S` via `OrderHom.lfp_mono_of_le` applied to `SGFInnerFun_mono_y`. -/
 noncomputable def SGFOuter (b : Set S) : Set S →o Set S where
   toFun y := (C.SGFInner b y).lfp
   monotone' := fun _y1 _y2 hy => OrderHom.lfp_mono_of_le (fun x => C.SGFInnerFun_mono_y b hy x)

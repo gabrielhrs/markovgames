@@ -5,6 +5,7 @@ Authors: Gabriel Santos
 -/
 import Csg.ReachOp
 import Csg.SafetyOp
+import Csg.FixedPoints
 
 /-!
 # A reusable interval certificate: bounding a fixed point rather than pinning it exactly
@@ -48,25 +49,6 @@ Discharging those hypotheses for a specific model is exactly as hard as that mod
 this file changes nothing about that -- it only widens the target from an equality to an interval,
 which is what makes discharging tractable at all for anything past RPS-sized and symmetric.
 -/
-
-/-- **The payoff, `lfp` side.** A lower bound `lo` over every pre-fixed point, together with an
-    upper candidate `hi` that is itself a pre-fixed point (`f hi ≤ hi`, not the exact-certificate's
-    stronger `f hi = hi`), sandwiches `f.lfp` between them. `OrderHom.le_lfp`/`OrderHom.lfp_le`
-    assembled directly, no `le_antisymm` needed since the two conclusions are independent
-    inequalities rather than two sides of one equality. -/
-theorem OrderHom.lfp_mem_Icc_of_certificate {α : Type*} [CompleteLattice α] (f : α →o α)
-    (lo hi : α) (hlb : ∀ b, f b ≤ b → lo ≤ b) (hpre : f hi ≤ hi) :
-    lo ≤ f.lfp ∧ f.lfp ≤ hi :=
-  ⟨f.le_lfp hlb, f.lfp_le hpre⟩
-
-/-- **The payoff, `gfp` side, dual.** A post-fixed-point lower candidate `lo` (`lo ≤ f lo`) together
-    with an upper bound `hi` over every post-fixed point sandwiches `f.gfp` between them --
-    `OrderHom.le_gfp`/`OrderHom.gfp_le`, the exact mirror of the `lfp` case above with the roles of
-    `lo`/`hi` swapped to match which side gets the easier one-directional hypothesis. -/
-theorem OrderHom.gfp_mem_Icc_of_certificate {α : Type*} [CompleteLattice α] (f : α →o α)
-    (lo hi : α) (hpost : lo ≤ f lo) (hub : ∀ b, b ≤ f b → b ≤ hi) :
-    lo ≤ f.gfp ∧ f.gfp ≤ hi :=
-  ⟨f.le_gfp hpost, f.gfp_le hub⟩
 
 namespace Csg
 namespace CSG

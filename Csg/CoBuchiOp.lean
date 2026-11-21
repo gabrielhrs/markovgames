@@ -26,9 +26,8 @@ monotonicity lemmas paired with `.gfp` (inner) and `.lfp` (outer) rather than th
 
 **The one ingredient this file needs that `BuchiOp.lean` didn't**: `OrderHom.gfp_mono_of_le`, to
 bundle the outer (`μx`) level as a genuine `OrderHom` -- `x ↦ (coBuchiInnerOp U hr x).gfp` needs to
-be monotone in `x`, which is exactly "`.gfp` is monotone in the operator itself," the dual fact
-`BuchiOp.lean` already proved (unused there) anticipating precisely this. Imported via
-`Csg.BuchiOp` rather than restated.
+be monotone in `x`, which is exactly "`.gfp` is monotone in the operator itself" -- the dual
+of the fact `BuchiOp.lean` uses, stated beside it in `FixedPoints.lean`.
 
 Same scope as `BuchiOp.lean`: the operator and its well-definedness, nothing about a pinning
 combinator or a worked instance. `ConcurrentCoBuchiExample.lean` supplies both: the paper's own

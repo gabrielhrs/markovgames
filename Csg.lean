@@ -4,6 +4,7 @@ import Csg.BackwardInduction
 import Csg.MatchingPennies
 import Csg.BoundedReachability
 import Csg.RockPaperScissors
+import Csg.FixedPoints
 import Csg.CsgMonotone
 import Csg.ReachOp
 import Csg.ReachCertificate

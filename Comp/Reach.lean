@@ -28,7 +28,7 @@ it is not a checkable property of a vector.
 
 So a lower bound does not come from certifying the vector. It comes from the vector *being an
 iterate*: `a ≤ lfp` implies `f a ≤ f lfp = lfp` by monotonicity and `OrderHom.map_lfp`, so one step
-preserves the property. That is `OrderHom.le_lfp_of_step` below, three lines, and chaining it from
+preserves the property. That is `OrderHom.le_lfp_of_step` (`Lattice.lean`), and chaining it from
 `⊥` gives a lower bound after any number of steps. (`Csg/ReachConverge.lean`'s
 `reachOp_lfp_eq_sSup_iterate` gives the same conclusion for `f^[n] ⊥` via Kleene; the one-step form
 is used here because it composes with the per-step certificates without an induction on `n`.)

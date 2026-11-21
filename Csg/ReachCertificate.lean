@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Gabriel Santos
 -/
 import Csg.ReachOp
+import Csg.FixedPoints
 
 /-!
 # A reusable reachability-value certificate
@@ -25,18 +26,9 @@ same combinator for anything larger).
 **The assembly step itself has nothing to do with `CSG`s.** `le_antisymm` applied to
 `OrderHom.lfp_le_fixed`/`OrderHom.le_lfp` never touches `reachOp`, `stageValue`, or any `CSG` field
 -- it is a fact about an arbitrary monotone self-map `f` of an arbitrary `CompleteLattice`.
-`OrderHom.lfp_eq_of_certificate` below states it at that level of generality; `CSG`'s own
-`reachOp_lfp_eq_of_certificate` is a one-line wrapper specialising `f` to `C.reachOp goal hr`. -/
-
-/-- **The payoff, fully generalised.** A candidate `v` in any `CompleteLattice` that is an exact
-    fixed point of a monotone self-map `f`, and that lower-bounds every pre-fixed point of `f`,
-    *is* `f`'s least fixed point -- Knaster-Tarski's two pinning lemmas assembled via
-    `le_antisymm`, with no reference to `CSG`s, `reachOp`, or `[0, 1]`-valued functions anywhere in
-    the statement or proof. Checked against the cached Mathlib source
-    (`Mathlib/Order/FixedPoints.lean`) for a naming collision before adding this: none found. -/
-theorem OrderHom.lfp_eq_of_certificate {α : Type*} [CompleteLattice α] (f : α →o α) (v : α)
-    (hfixed : f v = v) (hlb : ∀ b, f b ≤ b → v ≤ b) : f.lfp = v :=
-  le_antisymm (f.lfp_le_fixed hfixed) (f.le_lfp hlb)
+`OrderHom.lfp_eq_of_certificate` (`FixedPoints.lean`) states it at that level of generality;
+`CSG`'s own `reachOp_lfp_eq_of_certificate` is a one-line wrapper specialising `f` to
+`C.reachOp goal hr`. -/
 
 namespace Csg
 namespace CSG
@@ -51,7 +43,7 @@ variable (C : CSG S A1 A2)
     `rpsVStar`-specific proof to an arbitrary `CSG`, goal, and candidate. Callers still have to
     supply `hfixed`/`hlb` themselves: this combinator automates the assembly of the two pinning
     lemmas via `le_antisymm`, not the two mathematical facts underneath it. A one-line wrapper
-    around the fully generic `OrderHom.lfp_eq_of_certificate` above, specialising its `f` to
+    around the fully generic `OrderHom.lfp_eq_of_certificate`, specialising its `f` to
     `C.reachOp goal hr`. -/
 theorem reachOp_lfp_eq_of_certificate (goal : S → Prop) [DecidablePred goal]
     (hr : ∀ s a1 a2, C.r s a1 a2 = 0) (v : S → Set.Icc (0 : ℝ) 1)
