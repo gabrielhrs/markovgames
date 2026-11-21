@@ -389,9 +389,9 @@ theorem cbInnerGfp_eq (b : CBState → Set.Icc (0 : ℝ) 1) :
   refine OrderHom.gfp_eq_of_certificate _ _ ?_ ?_
   · funext s
     apply Subtype.ext
-    change (cbCSG.coBuchiInnerOpFun cbU cbR_zero b (cbGClosed b) s : ℝ) =
+    change (cbCSG.buchiBody cbU cbR_zero b (cbGClosed b) s : ℝ) =
       cbGClosedVal (fun s' => (b s' : ℝ)) s
-    rw [CSG.coBuchiInnerOpFun_coe]
+    rw [CSG.buchiBody_coe]
     cases s with
     | t1 =>
       have hU : cbU .t1 := Or.inl rfl
@@ -423,25 +423,25 @@ theorem cbInnerGfp_eq (b : CBState → Set.Icc (0 : ℝ) 1) :
       have hU : ¬ cbU .t3 := by unfold cbU; simp
       calc (w .t3 : ℝ) ≤ (cbCSG.coBuchiInnerOp cbU cbR_zero b w .t3 : ℝ) := hw .t3
         _ = cbCSG.stageValue .t3 (fun s' => (b s' : ℝ)) := by
-              change (cbCSG.coBuchiInnerOpFun cbU cbR_zero b w .t3 : ℝ) =
+              change (cbCSG.buchiBody cbU cbR_zero b w .t3 : ℝ) =
                 cbCSG.stageValue .t3 (fun s' => (b s' : ℝ))
-              rw [CSG.coBuchiInnerOpFun_coe, ite_eq_right hU]
+              rw [CSG.buchiBody_coe, ite_eq_right hU]
         _ = cbGClosedVal (fun s' => (b s' : ℝ)) .t3 := by rw [cbStageValue_t3]; rfl
     have hw5 : (w .t5 : ℝ) ≤ cbGClosedVal (fun s' => (b s' : ℝ)) .t5 := by
       have hU : ¬ cbU .t5 := by unfold cbU; simp
       calc (w .t5 : ℝ) ≤ (cbCSG.coBuchiInnerOp cbU cbR_zero b w .t5 : ℝ) := hw .t5
         _ = cbCSG.stageValue .t5 (fun s' => (b s' : ℝ)) := by
-              change (cbCSG.coBuchiInnerOpFun cbU cbR_zero b w .t5 : ℝ) =
+              change (cbCSG.buchiBody cbU cbR_zero b w .t5 : ℝ) =
                 cbCSG.stageValue .t5 (fun s' => (b s' : ℝ))
-              rw [CSG.coBuchiInnerOpFun_coe, ite_eq_right hU]
+              rw [CSG.buchiBody_coe, ite_eq_right hU]
         _ = cbGClosedVal (fun s' => (b s' : ℝ)) .t5 := by rw [cbStageValue_t5]; rfl
     have hw4 : (w .t4 : ℝ) ≤ cbGClosedVal (fun s' => (b s' : ℝ)) .t4 := by
       have hU : cbU .t4 := Or.inr (Or.inr rfl)
       calc (w .t4 : ℝ) ≤ (cbCSG.coBuchiInnerOp cbU cbR_zero b w .t4 : ℝ) := hw .t4
         _ = cbCSG.stageValue .t4 (fun s' => (w s' : ℝ)) := by
-              change (cbCSG.coBuchiInnerOpFun cbU cbR_zero b w .t4 : ℝ) =
+              change (cbCSG.buchiBody cbU cbR_zero b w .t4 : ℝ) =
                 cbCSG.stageValue .t4 (fun s' => (w s' : ℝ))
-              rw [CSG.coBuchiInnerOpFun_coe, ite_eq_left hU]
+              rw [CSG.buchiBody_coe, ite_eq_left hU]
         _ = (w .t5 : ℝ) := by rw [cbStageValue_t4]
         _ ≤ cbGClosedVal (fun s' => (b s' : ℝ)) .t5 := hw5
         _ = cbGClosedVal (fun s' => (b s' : ℝ)) .t4 := rfl
@@ -452,9 +452,9 @@ theorem cbInnerGfp_eq (b : CBState → Set.Icc (0 : ℝ) 1) :
       have hU : cbU .t2 := Or.inr (Or.inl rfl)
       calc (w .t2 : ℝ) ≤ (cbCSG.coBuchiInnerOp cbU cbR_zero b w .t2 : ℝ) := hw .t2
         _ = min (w .t2 : ℝ) (((w .t1 : ℝ) + (w .t3 : ℝ)) / 2) := by
-              change (cbCSG.coBuchiInnerOpFun cbU cbR_zero b w .t2 : ℝ) =
+              change (cbCSG.buchiBody cbU cbR_zero b w .t2 : ℝ) =
                 min (w .t2 : ℝ) (((w .t1 : ℝ) + (w .t3 : ℝ)) / 2)
-              rw [CSG.coBuchiInnerOpFun_coe, ite_eq_left hU, cbStageValue_t2]
+              rw [CSG.buchiBody_coe, ite_eq_left hU, cbStageValue_t2]
         _ ≤ ((w .t1 : ℝ) + (w .t3 : ℝ)) / 2 := min_le_right _ _
         _ ≤ (cbGClosedVal (fun s' => (b s' : ℝ)) .t1 +
               cbGClosedVal (fun s' => (b s' : ℝ)) .t3) / 2 := by

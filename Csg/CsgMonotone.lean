@@ -189,5 +189,33 @@ theorem stageValue_lipschitz {s : S} {v w : S → ℝ} {ε : ℝ} (hε : 0 ≤ �
   change |(C.stageGame s v).value - (C.stageGame s w).value| ≤ ε
   exact MatrixGame.abs_value_sub_le fun a1 a2 => C.stageGame_A_lipschitz hε h a1 a2
 
+/-! ## The stage value on `[0, 1]`-valued continuations -/
+
+/-- The stage value at `s` against a `[0, 1]`-valued continuation, packaged back into `[0, 1]` by
+    `stageValue_nonneg`/`stageValue_le_one` (hence the reward-free hypothesis). This is the step
+    every `[0, 1]`-valued Bellman operator takes at a state it does not pin to a constant:
+    `reachOpFun`, `safetyOpFun`, `untilOpFun` and `buchiBody` are each an `if` over this and the
+    constants `0` and `1`. -/
+noncomputable def stageValueIcc (hr : ∀ s a1 a2, C.r s a1 a2 = 0) (v : S → Set.Icc (0 : ℝ) 1)
+    (s : S) : Set.Icc (0 : ℝ) 1 :=
+  ⟨C.stageValue s (fun s' => (v s' : ℝ)),
+    C.stageValue_nonneg hr (fun s' => (v s').2.1), C.stageValue_le_one hr (fun s' => (v s').2.2)⟩
+
+/-- The coercion of `stageValueIcc` to `ℝ` is the stage value, by definition. -/
+theorem stageValueIcc_coe (hr : ∀ s a1 a2, C.r s a1 a2 = 0) (v : S → Set.Icc (0 : ℝ) 1) (s : S) :
+    (C.stageValueIcc hr v s : ℝ) = C.stageValue s (fun s' => (v s' : ℝ)) :=
+  rfl
+
+/-- **The payoff.** `stageValueIcc` is monotone in the continuation: `stageValue_mono`, read
+    through the order on `Set.Icc (0 : ℝ) 1`. The subtype order is unwrapped by `change`, a
+    definitional step, rather than by a named lemma: this toolchain has a core `Subtype.instLE`
+    alongside Mathlib's `Preorder`-derived one, and a lemma such as `Subtype.mk_le_mk` stated
+    against one need not syntactically match a goal stated against the other, though both compute
+    to the same comparison. -/
+theorem stageValueIcc_mono (hr : ∀ s a1 a2, C.r s a1 a2 = 0) : Monotone (C.stageValueIcc hr) := by
+  intro v w hvw s
+  change C.stageValue s (fun s' => (v s' : ℝ)) ≤ C.stageValue s (fun s' => (w s' : ℝ))
+  exact C.stageValue_mono fun s' => hvw s'
+
 end CSG
 end Csg

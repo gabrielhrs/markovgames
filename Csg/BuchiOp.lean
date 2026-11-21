@@ -40,7 +40,7 @@ worked here, and `ConcurrentCoBuchiExample.lean` works one for the dual, `coBuch
 be monotone *in the operator*, not just in the lattice element the operator is applied to. Mathlib
 bundles `OrderHom.lfp` as a monotone map `(α →o α) →o α`, which is this fact;
 `OrderHom.lfp_mono_of_le` (`FixedPoints.lean`) restates it with the hypothesis in the pointwise
-form `∀ a, f a ≤ g a` that `buchiInnerOpFun_mono_y` supplies.
+form `∀ a, f a ≤ g a` that `buchiBody_mono_y` supplies.
 -/
 
 namespace Csg
@@ -50,75 +50,86 @@ variable {S A1 A2 : Type*} [Fintype S] [Fintype A1] [Fintype A2] [Nonempty A1] [
   [DecidableEq A1] [DecidableEq A2]
 variable (C : CSG S A1 A2)
 
-/-- The Büchi Bellman step's **inner** (`μx`) level, for a fixed outer candidate `y`: a `U`-state
-    plays its stage game against `y` (having just reached `U`, one more step is still owed before
-    the condition can be satisfied *again* -- `y` is "the value from here, having just reset");
-    a state outside `U` plays its stage game against the inner continuation `x`, exactly as
-    `reachOpFun`'s non-`goal` branch does. Named `buchiInnerOpFun` rather than `buchiInnerOp` itself
-    so the monotonicity proofs below can refer to it by name before bundling, mirroring
-    `reachOpFun`/`reachOpFun_mono`. -/
-noncomputable def buchiInnerOpFun (U : S → Prop) [DecidablePred U]
-    (hr : ∀ s a1 a2, C.r s a1 a2 = 0) (y x : S → Set.Icc (0 : ℝ) 1) (s : S) :
+/-- The shared body of the Büchi and co-Büchi Bellman steps, de Alfaro and Majumdar's
+    `(¬U ∧ Ppre₁(x)) ∨ (U ∧ Ppre₁(y))`: a `U`-state plays its stage game against `y`, a state
+    outside `U` plays its stage game against `x`. Eq. (4) (Büchi, `νy·μx`) and eq. (5) (co-Büchi,
+    `μx·νy`) have this same body and differ only in which variable is the inner one and which
+    fixed point binds it: `buchiInnerOp` below fixes `y` and iterates `x`, and `CoBuchiOp.lean`'s
+    `coBuchiInnerOp` fixes `x` and iterates `y`. -/
+noncomputable def buchiBody (U : S → Prop) [DecidablePred U]
+    (hr : ∀ s a1 a2, C.r s a1 a2 = 0) (x y : S → Set.Icc (0 : ℝ) 1) (s : S) :
     Set.Icc (0 : ℝ) 1 :=
-  if U s then
-    ⟨C.stageValue s (fun s' => (y s' : ℝ)),
-      C.stageValue_nonneg hr (fun s' => (y s').2.1), C.stageValue_le_one hr (fun s' => (y s').2.2)⟩
-  else
-    ⟨C.stageValue s (fun s' => (x s' : ℝ)),
-      C.stageValue_nonneg hr (fun s' => (x s').2.1), C.stageValue_le_one hr (fun s' => (x s').2.2)⟩
+  if U s then C.stageValueIcc hr y s else C.stageValueIcc hr x s
 
-/-- **The payoff.** `buchiInnerOpFun` is monotone in the inner continuation `x` -- a `U`-state's
-    value doesn't mention `x` at all (trivially monotone there), and every other state's value is
-    `stageValue_mono` applied to the pointwise hypothesis, the same unwrapping `reachOpFun_mono`
-    already does. -/
-theorem buchiInnerOpFun_mono (U : S → Prop) [DecidablePred U]
-    (hr : ∀ s a1 a2, C.r s a1 a2 = 0) (y : S → Set.Icc (0 : ℝ) 1) :
-    Monotone (C.buchiInnerOpFun U hr y) := by
-  intro x1 x2 hx s
+/-- **The payoff.** The coercion of `buchiBody` to `ℝ`, as a plain `if`-`then`-`else` with no
+    subtype packaging. Consumers that reason about the *value* of `buchiBody`, rather than its
+    monotonicity, should rewrite with this first: each branch is a `stageValueIcc`, an element
+    of `Set.Icc (0 : ℝ) 1` (value plus a two-part membership proof), and `rw [ite_eq_left h]`/
+    `rw [ite_eq_right h]` applied directly to an unfolded `buchiBody` goal can report "motive is
+    not type correct" or a pattern-matching failure, even though the two sides are definitionally
+    equal. With this `ℝ`-valued equation the packaging is gone: `split_ifs` produces two goals,
+    each closed by `rfl` (`stageValueIcc_coe`). -/
+theorem buchiBody_coe (U : S → Prop) [DecidablePred U]
+    (hr : ∀ s a1 a2, C.r s a1 a2 = 0) (x y : S → Set.Icc (0 : ℝ) 1) (s : S) :
+    (C.buchiBody U hr x y s : ℝ) = if U s then C.stageValue s (fun s' => (y s' : ℝ))
+      else C.stageValue s (fun s' => (x s' : ℝ)) := by
+  unfold buchiBody
+  split_ifs <;> rfl
+
+/-- **The payoff.** `buchiBody` is monotone in `x`, for any fixed `y`: a state outside `U` is
+    `stageValueIcc_mono` applied to `x`'s inequality, and a `U`-state does not mention `x` at all.
+    This is the monotonicity of Büchi's inner step, and the pointwise operator inequality
+    `OrderHom.gfp_mono_of_le` needs for co-Büchi's outer level. -/
+theorem buchiBody_mono_x (U : S → Prop) [DecidablePred U]
+    (hr : ∀ s a1 a2, C.r s a1 a2 = 0) {x1 x2 : S → Set.Icc (0 : ℝ) 1} (hx : x1 ≤ x2)
+    (y : S → Set.Icc (0 : ℝ) 1) :
+    C.buchiBody U hr x1 y ≤ C.buchiBody U hr x2 y := by
+  intro s
   by_cases h : U s
-  · have heq : C.buchiInnerOpFun U hr y x1 s = C.buchiInnerOpFun U hr y x2 s := by
-      simp only [buchiInnerOpFun, ite_eq_left h]
+  · have heq : C.buchiBody U hr x1 y s = C.buchiBody U hr x2 y s := by
+      simp only [buchiBody, ite_eq_left h]
     exact heq.le
-  · simp only [buchiInnerOpFun, ite_eq_right h]
-    exact C.stageValue_mono fun s' => hx s'
+  · simp only [buchiBody, ite_eq_right h]
+    exact C.stageValueIcc_mono hr hx s
 
-/-- The inner Bellman step, bundled as an `OrderHom` for a fixed outer candidate `y` --
-    `buchiInnerOpFun` plus its own monotonicity, exactly the `reachOp`/`safetyOp` pattern. Its
-    `.lfp` is `μx.(...)`, the object `buchiOp` below takes as its own per-`y` value. -/
+/-- **The payoff.** `buchiBody` is monotone in `y`, for any fixed `x`: a `U`-state is
+    `stageValueIcc_mono` applied to `y`'s inequality, and a state outside `U` does not mention
+    `y` at all. This is the monotonicity of co-Büchi's inner step, and the pointwise operator
+    inequality `OrderHom.lfp_mono_of_le` needs for Büchi's outer level. -/
+theorem buchiBody_mono_y (U : S → Prop) [DecidablePred U]
+    (hr : ∀ s a1 a2, C.r s a1 a2 = 0) (x : S → Set.Icc (0 : ℝ) 1)
+    {y1 y2 : S → Set.Icc (0 : ℝ) 1} (hy : y1 ≤ y2) :
+    C.buchiBody U hr x y1 ≤ C.buchiBody U hr x y2 := by
+  intro s
+  by_cases h : U s
+  · simp only [buchiBody, ite_eq_left h]
+    exact C.stageValueIcc_mono hr hy s
+  · have heq : C.buchiBody U hr x y1 s = C.buchiBody U hr x y2 s := by
+      simp only [buchiBody, ite_eq_right h]
+    exact heq.le
+
+/-- The Büchi Bellman step's **inner** (`μx`) level, for a fixed outer candidate `y`, bundled as
+    an `OrderHom`: `x ↦ buchiBody U hr x y`. A `U`-state plays against `y` (having just reached
+    `U`, one more step is owed before the condition can be satisfied *again*, so `y` is "the value
+    from here, having just reset"); a state outside `U` plays against the inner continuation `x`,
+    as `reachOpFun`'s non-`goal` branch does. Its `.lfp` is `μx.(...)`, the object `buchiOp` below
+    takes as its own per-`y` value. -/
 noncomputable def buchiInnerOp (U : S → Prop) [DecidablePred U]
     (hr : ∀ s a1 a2, C.r s a1 a2 = 0) (y : S → Set.Icc (0 : ℝ) 1) :
     (S → Set.Icc (0 : ℝ) 1) →o (S → Set.Icc (0 : ℝ) 1) where
-  toFun := C.buchiInnerOpFun U hr y
-  monotone' := C.buchiInnerOpFun_mono U hr y
+  toFun x := C.buchiBody U hr x y
+  monotone' := fun _x1 _x2 hx => C.buchiBody_mono_x U hr hx y
 
-/-- **The payoff.** `buchiInnerOpFun` is *also* monotone in the outer candidate `y`, for any fixed
-    inner continuation `x` -- a `U`-state's value is `stageValue_mono` applied to `y`'s inequality;
-    a non-`U` state's value doesn't mention `y` at all, so both sides are the literal same term.
-    This is exactly the pointwise operator inequality `OrderHom.lfp_mono_of_le` needs to bundle the
-    outer (`νy`) level as a genuine `OrderHom` in turn. -/
-theorem buchiInnerOpFun_mono_y (U : S → Prop) [DecidablePred U]
-    (hr : ∀ s a1 a2, C.r s a1 a2 = 0) {y1 y2 : S → Set.Icc (0 : ℝ) 1} (hy : y1 ≤ y2)
-    (x : S → Set.Icc (0 : ℝ) 1) :
-    C.buchiInnerOpFun U hr y1 x ≤ C.buchiInnerOpFun U hr y2 x := by
-  intro s
-  by_cases h : U s
-  · simp only [buchiInnerOpFun, ite_eq_left h]
-    exact C.stageValue_mono fun s' => hy s'
-  · have heq : C.buchiInnerOpFun U hr y1 x s = C.buchiInnerOpFun U hr y2 x s := by
-      simp only [buchiInnerOpFun, ite_eq_right h]
-    exact heq.le
-
-/-- **The payoff.** The Büchi Bellman operator, `y ↦ μx.buchiInnerOpFun U y x`, bundled as an
+/-- **The payoff.** The Büchi Bellman operator, `y ↦ μx.buchiBody U x y`, bundled as an
     `OrderHom` on `S → Set.Icc (0 : ℝ) 1` via `OrderHom.lfp_mono_of_le` applied to
-    `buchiInnerOpFun_mono_y` -- the one genuinely new architectural step this file needed beyond
-    `CsgMonotone.lean`. `(C.buchiOp U hr).gfp` is `⟨1⟩□◇U`, de Alfaro and Majumdar's eq. (4): the
+    `buchiBody_mono_y`. `(C.buchiOp U hr).gfp` is `⟨1⟩□◇U`, de Alfaro and Majumdar's eq. (4): the
     maximal probability of visiting `U` infinitely often. -/
 noncomputable def buchiOp (U : S → Prop) [DecidablePred U]
     (hr : ∀ s a1 a2, C.r s a1 a2 = 0) :
     (S → Set.Icc (0 : ℝ) 1) →o (S → Set.Icc (0 : ℝ) 1) where
   toFun y := (C.buchiInnerOp U hr y).lfp
   monotone' := fun _y1 _y2 hy =>
-    OrderHom.lfp_mono_of_le (fun x => C.buchiInnerOpFun_mono_y U hr hy x)
+    OrderHom.lfp_mono_of_le (fun x => C.buchiBody_mono_y U hr x hy)
 
 end CSG
 end Csg

@@ -36,28 +36,25 @@ variable (C : CSG S A1 A2)
 
 /-- The safety Bellman step, on `S → Set.Icc (0 : ℝ) 1` rather than bare `S → ℝ`: leaving `safe`
     is absorbing at `0` (an irrecoverable violation, regardless of the continuation); any `safe`
-    state still plays its stage game against the continuation, packaged back into `[0, 1]` via
-    `stageValue_nonneg`/`_le_one` exactly as `reachOpFun` does. Named `safetyOpFun` rather than
+    state still plays its stage game against the continuation, packaged back into `[0, 1]` by
+    `stageValueIcc` exactly as `reachOpFun` does. Named `safetyOpFun` rather than
     `safetyOp` itself so the monotonicity proof below (`safetyOpFun_mono`) can refer to it by name
     before it's bundled into an `OrderHom`, mirroring `reachOpFun`/`reachOpFun_mono`. -/
 noncomputable def safetyOpFun (safe : S → Prop) [DecidablePred safe]
     (hr : ∀ s a1 a2, C.r s a1 a2 = 0) (v : S → Set.Icc (0 : ℝ) 1) (s : S) : Set.Icc (0 : ℝ) 1 :=
-  if safe s then
-    ⟨C.stageValue s (fun s' => (v s' : ℝ)),
-      C.stageValue_nonneg hr (fun s' => (v s').2.1), C.stageValue_le_one hr (fun s' => (v s').2.2)⟩
+  if safe s then C.stageValueIcc hr v s
   else ⟨0, by norm_num, by norm_num⟩
 
 /-- **The payoff.** `safetyOpFun` is monotone in the continuation `v` -- a `safe` state's value is
-    `stageValue_mono` applied to the pointwise hypothesis, unwrapped from `Set.Icc (0 : ℝ) 1`'s
-    order back to `≤` on `ℝ` exactly as `reachOpFun_mono` does; a violating state is pinned to the
-    same constant `0` regardless of `v`, trivially monotone there. -/
+    `stageValueIcc_mono`; a violating state is pinned to the same constant `0` regardless of `v`,
+    trivially monotone there. -/
 theorem safetyOpFun_mono (safe : S → Prop) [DecidablePred safe]
     (hr : ∀ s a1 a2, C.r s a1 a2 = 0) :
     Monotone (C.safetyOpFun safe hr) := by
   intro v w hvw s
   by_cases h : safe s
   · simp only [safetyOpFun, ite_eq_left h]
-    exact C.stageValue_mono fun s' => hvw s'
+    exact C.stageValueIcc_mono hr hvw s
   · have heq : C.safetyOpFun safe hr v s = C.safetyOpFun safe hr w s := by
       simp only [safetyOpFun, ite_eq_right h]
     exact heq.le

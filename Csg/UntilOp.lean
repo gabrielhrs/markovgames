@@ -71,21 +71,19 @@ variable (C : CSG S A1 A2)
     the same state); a state that is neither `goal` nor `safe` is a dead end, worth `0` (the "stay
     in `safe` until `goal`" requirement is already broken, no continuation can recover); any other
     state (`safe`, not yet `goal`) plays its stage game against the continuation, packaged back
-    into `[0, 1]` via `stageValue_nonneg`/`_le_one` exactly as `reachOpFun`'s own non-goal case
+    into `[0, 1]` by `stageValueIcc` exactly as `reachOpFun`'s own non-goal case
     does. Named `untilOpFun` rather than `untilOp` itself so the monotonicity proof below
     (`untilOpFun_mono`) can refer to it by name before it's bundled into an `OrderHom`. -/
 noncomputable def untilOpFun (safe goal : S → Prop) [DecidablePred safe] [DecidablePred goal]
     (hr : ∀ s a1 a2, C.r s a1 a2 = 0) (v : S → Set.Icc (0 : ℝ) 1) (s : S) : Set.Icc (0 : ℝ) 1 :=
   if goal s then ⟨1, by norm_num, by norm_num⟩
-  else if safe s then ⟨C.stageValue s (fun s' => (v s' : ℝ)),
-    C.stageValue_nonneg hr (fun s' => (v s').2.1), C.stageValue_le_one hr (fun s' => (v s').2.2)⟩
+  else if safe s then C.stageValueIcc hr v s
   else ⟨0, by norm_num, by norm_num⟩
 
 /-- **The payoff.** `untilOpFun` is monotone in the continuation `v` -- `goal` states are pinned to
     the constant `1` regardless of `v` (trivially monotone), dead-end states (neither `goal` nor
     `safe`) are pinned to the constant `0` (also trivially monotone), and every remaining state's
-    value is `stageValue_mono` applied to the pointwise hypothesis, unwrapped from
-    `Set.Icc (0 : ℝ) 1`'s order back to `≤` on `ℝ` by definitional unfolding -- the same nested
+    value is `stageValueIcc_mono` -- the same nested
     `by_cases` + `simp only [untilOpFun, ite_eq_left h]`/`ite_eq_right h` idiom `reachOpFun_mono`
     already uses,
     safe here since both `goal` and `safe` are abstract predicates, never concrete decidable
@@ -101,7 +99,7 @@ theorem untilOpFun_mono (safe goal : S → Prop) [DecidablePred safe] [Decidable
     exact heq.le
   · by_cases hs : safe s
     · simp only [untilOpFun, ite_eq_right hg, ite_eq_left hs]
-      exact C.stageValue_mono fun s' => hvw s'
+      exact C.stageValueIcc_mono hr hvw s
     · have heq : C.untilOpFun safe goal hr v s = C.untilOpFun safe goal hr w s := by
         simp only [untilOpFun, ite_eq_right hg, ite_eq_right hs]
       exact heq.le

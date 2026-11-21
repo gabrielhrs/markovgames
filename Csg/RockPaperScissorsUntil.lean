@@ -77,43 +77,14 @@ theorem rpsVStar_fixed_until :
       rw [rpsCSG_stageValue_draw]
       simp only [rpsVStar]
 
-/-- **The payoff, part 2.** `rpsVStar` lower-bounds every pre-fixed point of the `until` operator --
-    the *same* argument `rpsVStar_le_of_prefixed` used, unaffected by the change of operator: `win2`
-    is still forced to `1` (the `goal` branch is identical between the two operators), `win1`'s
-    membership lower bound `0` is already all `rpsVStar win1` needs (the `until` operator's own
-    dead-end pinning at `win1` gives no *additional* information beyond what `[0, 1]` membership
-    already provides), and `draw`/`initial`'s pre-fixed-point inequalities are literally the same
-    stage-game facts as before, since neither state's `safe`/`goal` status changes which branch of
-    `untilOpFun` they route through relative to `reachOpFun`. -/
+/-- **The payoff, part 2.** `rpsVStar` lower-bounds every pre-fixed point of the `until` operator,
+    by the same lemma as for `reachOp` (`rpsVStar_le_of_step_le`): `win2` is `goal` under both
+    operators, and `draw` and `initial` are `safe` and not `goal`, so `untilOpFun` takes the same
+    stage-value step there as `reachOpFun`. The dead-end pinning at `win1` is not used; `[0, 1]`
+    membership already gives `rpsVStar win1 = 0 ≤ b win1`. -/
 theorem rpsVStar_le_of_prefixed_until {b : RPSState → Set.Icc (0 : ℝ) 1}
-    (hb : rpsCSG.untilOp rpsSafeNotWin1 rpsGoalWin2 rpsR_zero b ≤ b) : rpsVStar ≤ b := by
-  have hwin1 : (0 : ℝ) ≤ (b RPSState.win1 : ℝ) := (b RPSState.win1).2.1
-  have hwin2 : (b RPSState.win2 : ℝ) = 1 := by
-    have hle : (1 : ℝ) ≤ (b RPSState.win2 : ℝ) := hb RPSState.win2
-    exact le_antisymm (b RPSState.win2).2.2 hle
-  have hdraw_ge : (b RPSState.initial : ℝ) ≤ (b RPSState.draw : ℝ) := by
-    have hle : rpsCSG.stageValue RPSState.draw (fun s' => (b s' : ℝ)) ≤
-        (b RPSState.draw : ℝ) := hb RPSState.draw
-    rwa [rpsCSG_stageValue_draw] at hle
-  have hinit_ge : ((b RPSState.win1 : ℝ) + 1 + (b RPSState.draw : ℝ)) / 3 ≤
-      (b RPSState.initial : ℝ) := by
-    have hle : rpsCSG.stageValue RPSState.initial (fun s' => (b s' : ℝ)) ≤
-        (b RPSState.initial : ℝ) := hb RPSState.initial
-    rw [rpsCSG_stageValue_initial, hwin2] at hle
-    linarith
-  have hinit_half : (1 : ℝ) / 2 ≤ (b RPSState.initial : ℝ) := by linarith
-  intro s
-  cases s with
-  | win1 => exact hwin1
-  | win2 => exact hwin2.ge
-  | initial =>
-      change (rpsVStar RPSState.initial : ℝ) ≤ (b RPSState.initial : ℝ)
-      simp only [rpsVStar]
-      linarith
-  | draw =>
-      change (rpsVStar RPSState.draw : ℝ) ≤ (b RPSState.draw : ℝ)
-      simp only [rpsVStar]
-      linarith
+    (hb : rpsCSG.untilOp rpsSafeNotWin1 rpsGoalWin2 rpsR_zero b ≤ b) : rpsVStar ≤ b :=
+  rpsVStar_le_of_step_le (b := b) (hb RPSState.win2) (hb RPSState.draw) (hb RPSState.initial)
 
 /-- **The headline result.** The genuine `until` reading of this property has *exactly* the same
     least fixed point as the plain-reachability reading -- concrete, if RPS-specific, evidence for

@@ -108,26 +108,26 @@ theorem rpsVStar_fixed :
       rw [rpsCSG_stageValue_draw]
       simp only [rpsVStar]
 
-/-- **The payoff, part 2.** `rpsVStar` lower-bounds every pre-fixed point `b` of `reachOp`, forcing
-    `b win2 = 1` and `b win1 ≥ 0` first, then chaining `draw`'s and `initial`'s own pre-fixed-point
-    inequalities via `linarith` to pin `b initial ≥ 1/2` (and hence `b draw ≥ 1/2` too). This is
-    the one part of the argument that is genuinely rock-paper-scissors-specific, not reusable
-    as-is (see the module docstring). -/
-theorem rpsVStar_le_of_prefixed {b : RPSState → Set.Icc (0 : ℝ) 1}
-    (hb : rpsCSG.reachOp rpsGoalWin2 rpsR_zero b ≤ b) : rpsVStar ≤ b := by
+/-- **The payoff, part 2.** `rpsVStar` lower-bounds every `b` that is at least `1` at `win2` and
+    at least its own stage value at `draw` and at `initial`. `b win1 ≥ 0` is membership in
+    `[0, 1]`; `draw`'s and `initial`'s inequalities chain via `linarith` to pin `b initial ≥ 1/2`
+    (and hence `b draw ≥ 1/2`). Stated on the three inequalities rather than on a pre-fixed point
+    of one operator, because `reachOp` and `RockPaperScissorsUntil.lean`'s `untilOp` take the same
+    step at these three states: `rpsVStar_le_of_prefixed` below and its `until` counterpart are
+    both this lemma. This is the one part of the argument that is specific to
+    rock-paper-scissors. -/
+theorem rpsVStar_le_of_step_le {b : RPSState → Set.Icc (0 : ℝ) 1}
+    (hgoal : (1 : ℝ) ≤ (b RPSState.win2 : ℝ))
+    (hdraw : rpsCSG.stageValue RPSState.draw (fun s' => (b s' : ℝ)) ≤ (b RPSState.draw : ℝ))
+    (hinit : rpsCSG.stageValue RPSState.initial (fun s' => (b s' : ℝ)) ≤
+      (b RPSState.initial : ℝ)) : rpsVStar ≤ b := by
   have hwin1 : (0 : ℝ) ≤ (b RPSState.win1 : ℝ) := (b RPSState.win1).2.1
-  have hwin2 : (b RPSState.win2 : ℝ) = 1 := by
-    have hle : (1 : ℝ) ≤ (b RPSState.win2 : ℝ) := hb RPSState.win2
-    exact le_antisymm (b RPSState.win2).2.2 hle
+  have hwin2 : (b RPSState.win2 : ℝ) = 1 := le_antisymm (b RPSState.win2).2.2 hgoal
   have hdraw_ge : (b RPSState.initial : ℝ) ≤ (b RPSState.draw : ℝ) := by
-    have hle : rpsCSG.stageValue RPSState.draw (fun s' => (b s' : ℝ)) ≤
-        (b RPSState.draw : ℝ) := hb RPSState.draw
-    rwa [rpsCSG_stageValue_draw] at hle
+    rwa [rpsCSG_stageValue_draw] at hdraw
   have hinit_ge : ((b RPSState.win1 : ℝ) + 1 + (b RPSState.draw : ℝ)) / 3 ≤
       (b RPSState.initial : ℝ) := by
-    have hle : rpsCSG.stageValue RPSState.initial (fun s' => (b s' : ℝ)) ≤
-        (b RPSState.initial : ℝ) := hb RPSState.initial
-    rw [rpsCSG_stageValue_initial, hwin2] at hle
+    rw [rpsCSG_stageValue_initial, hwin2] at hinit
     linarith
   have hinit_half : (1 : ℝ) / 2 ≤ (b RPSState.initial : ℝ) := by linarith
   intro s
@@ -142,6 +142,12 @@ theorem rpsVStar_le_of_prefixed {b : RPSState → Set.Icc (0 : ℝ) 1}
       change (rpsVStar RPSState.draw : ℝ) ≤ (b RPSState.draw : ℝ)
       simp only [rpsVStar]
       linarith
+
+/-- `rpsVStar` lower-bounds every pre-fixed point `b` of `reachOp`: the pre-fixed-point inequality
+    at `win2`, `draw` and `initial` is `rpsVStar_le_of_step_le`'s three hypotheses. -/
+theorem rpsVStar_le_of_prefixed {b : RPSState → Set.Icc (0 : ℝ) 1}
+    (hb : rpsCSG.reachOp rpsGoalWin2 rpsR_zero b ≤ b) : rpsVStar ≤ b :=
+  rpsVStar_le_of_step_le (b := b) (hb RPSState.win2) (hb RPSState.draw) (hb RPSState.initial)
 
 /-- **The headline result.** `rpsVStar` *is* the least fixed point, on the nose -- no limiting
     argument, just the two payoff lemmas above fed into `ReachCertificate.lean`'s reusable

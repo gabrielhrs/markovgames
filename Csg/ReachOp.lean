@@ -41,24 +41,17 @@ variable (C : CSG S A1 A2)
 /-- The reachability Bellman step, on `S → Set.Icc (0 : ℝ) 1` rather than bare `S → ℝ`: a `goal`
     state is worth `1` regardless of the continuation (absorption, same as `reachBounded`'s own
     `if goal s then 1 else ...`); any other state plays its stage game against the continuation,
-    packaged back into `[0, 1]` via `stageValue_nonneg`/`_le_one` (needing `C.r ≡ 0`, see
+    packaged back into `[0, 1]` by `stageValueIcc` (needing `C.r ≡ 0`, see
     `CsgMonotone.lean`). Named `reachOpFun` rather than `reachOp` itself so the monotonicity proof
     below (`reachOpFun_mono`) can refer to it by name before it's bundled into an `OrderHom`. -/
 noncomputable def reachOpFun (goal : S → Prop) [DecidablePred goal]
     (hr : ∀ s a1 a2, C.r s a1 a2 = 0) (v : S → Set.Icc (0 : ℝ) 1) (s : S) : Set.Icc (0 : ℝ) 1 :=
   if goal s then ⟨1, by norm_num, by norm_num⟩
-  else ⟨C.stageValue s (fun s' => (v s' : ℝ)),
-    C.stageValue_nonneg hr (fun s' => (v s').2.1), C.stageValue_le_one hr (fun s' => (v s').2.2)⟩
+  else C.stageValueIcc hr v s
 
 /-- **The payoff.** `reachOpFun` is monotone in the continuation `v` -- `goal` states are pinned
     to the same constant `1` regardless of `v` (so trivially monotone there), and every other
-    state's value is `stageValue_mono` applied to the pointwise hypothesis, unwrapped from
-    `Set.Icc (0 : ℝ) 1`'s order back to `≤` on `ℝ` by definitional unfolding (`exact`'s defeq
-    check, not a named simp lemma -- this Lean toolchain has picked up a fresh core
-    `Subtype.instLE` alongside Mathlib's own `Preorder`-derived one, so a lemma like
-    `Subtype.mk_le_mk` compiled against one may not syntactically match a goal stated against the
-    other, even though both compute to exactly the same underlying comparison and `exact`'s
-    defeq check sees through either). -/
+    state's value is `stageValueIcc_mono`. -/
 theorem reachOpFun_mono (goal : S → Prop) [DecidablePred goal]
     (hr : ∀ s a1 a2, C.r s a1 a2 = 0) :
     Monotone (C.reachOpFun goal hr) := by
@@ -68,7 +61,7 @@ theorem reachOpFun_mono (goal : S → Prop) [DecidablePred goal]
       simp only [reachOpFun, ite_eq_left h]
     exact heq.le
   · simp only [reachOpFun, ite_eq_right h]
-    exact C.stageValue_mono fun s' => hvw s'
+    exact C.stageValueIcc_mono hr hvw s
 
 /-- **The payoff.** The reachability Bellman operator, bundled as an `OrderHom` on the complete
     lattice `S → Set.Icc (0 : ℝ) 1` -- `reachOpFun` plus its own monotonicity proof. Existence of a

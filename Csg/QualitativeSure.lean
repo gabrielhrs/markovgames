@@ -127,7 +127,7 @@ noncomputable def SFG (b : Set S) : Set S := C.SF (C.G b)
 
 /-- `SGF`'s **inner** (`μX`) step, for a fixed outer candidate `y`: a `b`-state plays `Pre1` against
     `y` (having just reached `b`, one more step is owed before the condition is satisfied again);
-    a non-`b` state plays `Pre1` against the inner continuation `x`. Exactly `buchiInnerOpFun` with
+    a non-`b` state plays `Pre1` against the inner continuation `x`. Exactly `buchiBody` with
     `stageValue` replaced by `Pre1`. -/
 noncomputable def SGFInnerFun (b y x : Set S) : Set S := (C.Pre1 x ∩ bᶜ) ∪ (C.Pre1 y ∩ b)
 
@@ -145,7 +145,7 @@ noncomputable def SGFInner (b y : Set S) : Set S →o Set S where
   monotone' := C.SGFInnerFun_mono b y
 
 /-- **The payoff.** `SGFInnerFun` is *also* monotone in the outer candidate `y`, for any fixed
-    inner continuation `x` -- exactly `buchiInnerOpFun_mono_y`'s own shape, needed to bundle the
+    inner continuation `x` -- exactly `buchiBody_mono_y`'s own shape, needed to bundle the
     outer (`νY`) level via `OrderHom.lfp_mono_of_le`. -/
 theorem SGFInnerFun_mono_y (b : Set S) {y1 y2 : Set S} (hy : y1 ≤ y2) (x : Set S) :
     C.SGFInnerFun b y1 x ≤ C.SGFInnerFun b y2 x := by

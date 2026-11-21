@@ -166,7 +166,7 @@ theorem reachGameQ_stageValue (G : CsgQ S A1 A2) (h : G.WellFormed)
 /-- `reachOp`'s coercion as a subtype-free, `ℝ`-valued `if`-`then`-`else`. Without this, `change`
     cannot reach past the `Set.Icc` packaging: the `ite` sits on an abstract `DecidablePred goal`
     instance and so will not reduce definitionally, whatever the ambient hypothesis says about
-    `goal s`. The fix is `Csg/CoBuchiOp.lean`'s own `coBuchiInnerOpFun_coe`, verbatim --
+    `goal s`. The fix is `Csg/BuchiOp.lean`'s own `buchiBody_coe`, verbatim --
     `unfold`, then `split_ifs <;> rfl` -- and with it in hand `ite_eq_left`/`ite_eq_right` work as
     ordinary rewrite lemmas, which is how `Csg/CoalitionComplementReach.lean` handles the same
     branch.
