@@ -156,4 +156,15 @@ theorem mp_value : mpMatrixQ.toMatrixGame.value = 0 := by
 #eval (mpMatrixQ.findValueCert mpActions mpActions).map
         (fun c => (c.1, mpActions.map c.2.1, mpActions.map c.2.2))
 
+/-! ## Checking a certificate in the kernel
+
+A rational identity and the two value certificates above, by `decide +kernel`: the `Decidable`
+instance is reduced by the kernel instead of by the elaborator. -/
+
+example : (1 / 3 : ℚ) + 1 / 6 = 1 / 2 := by decide +kernel
+
+example : mpMatrixQ.ValueCert 0 mpUnif mpUnif := by decide +kernel
+
+example : rpsMatrixQ.ValueCert 0 rpsUnif rpsUnif := by decide +kernel
+
 end Comp

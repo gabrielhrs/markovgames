@@ -10,6 +10,7 @@ import Comp.FixLoop
 import Comp.QualOps
 import Comp.QualBridge
 import Comp.Objective
+import Comp.ReachTrace
 import Comp.ModelData
 import Comp.ModelDataQualitative
 import Comp.RockPaperScissorsQ
@@ -19,3 +20,5 @@ import Comp.HideOrRunQ
 import Comp.LeakyGateQ
 import Comp.HideOrRunDataQ
 import Comp.RaggedQ
+import Comp.ModelDataReach
+import Comp.RaggedReachQ

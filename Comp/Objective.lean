@@ -151,9 +151,10 @@ inductive Answers (G : CsgQ S A1 A2) (h : G.WellFormed) : Objective S → Answer
 
 /-! ## Getting the equality back out
 
-Going in, a constructor takes the equality a run established. Coming out, the three lemmas below
-return it with nothing else assumed, so an answer can be used wherever the `Csg/` statement
-could. -/
+Going in, a constructor takes the equality a run established. Coming out, the first three lemmas
+below return it with nothing else assumed, so an answer can be used wherever the `Csg/` statement
+could. The fourth does the same for a reachability interval, as two real inequalities per
+state. -/
 
 /-- **Out.** An answer to a `sureSafe` objective is the sure-safety region, with nothing else
     assumed. -/
@@ -176,6 +177,20 @@ theorem LF_eq_of_answers (G : CsgQ S A1 A2) (h : G.WellFormed) {target c : Finse
     (G.toCSG h).LF ↑target = (↑c : Set S) := by
   cases ha with
   | limitReach hLF => exact hLF
+
+/-- **Out, for an interval.** An answer to a `reach` objective bounds the real reachability value
+    at every state, with the subtype and its packaging gone: `lo s ≤ value s ≤ hi s` in `ℝ`.
+    Reward-freeness is an argument here only so that the operator can be named; the constructor
+    carried its own proof of it, and any two proofs agree. -/
+theorem reach_bounds_of_answers (G : CsgQ S A1 A2) (h : G.WellFormed) (hrf : G.RewardFree)
+    {target : Finset S} {lo hi : S → ℚ}
+    (ha : G.Answers h (Objective.reach target) (Answer.interval lo hi)) (s : S) :
+    ((lo s : ℚ) : ℝ)
+        ≤ ((((G.toCSG h).reachOp (· ∈ target) (toCSG_r_zero G h hrf)).lfp s : ℝ)) ∧
+      ((((G.toCSG h).reachOp (· ∈ target) (toCSG_r_zero G h hrf)).lfp s : ℝ))
+        ≤ ((hi s : ℚ) : ℝ) := by
+  cases ha with
+  | reach _ h0 h1 k0 k1 hlo hhi => exact ⟨hlo s, hhi s⟩
 
 /-- **The indices do work.** A region is not a possible answer to a discounted value, and the
     relation says so by having no constructor with those indices -- so this is unprovable rather

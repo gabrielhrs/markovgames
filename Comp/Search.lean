@@ -190,18 +190,17 @@ theorem value_eq_of_find {G : MatrixGameQ I J} {Is : List I} {Js : List J}
     (h : G.findValueCert Is Js = some (t, p, q)) : G.toMatrixGame.value = ((t : ℚ) : ℝ) :=
   value_eq_of_valueCert (valueCert_of_find h)
 
-/-! ## Exercising the solver: `#eval`, not `decide`
+/-! ## Exercising the solver: `#eval` to find, the kernel to check
 
-The two are not interchangeable here, and the difference shapes how the search is used. `#eval`
-runs compiled code; `decide` asks the *kernel* to reduce a `Decidable` instance, and kernel
-reduction gets stuck on `solveQ` -- it will not unfold the recursion and the `Option` plumbing far
-enough to yield a literal. So
+`#eval` runs compiled code, and that is how the search is run:
 
     #eval solveQ 2 [[1, 1, 3], [1, -1, 1]]   -- some [2, 1]
     #eval solveQ 2 [[1, 1, 2], [2, 2, 4]]    -- none
 
-answer immediately, while the same two statements written as `example ... := by decide` do not
-elaborate at all.
+Plain `decide` does not get through rational arithmetic: on a statement with a `ℚ` literal in it,
+the elaborator's reduction of the `Decidable` instance stops short of a value. `decide +kernel`
+hands the same reduction to the kernel, which completes it. The examples at the end of
+`Comp/RockPaperScissorsQ.lean` are two value certificates checked that way.
 
 At the game level, `findValueCert` returns the following on the standard small instances, which is
 what to expect when wiring up a new one:
@@ -216,11 +215,11 @@ The last two are the cases worth noting: the mixed one is the `(ad - bc)/(a + d 
 and the constant game is degenerate -- every support pair solves it, and the first one enumerated
 wins, which is harmless because `ValueCert` does not care which optimal pair it is handed.
 
-The constraint is a feature rather than a nuisance. `#eval` is for *finding* a witness; `decide` is
-for *checking* one, and checking only has to chew through `ValueCert` at explicit rational literals
--- finitely many comparisons, no recursion -- which it does happily. Verifying a whole computed run
-inside the kernel would need `native_decide` and its trust axiom; taking the witness out of `#eval`
-and checking it with `decide` needs neither. -/
+So the division is: `#eval` *finds* a witness, and `decide +kernel` *checks* one (as does
+`norm_num`, after the sums are expanded by hand). A check is a closed decidable statement at
+explicit rational literals -- finitely many comparisons, no search -- so it needs neither
+`native_decide` nor its trust in the compiler. `Comp/ModelDataReach.lean` checks a whole
+reachability run this way. -/
 
 end MatrixGameQ
 
