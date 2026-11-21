@@ -632,15 +632,15 @@ theorem sum_pushStrat_mul {α β : Type*} [Fintype α] [Fintype β] [DecidableEq
 theorem sum_mul_pushStrat {α β : Type*} [Fintype α] [Fintype β] [DecidableEq β] (g : α → β)
     (x : α → ℝ) (c : β → ℝ) : ∑ b, c b * pushStrat g x b = ∑ a, c (g a) * x a :=
   calc ∑ b, c b * pushStrat g x b = ∑ b, pushStrat g x b * c b :=
-        Finset.sum_congr rfl fun b _ => mul_comm _ _
+        Finset.sum_congr rfl fun _ _ => mul_comm _ _
     _ = ∑ a, x a * c (g a) := sum_pushStrat_mul g x c
-    _ = ∑ a, c (g a) * x a := Finset.sum_congr rfl fun a _ => mul_comm _ _
+    _ = ∑ a, c (g a) * x a := Finset.sum_congr rfl fun _ _ => mul_comm _ _
 
 /-- The push-forward of a mixed strategy is a mixed strategy. -/
 theorem pushStrat_mem {α β : Type*} [Fintype α] [Fintype β] [DecidableEq β] (g : α → β)
     {x : α → ℝ} (hx : x ∈ stdSimplex ℝ α) : pushStrat g x ∈ stdSimplex ℝ β := by
   refine ⟨fun b => ?_, ?_⟩
-  · show 0 ≤ ∑ a, if g a = b then x a else 0
+  · change 0 ≤ ∑ a, if g a = b then x a else 0
     refine Finset.sum_nonneg fun a _ => ?_
     split_ifs
     · exact hx.1 a
@@ -676,7 +676,7 @@ theorem value_comapRow {f : I' → I} (hf : Function.Surjective f) :
       ∑ i, G.optimalRow i * G.A i j := by
     refine (sum_pushStrat_mul g G.optimalRow fun i' => (G.comapRow f).A i' j).trans ?_
     refine Finset.sum_congr rfl fun i _ => ?_
-    show G.optimalRow i * G.A (f (g i)) j = G.optimalRow i * G.A i j
+    change G.optimalRow i * G.A (f (g i)) j = G.optimalRow i * G.A i j
     rw [hg i]
   exact hsum.le.trans (G.optimalRow_col_le j)
 
@@ -715,7 +715,7 @@ theorem value_comapCol {f : J' → J} (hf : Function.Surjective f) :
       ∑ j, G.A i j * G.optimalCol j := by
     refine (sum_mul_pushStrat g G.optimalCol fun j' => (G.comapCol f).A i j').trans ?_
     refine Finset.sum_congr rfl fun j _ => ?_
-    show G.A i (f (g j)) * G.optimalCol j = G.A i j * G.optimalCol j
+    change G.A i (f (g j)) * G.optimalCol j = G.A i j * G.optimalCol j
     rw [hg j]
   exact (G.le_optimalCol_row i).trans hsum.ge
 

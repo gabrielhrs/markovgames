@@ -110,6 +110,7 @@ def withDiscount (G : CsgQ S A1 A2) (l : ℚ) : DiscountedCsgQ S A1 A2 where
   toCsgQ := G
   l := l
 
+omit [DecidableEq S] in
 /-- `withDiscount` is well formed exactly when the model is and the discount is in `[0, 1)`. -/
 theorem withDiscount_wf (G : CsgQ S A1 A2) (h : G.WellFormed) {l : ℚ} (hl0 : 0 ≤ l)
     (hl1 : l < 1) : (G.withDiscount l).WellFormed :=

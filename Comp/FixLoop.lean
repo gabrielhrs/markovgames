@@ -196,6 +196,7 @@ The caller's remaining obligation, discharged. Two inductions on the fuel, each 
 cardinality invariant: a nonincreasing chain spends `card` and a nondecreasing one spends its
 complement, and in both cases running out of fuel means running out of room to move. -/
 
+omit [Fintype S] in
 /-- **A descending chain stops within `x.card` steps.** The invariant is `x.card ≤ n`: a step that
     changes anything is strict, so it costs at least one from the cardinality, and at `n = 0` the
     region is empty, where `f x ⊆ x` leaves `f x = x` the only option. -/

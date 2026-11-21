@@ -106,12 +106,12 @@ Isolating the unfolding here keeps the certificates below to pure arithmetic. Ea
 theorem stage_true_A (v : Bool → ℚ) (a1 a2 : Bool) :
     (twoGame.shapleyGameQ true v).A a1 a2 = 1 / 2 * (if a1 = a2 then v true else v false) := by
   cases a1 <;> cases a2 <;>
-    simp [DiscountedCsgQ.shapleyGameQ, twoGame, twoK, twoR, CsgQ.expectQ, Fintype.sum_bool]
+    simp [DiscountedCsgQ.shapleyGameQ, twoGame, twoK, twoR, CsgQ.expectQ]
 
 /-- The absorbing state's payoff matrix is constant: the actions are irrelevant there. -/
 theorem stage_false_A (v : Bool → ℚ) (a1 a2 : Bool) :
     (twoGame.shapleyGameQ false v).A a1 a2 = 1 + 1 / 2 * v false := by
-  simp [DiscountedCsgQ.shapleyGameQ, twoGame, twoK, twoR, CsgQ.expectQ, Fintype.sum_bool]
+  simp [DiscountedCsgQ.shapleyGameQ, twoGame, twoK, twoR, CsgQ.expectQ]
 
 /-! ## Iterates and strategies, as literals -/
 
