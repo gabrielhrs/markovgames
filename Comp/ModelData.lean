@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Gabriel Santos
 -/
 import Comp.Objective
+import Comp.Qualitative
 
 /-!
 # A model as data: sparse adjacency in, a `CsgQ` out
@@ -64,9 +65,9 @@ conditions, and what they buy is explained at `keysNat`: together they let a sup
 row's keys without the weights being inspected, which is what keeps the kernel in play above the
 bridge. None of the three `ℚ` conditions is reachable by `decide` once a weight is written as a
 fraction -- `(1/2 : ℚ)` is a division -- so each is proved once per model by `norm_num`, and
-*nothing above them* needs rational arithmetic again. A model whose weights are all `0` or `1` is
-the exception in practice: those are not divisions, so its three rational conditions should fall to
-`decide` like the structural ones.
+*nothing above them* needs rational arithmetic again. That holds for a model whose weights are all
+`0` or `1` as well: `Stochastic` adds weights, and rational addition normalises through `Nat.gcd`
+whatever the summands are.
 
 **Why `NeZero` appears, and one practical note.** `Comp/Basic.lean`'s `CsgQ` requires
 `[Nonempty A1] [Nonempty A2]`, and `Fin d.nAct1` is nonempty only when `d.nAct1 ≠ 0`. So `toCsgQ`
@@ -77,18 +78,13 @@ numeral. Declaring the three `NeZero`s by hand beside the model works too, and d
 that.
 
 **The support, read off the row.** Sparse storage fixes the size of the *model*, but
-`Comp/QualitativeFinset.lean`'s `supportF` is `Finset.univ.filter (· ≠ 0)`, so computing a
-two-element support still costs a scan of every state. `supportOf` reads it straight off the row
-instead, at a cost proportional to the row's length, and `supportF_eq` is the bridge. That one lemma
-does two jobs, which is the pleasing part: it is also exactly the per-instance arithmetic quarantine
-(`supportF_eq_supp` in `Comp/HideOrRunQ.lean`, `supportF_eq_chainSupp` in
-`Comp/SafetyChainQ.lean`) proved once for every model at once. Above the bridge there is no `ℚ`
-arithmetic, only comparison of a weight with zero -- so `decide` is available even for a
-*probabilistic* model, which the hand-written instances could not manage.
-
-The step after that is to make the operators above `supportF` go through it, the way
-`Comp/HideOrRunQ.lean`'s `aC`/`bC`/`lStepC` go through its own table. That is a transfer lemma per
-operator and it is not here yet.
+`Comp/Qualitative.lean`'s `supportF` is `Finset.univ.filter (· ≠ 0)`, so computing a two-element
+support still costs a scan of every state, each test a rational comparison. `supportOf` reads the
+support off the distribution's keys instead, at a cost proportional to its length and with no
+weight inspected, and `supportF_eq` is the bridge. It is the arithmetic quarantine that
+`Comp/HideOrRunQ.lean` and `Comp/SafetyChainQ.lean` each prove for a support table written by hand
+(`supportF_eq_supp`, `supportF_eq_chainSupp`), proved once for every model.
+`Comp/ModelDataQualitative.lean` hands `supportOf` to the operators of `Comp/QualOps.lean`.
 
 **Also not here:** parsing, which is ordinary programming and belongs outside the proof
 development; `Array` in place of `List`, which is what a lookup-*time* fix would need and which
@@ -111,8 +107,7 @@ def denseOf (n : ℕ) : List (ℕ × ℚ) → Fin n → ℚ
   | (t, q) :: rest, s' => (if (s' : ℕ) = t then q else 0) + denseOf n rest s'
 
 /-- A single weighted index in range contributes its weight to the sum and nothing elsewhere. The
-    arithmetic core of this file: `sum_denseOf` is this plus an induction, and a point-mass
-    kernel's well-formedness is this at `q = 1`.
+    arithmetic core of this file: `sum_denseOf` is this plus an induction.
 
     `Fin.ext` is the fact that a `Fin` is determined by its value; it has gone under other names
     (`Fin.eq_of_val_eq`, `Fin.val_injective`) in other versions. -/
@@ -130,11 +125,6 @@ theorem sum_ite_coe_eq {n t : ℕ} (ht : t < n) (q : ℚ) :
         refine Finset.sum_congr rfl fun s' _ => ?_
         simp only [hcond s']
     _ = q := by simp
-
-/-- The `q = 1` case, which is what a point-mass kernel needs. -/
-theorem sum_ite_coe_eq_one {n t : ℕ} (ht : t < n) :
-    ∑ s' : Fin n, (if (s' : ℕ) = t then (1 : ℚ) else 0) = 1 :=
-  sum_ite_coe_eq ht 1
 
 /-- A sparse distribution with nonnegative weights densifies to a nonnegative vector. -/
 theorem denseOf_nonneg (n : ℕ) (dist : List (ℕ × ℚ)) (s' : Fin n) :
@@ -172,7 +162,7 @@ rather than the state count -- and, as a side effect, no rational arithmetic abo
 /-- A sum of two nonnegative rationals vanishes only if both do, so it is nonzero exactly when one
     of them is. The only arithmetic `denseOf_ne_zero_iff` needs, and the reason nonnegativity is a
     hypothesis there: with cancellation allowed, a support could not be read off the keys.
-    (`Comp/HideOrRunQ.lean`'s `half_add_half_ne_zero` is this fact with explicit `1/2`s.) -/
+    (`Comp/SafetyChainQ.lean`'s `half_add_half_ne_zero` is this fact with explicit `1/2`s.) -/
 theorem add_ne_zero_iff_of_nonneg {a b : ℚ} (ha : 0 ≤ a) (hb : 0 ≤ b) :
     a + b ≠ 0 ↔ a ≠ 0 ∨ b ≠ 0 := by
   constructor
@@ -616,20 +606,6 @@ theorem ModelData.padFin2_mem (d : ModelData) (hs : d.Shape) (s : Fin d.nStates)
   rw [ModelData.mem_enabled2]
   exact d.pad2_mem_keys2 s a2
 
-/-- Neither enabled set is empty, since every state has a transition and it names an action. -/
-theorem ModelData.enabled1_nonempty (d : ModelData) (hs : d.Shape) (s : Fin d.nStates) :
-    (d.enabled1 hs s).Nonempty := by
-  refine ⟨⟨d.pad1 s 0, d.keys1_lt hs s _ (d.pad1_mem_keys1 s 0)⟩, ?_⟩
-  rw [ModelData.mem_enabled1]
-  exact d.pad1_mem_keys1 s 0
-
-/-- The column player's. -/
-theorem ModelData.enabled2_nonempty (d : ModelData) (hs : d.Shape) (s : Fin d.nStates) :
-    (d.enabled2 hs s).Nonempty := by
-  refine ⟨⟨d.pad2 s 0, d.keys2_lt hs s _ (d.pad2_mem_keys2 s 0)⟩, ?_⟩
-  rw [ModelData.mem_enabled2]
-  exact d.pad2_mem_keys2 s 0
-
 /-- `padFin1` is the identity on enabled actions. -/
 theorem ModelData.padFin1_eq_self (d : ModelData) (hs : d.Shape) (s : Fin d.nStates)
     {a1 : Fin d.nAct1} (h : a1 ∈ d.enabled1 hs s) : d.padFin1 hs s a1 = a1 := by
@@ -650,8 +626,8 @@ theorem ModelData.transAt_padFin (d : ModelData) (hs : d.Shape) (s : Fin d.nStat
 
 /-! ### Padding one coordinate at a time
 
-`transAt_pad` pads both coordinates. The qualitative operators need each separately, because `aF`
-varies its row action with the column action fixed and `bF` does the reverse. Both hold because
+`transAt_pad` pads both coordinates. The qualitative operators need each separately, because `A`
+varies its row action with the column action fixed and `B` does the reverse. Both hold because
 `transAt` pads the two coordinates independently and each padding is idempotent. The support-level
 versions, `supportOf_padFin1` and `supportOf_padFin2`, are with `supportOf` below. -/
 
@@ -670,17 +646,19 @@ theorem ModelData.transAt_pad2 (d : ModelData) (s a1 a2 : ℕ) :
 
 /-! ### The quantifier swap
 
-**The payoff of carrying actions on transitions.** Every qualitative operator in this library has
-the shape `∃ a1, ∀ a2, P a1 a2` over the *global* action namespaces. This says such a quantifier may
-be restricted to a state's own enabled actions, provided `P` cannot tell a joint action from its
-padded representative -- which `supportOf_padFin` supplies, since `P` always factors through the
-support.
+`Pre1` has the shape `∃ a1, ∀ a2, P a1 a2` over the *global* action namespaces. This says such a
+quantifier pair may be restricted to a state's own enabled actions, provided `P` cannot tell a joint
+action from its padded representative -- which `supportOf_padFin` supplies whenever `P` factors
+through the support.
 
 The argument is that `pad` is a retraction onto the enabled set. Forwards, a witness `a1` is
 replaced by `padFin1 a1`, which is enabled and which `P` cannot distinguish from it, and an enabled
 `a2` is its own representative. Backwards, an enabled witness serves unchanged, and an arbitrary
-`a2` is handled by its representative, which is enabled. Nothing here is specific to `Pre1`; the
-other five operators instantiate the same lemma. -/
+`a2` is handled by its representative, which is enabled.
+
+`Comp/ModelDataQualitative.lean`'s `pre1Tr_eq` is the instance. `A` and `B` are each a single
+quantifier with a set-valued parameter and do not have this shape; they are narrowed there through
+pad-saturation instead. -/
 
 /-- Restricting `∃ a1, ∀ a2` to the actions a state actually enables. -/
 theorem ModelData.exists_forall_enabled_iff (d : ModelData) (hs : d.Shape) (s : Fin d.nStates)
@@ -736,6 +714,7 @@ theorem ModelData.supportOf_padFin (d : ModelData) (hs : d.Shape) (s : Fin d.nSt
     d.supportOf hs s (d.padFin1 hs s a1) (d.padFin2 hs s a2) = d.supportOf hs s a1 a2 := by
   unfold ModelData.supportOf
   simp only [ModelData.transAt_padFin]
+
 /-- The support does not see a row action's padding. Stated with `padFin1` on the left so that it
     rewrites in the direction the operator proofs need. -/
 theorem ModelData.supportOf_padFin1 (d : ModelData) (hs : d.Shape) (s : Fin d.nStates)
@@ -751,16 +730,15 @@ theorem ModelData.supportOf_padFin2 (d : ModelData) (hs : d.Shape) (s : Fin d.nS
   unfold ModelData.supportOf
   simp only [ModelData.padFin2, ModelData.transAt_pad2]
 
-/-- **The bridge, and the quarantine.** `Comp/QualitativeFinset.lean`'s `supportF` -- a filter over
+/-- **The bridge, and the quarantine.** `Comp/Qualitative.lean`'s `supportF` -- a filter over
     every state, with a rational disequality in it -- is the padded transition's own key set.
 
     Computing a support costs the row's length instead of the state count; and nothing above this
     line touches a weight at all, since `supportOf` is built from `keysNat`, which is `ℕ` data. So
     the kernel reduces every operator above it even when the weights are fractions it could not so
     much as evaluate. That is the job `Comp/HideOrRunQ.lean` and `Comp/SafetyChainQ.lean` each do by
-    hand for their own game, except that those tables rely on their kernels being `0`/`1`; this one
-    holds for any model, and the three `ℚ` conditions it rests on are proved once per model rather
-    than reproved inside every fixed-point check. -/
+    hand for their own game; this one holds for any model, and the three `ℚ` conditions it rests on
+    are proved once per model. -/
 theorem ModelData.supportF_eq (d : ModelData) [NeZero d.nAct1] [NeZero d.nAct2]
     (hs : d.Shape) (hnn : d.Nonneg) (hnz : d.Nonzero) (s : Fin d.nStates) (a1 : Fin d.nAct1)
     (a2 : Fin d.nAct2) :

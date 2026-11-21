@@ -36,8 +36,7 @@ It arises here, and the answer is that nothing in the computation looks at a wei
 `Comp/ModelData.lean`'s `supportOf` is built from `keysNat`, the row's keys, which is `ℕ` data; the
 weights are confined to three side conditions (`Nonneg`, `Nonzero`, `Stochastic`) that are proved
 once, by `norm_num`, outside the computation. Above that line the qualitative operators are finite
-set arithmetic over `Fin 4` and `Fin 2`, and `gate_answers` closes both of its fixed-point checks
-with `decide`.
+set arithmetic over `Fin 4` and `Fin 2`, and `gate_answers` is checked by `decide`.
 
 So the division of labour is: `norm_num` for the arithmetic, once per model; `decide` for the
 algorithm, however many iterations it takes. It is the same split as the per-instance quarantine
@@ -123,6 +122,16 @@ theorem gate_stochastic : gate.Stochastic := by
 theorem gate_wf : gate.toCsgQ.WellFormed :=
   gate.wellFormed gate_shape gate_stochastic
 
+/-- The model's support function: what `Comp/QualOps.lean`'s operators are applied to. -/
+abbrev gateSupp : Fin gate.nStates → Fin gate.nAct1 → Fin gate.nAct2 → Finset (Fin gate.nStates) :=
+  gate.supportOf gate_shape
+
+/-- …and it is the support of the game's kernel, which is all `Comp/QualBridge.lean` asks. -/
+theorem gateSupp_spec (s : Fin gate.nStates) (a1 : Fin gate.nAct1) (a2 : Fin gate.nAct2) :
+    ((gate.toCsgQ.toCSG gate_wf).K s a1 a2).support
+      = (↑(gateSupp s a1 a2) : Set (Fin gate.nStates)) :=
+  gate.support_toCSG gate_shape gate_stochastic gate_nonzero s a1 a2
+
 /-! ## Running it -/
 
 /-- Everything but the sink. -/
@@ -137,34 +146,34 @@ def gateGood : Finset (Fin gate.nStates) := {0, 1}
 #eval decide gate.Stochastic
 -- expect: true        (compiled code has no trouble with the halves)
 
-#eval gate.supportOf gate_shape 0 0 0
+#eval gateSupp 0 0 0
 -- expect: {0, 1}      the coin flip's two outcomes, read off the row
 
-#eval gate.supportOf gate_shape 2 0 0
+#eval gateSupp 2 0 0
 -- expect: {2, 3}      the leak
 
-#eval gate.gStepOf gate_shape gateSafe Finset.univ
+#eval Qual.gStep gateSupp gateSafe Finset.univ
 -- expect: {0, 1, 2}   one step only removes the sink
 
-#eval (gate.gStepOf gate_shape gateSafe)^[2] Finset.univ
+#eval (Qual.gStep gateSupp gateSafe)^[2] Finset.univ
 -- expect: {0, 1}      and the second removes the leak
 
-#eval (gate.gStepOf gate_shape gateSafe)^[3] Finset.univ
+#eval (Qual.gStep gateSupp gateSafe)^[3] Finset.univ
 -- expect: {0, 1}      stabilised
 
-#eval gate.gRegion gate_shape gateSafe
+#eval gate.gRegionTr gate_shape gateSafe
 -- expect: {0, 1}      and the same, without being told how many steps to take
 
 /-! ## The answer -/
 
 /-- **A probabilistic model, computed and checked.** The sure-safety region of a game whose kernel
-    contains halves, as an answer to an objective, with both fixed-point checks closed by `decide`.
+    contains halves, as an answer to an objective, checked by `decide`.
 
     The weights took part in the three validity theorems above and nowhere else: the descent itself
     never evaluated one. That is what makes the `decide`s possible, and it is the point of the whole
     sparse layer.
 
-    No iteration count and no fixed-point check: `gRegion` runs `Comp/FixLoop.lean`'s loop --
+    No iteration count and no fixed-point check: `gRegionTr` runs `Comp/FixLoop.lean`'s loop --
     apply, compare, stop -- which is proved to terminate at a fixed point, so the single `decide`
     states only which region came back and the `#eval`s above are illustrative. -/
 theorem gate_answers :
@@ -181,9 +190,9 @@ theorem gate_answers_counted :
 
 /-! ## A second objective: almost-sure reachability
 
-The same model, a different question. `Comp/ModelDataQualitative.lean` carries `A`, `B`, `Apre1`
-and the almost-sure middle step over to the rows, so nothing here is specific to this game: the
-three wrappers take `decide`-able facts about the data and return statements about `CSG.AF`.
+The same model, a different question, and nothing here is specific to this game:
+`Comp/QualOps.lean`'s operators are applied to `gateSupp`, and `Comp/QualBridge.lean`'s lemmas take
+`decide`-able facts about the results and return statements about `CSG.AF`.
 
 Asking for almost-sure reachability of state `0`, the answer is `{0, 1}` -- state `1` is *not* in
 the target and the row player cannot force a move to `0` in one step, but it can play the coin
@@ -196,33 +205,33 @@ The outer descent takes one step (`univ`, then `{0, 1}`, then stop) and each inn
 /-- Reaching state `0`. -/
 def gateTarget : Finset (Fin gate.nStates) := {0}
 
-#eval gate.afStepOf gate_shape gateTarget Finset.univ ∅
+#eval Qual.afStep gateSupp gateTarget Finset.univ ∅
 -- expect: {0}         the target itself, after one inner step
 
-#eval (gate.afStepOf gate_shape gateTarget Finset.univ)^[2] ∅
+#eval (Qual.afStep gateSupp gateTarget Finset.univ)^[2] ∅
 -- expect: {1, 0}      and state 1 joins it, via the coin
 
-#eval (gate.afStepOf gate_shape gateTarget gateGood)^[2] ∅
+#eval (Qual.afStep gateSupp gateTarget gateGood)^[2] ∅
 -- expect: {1, 0}      the outer chain has already stabilised
 
 -- (printed in the order the computation inserted them, which is not the order `gateGood`'s own
 -- literal is written in; the `Finset`s are equal, as `gate_answers_AF` below records.)
 
-#eval gate.afRegion gate_shape gateTarget
+#eval gate.afRegionTr gate_shape gateTarget
 -- expect: {1, 0}      both loops, run to termination, with no counts supplied
 
 /-- The first outer step's inner `μX` fixed point, at `Finset.univ`. -/
 theorem gate_afInner_at_univ :
     ((gate.toCsgQ.toCSG gate_wf).AFInner ↑gateTarget
         ↑(Finset.univ : Finset (Fin gate.nStates))).lfp = (↑gateGood : Set (Fin gate.nStates)) :=
-  gate.afInner_eq_of_data gate_shape gate_stochastic gate_nonzero gateTarget Finset.univ
-    gateGood 2 (by decide) (by decide)
+  Qual.afInner_eq_coe_of_fixed (gate.toCsgQ.toCSG gate_wf) gateSupp gateSupp_spec gateTarget
+    Finset.univ gateGood 2 (by decide) (by decide)
 
 /-- …so `{0, 1}` bounds `AF` from above. -/
 theorem gate_AF_le_good :
     (gate.toCsgQ.toCSG gate_wf).AF ↑gateTarget ≤ (↑gateGood : Set (Fin gate.nStates)) :=
-  gate.AF_le_of_data_step gate_shape gate_stochastic gate_nonzero gateTarget Finset.univ
-    gateGood 2 (by decide) (by decide) (CsgQ.AF_le_univ gate.toCsgQ gate_wf gateTarget)
+  Qual.AF_le_of_iter (gate.toCsgQ.toCSG gate_wf) gateSupp gateSupp_spec gateTarget Finset.univ
+    gateGood 2 (by decide) (by decide) (Qual.AF_le_univ _ gateTarget)
 
 /-- **Almost-sure reachability, computed from the model.** `{0, 1}` is its own inner `μX` fixed
     point and the descent has reached it, so it *is* `CSG.AF {0}` -- and the nested loops of

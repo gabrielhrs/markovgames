@@ -7,10 +7,8 @@ import Comp.Iterate
 import Comp.Reach
 import Comp.Qualitative
 import Comp.FixLoop
-import Comp.QualitativeFinset
-import Comp.QualitativeLimitFinset
-import Comp.QualitativeAlmostFinset
-import Comp.QualitativeLimitReach
+import Comp.QualOps
+import Comp.QualBridge
 import Comp.Objective
 import Comp.ModelData
 import Comp.ModelDataQualitative
@@ -20,3 +18,4 @@ import Comp.SafetyChainQ
 import Comp.HideOrRunQ
 import Comp.LeakyGateQ
 import Comp.HideOrRunDataQ
+import Comp.RaggedQ

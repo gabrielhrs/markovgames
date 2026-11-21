@@ -3,10 +3,9 @@ Copyright (c) 2026 Gabriel Santos. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Gabriel Santos
 -/
-import Comp.ModelData
 import Comp.Objective
-import Comp.QualitativeAlmostFinset
-import Comp.QualitativeLimitReach
+import Comp.Qualitative
+import Comp.QualBridge
 
 /-!
 # Hide-or-run, computed: a value-1 state that cannot be won almost surely
@@ -36,22 +35,24 @@ Both sides are proved below: `hr_LF` gives `LF {goal} = {live, goal}`, `hr_AF` g
 `AF {goal} = {goal}`, and `hr_live_limit_sure_not_almost_sure` is the separation itself. The
 contrast is the whole reason this file exists.
 
-**One trick makes the nest manageable.** `Comp/QualitativeLimitReach.lean` gives the middle and
-outer levels as single-step lemmas, because `LW`'s first argument is the middle chain's own
-variable, so the witness family changes at every step. Here the game is small enough to discharge
-`LW` *once and for all*: `lw_fixed` checks, by `decide`, that two steps from `∅` reach a fixed point
-for **every** pair of regions and every state -- eight times eight times three instances. With that
-in hand `hr_LW` is a general lemma, the witness family becomes a function of `x` alone, and
-`midStep` is an honest computable `Finset HR → Finset HR` that `Function.iterate` can drive.
+**The descent is exhibited a step at a time**, through `Comp/QualBridge.lean`'s counted lemmas:
+each middle chain is run for a stated number of steps and seen to stop, and each outer step is its
+own theorem. That route asks for the innermost fixed point `LW` at every region the middle chain
+visits, and the game is small enough to settle it for all of them at once: `lw_fixed` checks, by
+`decide`, that two steps from `∅` reach a fixed point for **every** pair of regions and every
+state -- eight times eight times three instances. With that in hand `hr_LW` is a general lemma and
+`Qual.mid supp 2` is a computable `Finset HR → Finset HR` that `Function.iterate` drives.
 
-That exponential check is affordable at three states and would not be at thirty; the per-step
-lemmas remain the route for anything larger. Worth knowing which lever is which.
+That check is `2 ^ |S| · 2 ^ |S| · |S|` instances, three states here. `Qual.lfRegion` computes the
+same region with no such hypothesis, since `Comp/FixLoop.lean` proves the innermost loop stops;
+`Comp/HideOrRunDataQ.lean` runs this game both ways.
 
 **Where the arithmetic stops.** As in `Comp/SafetyChainQ.lean`, `supportF_eq_supp` is the last
-rational statement in the file. Everything above it -- `aC`, `bC`, `lStepC`, `lwC`, `lpre1C`,
-`midStep` -- is finite set computation, which is why every check below is a one-word `decide`.
-Here the kernel is deterministic, so the quarantine costs even less than it did there: a single
-`dirac` lemma does it.
+rational statement in the file: it identifies the kernel's supports with the table `supp`, and
+`supp_spec` passes that on as the one hypothesis `Comp/QualBridge.lean` needs. Everything after it
+is `Comp/QualOps.lean`'s operators applied to `supp` -- finite set computation, which is why every
+check below is a one-word `decide`. Here the kernel is deterministic, so the quarantine costs even
+less than it did there: a single `dirac` lemma does it.
 
 -/
 
@@ -141,96 +142,25 @@ theorem supportF_eq_supp (s : HR) (a1 a2 : Bool) : game.supportF s a1 a2 = supp 
     simp only [CsgQ.mem_supportF, ht, dirac_ne_zero_iff, Finset.mem_singleton]
   cases s <;> cases a1 <;> cases a2 <;> exact key _ rfl
 
-/-! ## `A`, `B` and `LW`, combinatorially -/
+/-- **The table is the support of the game's kernel**, which is the one hypothesis
+    `Comp/QualBridge.lean` asks for. -/
+theorem supp_spec (s : HR) (a1 a2 : Bool) :
+    ((game.toCSG game_wf).K s a1 a2).support = (↑(supp s a1 a2) : Set HR) := by
+  rw [CsgQ.toCSG_support, supportF_eq_supp]
 
-/-- `aF` with the support table substituted. -/
-def aC (v2 : Finset Bool) (y : Finset HR) (s : HR) : Finset Bool :=
-  Finset.univ.filter fun a1 => ∀ a2, a2 ∈ v2 ∨ supp s a1 a2 ⊆ y
+/-! ## The innermost fixed point, for every region at once -/
 
-theorem aF_eq_aC (v2 : Finset Bool) (y : Finset HR) (s : HR) : game.aF v2 y s = aC v2 y s := by
-  ext a1
-  simp only [CsgQ.mem_aF, aC, Finset.mem_filter, Finset.mem_univ, true_and, supportF_eq_supp]
-
-/-- `bF` with the support table substituted. -/
-def bC (v1 : Finset Bool) (x : Finset HR) (s : HR) : Finset Bool :=
-  Finset.univ.filter fun a2 => ∃ a1 ∈ v1, (supp s a1 a2 ∩ x).Nonempty
-
-theorem bF_eq_bC (v1 : Finset Bool) (x : Finset HR) (s : HR) : game.bF v1 x s = bC v1 x s := by
-  ext a2
-  simp only [CsgQ.mem_bF, bC, Finset.mem_filter, Finset.mem_univ, true_and, supportF_eq_supp]
-
-/-- `lStepF` with the support table substituted. -/
-def lStepC (x y : Finset HR) (s : HR) (w : Finset Bool) : Finset Bool := aC (bC w x s) y s
-
-theorem lStepF_eq (x y : Finset HR) (s : HR) : game.lStepF x y s = lStepC x y s := by
-  funext w
-  unfold CsgQ.lStepF lStepC
-  rw [bF_eq_bC, aF_eq_aC]
-
-/-- The row-action witness set, two steps from `∅`. `Finset Bool` has height two, so two steps is
-    all a monotone climb can take -- but nothing below *relies* on that argument: `lw_fixed`
-    checks it. -/
-def lwC (x y : Finset HR) (s : HR) : Finset Bool := (lStepC x y s)^[2] ∅
-
-/-- Two steps really do suffice, for every pair of regions and every state: eight times eight
-    times three instances, checked outright. This is what turns `hr_LW` into a general lemma and so
-    makes `midStep` a function of `x` alone. -/
-theorem lw_fixed : ∀ (x y : Finset HR) (s : HR), lStepC x y s (lwC x y s) = lwC x y s := by
+/-- Two steps of the innermost climb reach a fixed point, for every pair of regions and every
+    state: eight times eight times three instances, checked outright. `Finset Bool` has height two,
+    so two steps is all a monotone climb can take, but nothing below relies on that argument. -/
+theorem lw_fixed : ∀ (x y : Finset HR) (s : HR),
+    Qual.lStep supp x y s ((Qual.lStep supp x y s)^[2] ∅) = (Qual.lStep supp x y s)^[2] ∅ := by
   decide
 
 /-- `LW`, for every pair of regions and state at once. -/
 theorem hr_LW (x y : Finset HR) (s : HR) :
-    (game.toCSG game_wf).LW ↑x ↑y s = (↑(lwC x y s) : Set Bool) :=
-  CsgQ.LW_eq_coe_of_fixed game game_wf x y s (lwC x y s) 2 (by rw [lStepF_eq]; rfl)
-    (by rw [lStepF_eq]; exact lw_fixed x y s)
-
-/-! ## The middle chain -/
-
-/-- `lpre1F` with the support table substituted. -/
-def lpre1C (w : HR → Finset Bool) (x : Finset HR) : Finset HR :=
-  Finset.univ.filter fun s => bC (w s) x s = Finset.univ
-
-theorem lpre1F_eq_lpre1C (w : HR → Finset Bool) (x : Finset HR) :
-    game.lpre1F w x = lpre1C w x := by
-  ext s
-  simp only [CsgQ.mem_lpre1F, lpre1C, Finset.mem_filter, Finset.mem_univ, true_and, bF_eq_bC]
-
-/-- One turn of the middle chain, fully computable: the witness family is `lwC` at the current `x`,
-    which is exactly what `hr_LW`'s generality buys. -/
-def midStep (b y x : Finset HR) : Finset HR := lpre1C (fun s => lwC x y s) x ∪ b
-
-theorem coe_midStep (b y x : Finset HR) :
-    (game.toCSG game_wf).LFInner ↑b ↑y ↑x = (↑(midStep b y x) : Set HR) := by
-  rw [CsgQ.coe_LFInner_apply game game_wf b y x (fun s => lwC x y s) (fun s => hr_LW x y s),
-    lpre1F_eq_lpre1C]
-  rfl
-
-/-- Every stage of the middle climb is a lower bound on the `μX` fixed point. -/
-theorem mid_le (b y : Finset HR) (m : ℕ) :
-    (↑((midStep b y)^[m] ∅) : Set HR) ≤ ((game.toCSG game_wf).LFInner ↑b ↑y).lfp := by
-  induction m with
-  | zero =>
-      rw [Function.iterate_zero_apply, Finset.coe_empty]
-      exact bot_le
-  | succ m ih =>
-      rw [Function.iterate_succ_apply']
-      set x := (midStep b y)^[m] ∅ with hx
-      refine CsgQ.le_lfInner_of_step game game_wf b y x (midStep b y x)
-        (fun s => lwC x y s) (fun s => hr_LW x y s) ih ?_
-      unfold midStep
-      rw [lpre1F_eq_lpre1C]
-
-/-- A middle chain that was run and seen to stop pins the `μX` fixed point exactly. -/
-theorem mid_eq (b y c : Finset HR) (m : ℕ) (hiter : (midStep b y)^[m] ∅ = c)
-    (hfix : midStep b y c = c) :
-    ((game.toCSG game_wf).LFInner ↑b ↑y).lfp = (↑c : Set HR) := by
-  have hle : (↑c : Set HR) ≤ ((game.toCSG game_wf).LFInner ↑b ↑y).lfp := by
-    have h := mid_le b y m
-    rwa [hiter] at h
-  refine CsgQ.lfInner_eq_coe_of_fixed game game_wf b y c (fun s => lwC c y s)
-    (fun s => hr_LW c y s) ?_ hle
-  rw [lpre1F_eq_lpre1C]
-  exact hfix.symm
+    (game.toCSG game_wf).LW ↑x ↑y s = (↑((Qual.lStep supp x y s)^[2] ∅) : Set Bool) :=
+  Qual.LW_eq_coe_iter (game.toCSG game_wf) supp supp_spec 2 x y s (lw_fixed x y s)
 
 /-! ## Running it -/
 
@@ -243,20 +173,20 @@ def winning : Finset HR := {HR.live, HR.goal}
 #eval decide game.WellFormed
 -- expect: true
 
-#eval midStep target Finset.univ ∅
+#eval Qual.mid supp 2 target Finset.univ ∅
 -- expect: {goal}
 
-#eval (midStep target Finset.univ)^[2] ∅
+#eval (Qual.mid supp 2 target Finset.univ)^[2] ∅
 -- expect: {live, goal}
 
-#eval (midStep target winning)^[2] ∅
+#eval (Qual.mid supp 2 target winning)^[2] ∅
 -- expect: {live, goal}      the outer chain has already stabilised
 
-#eval lwC winning winning HR.live
+#eval (Qual.lStep supp winning winning HR.live)^[2] ∅
 -- expect: {true, false}     at `live` both actions are eventually witnesses
 
-#eval lwC winning winning HR.dead
--- expect: {}                nothing escapes from `dead`
+#eval (Qual.lStep supp winning winning HR.dead)^[2] ∅
+-- expect: ∅                 nothing escapes from `dead`
 
 /-! ## The value-1 set -/
 
@@ -264,65 +194,49 @@ def winning : Finset HR := {HR.live, HR.goal}
 theorem inner_at_univ :
     ((game.toCSG game_wf).LFInner ↑target ↑(Finset.univ : Finset HR)).lfp =
       (↑winning : Set HR) :=
-  mid_eq target Finset.univ winning 2 (by decide) (by decide)
+  Qual.lfInner_eq_coe_of_mid_fixed (game.toCSG game_wf) supp supp_spec 2 target Finset.univ
+    winning 2 (fun x s => lw_fixed x Finset.univ s) (by decide) (by decide)
 
 /-- …which makes `winning` an upper bound on `LF target`. -/
 theorem LF_le_winning : (game.toCSG game_wf).LF ↑target ≤ (↑winning : Set HR) :=
-  CsgQ.LF_le_of_step game game_wf target Finset.univ winning inner_at_univ
-    (CsgQ.LF_le_univ game game_wf target)
+  Qual.LF_le_of_step (game.toCSG game_wf) target Finset.univ winning inner_at_univ
+    (Qual.LF_le_univ _ target)
 
 /-- And the outer chain has stopped: `winning` is its own `μX` fixed point. -/
 theorem inner_at_winning :
     ((game.toCSG game_wf).LFInner ↑target ↑winning).lfp = (↑winning : Set HR) :=
-  mid_eq target winning winning 2 (by decide) (by decide)
+  Qual.lfInner_eq_coe_of_mid_fixed (game.toCSG game_wf) supp supp_spec 2 target winning
+    winning 2 (fun x s => lw_fixed x winning s) (by decide) (by decide)
 
 /-- **The value-1 set of hide-or-run.** `live` can reach `goal` with probability arbitrarily close
     to one, and `LF` says so -- through three nested fixed points, none of them given an iteration
     bound, all of them run and checked. -/
 theorem hr_LF : (game.toCSG game_wf).LF ↑target = (↑winning : Set HR) :=
-  CsgQ.LF_eq_coe_of_fixed game game_wf target winning inner_at_winning LF_le_winning
+  Qual.LF_eq_coe_of_fixed (game.toCSG game_wf) target winning inner_at_winning LF_le_winning
 
 /-! ## The almost-sure contrast
 
 Everything above computed `LF`. The same machinery with `Apre1` in place of `Lpre1` computes `AF`,
 and the two disagree -- which is the separation this game exists to exhibit. It is also cheaper:
-`Apre1` has no inner fixed point, so there is no witness family, `afStepC` is a function of `x`
-alone, and the chain carries no per-step hypothesis. -/
+`Apre1` has no inner fixed point, so there is no witness family, `Qual.afStep supp` is a function
+of `x` alone, and the chain carries no per-step hypothesis. -/
 
-/-- `apre1F` with the support table substituted. The row-action pool `aC ∅ y s` is read off
-    directly. -/
-def apre1C (x y : Finset HR) : Finset HR :=
-  Finset.univ.filter fun s => bC (aC ∅ y s) x s = Finset.univ
-
-theorem apre1F_eq_apre1C (x y : Finset HR) : game.apre1F x y = apre1C x y := by
-  ext s
-  simp only [CsgQ.mem_apre1F, apre1C, Finset.mem_filter, Finset.mem_univ, true_and, bF_eq_bC,
-    aF_eq_aC]
-
-/-- One turn of the almost-sure middle chain, combinatorially. -/
-def afStepC (b y x : Finset HR) : Finset HR := apre1C x y ∪ b
-
-theorem afStepF_eq (b y : Finset HR) : game.afStepF b y = afStepC b y := by
-  funext x
-  change game.apre1F x y ∪ b = apre1C x y ∪ b
-  rw [apre1F_eq_apre1C]
-
-#eval (afStepC target Finset.univ)^[2] ∅
+#eval (Qual.afStep supp target Finset.univ)^[2] ∅
 -- expect: {live, goal}     the same as the limit-sure chain at `univ`
 
-#eval (afStepC target winning)^[1] ∅
+#eval (Qual.afStep supp target winning)^[1] ∅
 -- expect: {goal}           and here the two part company
 
 /-- The first outer step, which agrees with the limit-sure one. -/
 theorem afInner_at_univ :
     ((game.toCSG game_wf).AFInner ↑target ↑(Finset.univ : Finset HR)).lfp =
       (↑winning : Set HR) :=
-  CsgQ.afInner_eq_coe_of_fixed game game_wf target Finset.univ winning 2
-    (by rw [afStepF_eq]; decide) (by rw [afStepF_eq]; decide)
+  Qual.afInner_eq_coe_of_fixed (game.toCSG game_wf) supp supp_spec target Finset.univ winning 2
+    (by decide) (by decide)
 
 theorem AF_le_winning : (game.toCSG game_wf).AF ↑target ≤ (↑winning : Set HR) :=
-  CsgQ.AF_le_of_step game game_wf target Finset.univ winning afInner_at_univ
-    (CsgQ.AF_le_univ game game_wf target)
+  Qual.AF_le_of_step (game.toCSG game_wf) target Finset.univ winning afInner_at_univ
+    (Qual.AF_le_univ _ target)
 
 /-- The second outer step, where almost-sure mode loses `live`. Restricted to the row actions that
     are safe for `winning`, the runner can only *wait* -- running risks `dead`, which lies outside
@@ -330,21 +244,21 @@ theorem AF_le_winning : (game.toCSG game_wf).AF ↑target ≤ (↑winning : Set 
     the goal itself. -/
 theorem afInner_at_winning :
     ((game.toCSG game_wf).AFInner ↑target ↑winning).lfp = (↑target : Set HR) :=
-  CsgQ.afInner_eq_coe_of_fixed game game_wf target winning target 1
-    (by rw [afStepF_eq]; decide) (by rw [afStepF_eq]; decide)
+  Qual.afInner_eq_coe_of_fixed (game.toCSG game_wf) supp supp_spec target winning target 1
+    (by decide) (by decide)
 
 theorem AF_le_target : (game.toCSG game_wf).AF ↑target ≤ (↑target : Set HR) :=
-  CsgQ.AF_le_of_step game game_wf target winning target afInner_at_winning AF_le_winning
+  Qual.AF_le_of_step (game.toCSG game_wf) target winning target afInner_at_winning AF_le_winning
 
 /-- And the outer chain has stopped. -/
 theorem afInner_at_target :
     ((game.toCSG game_wf).AFInner ↑target ↑target).lfp = (↑target : Set HR) :=
-  CsgQ.afInner_eq_coe_of_fixed game game_wf target target target 1
-    (by rw [afStepF_eq]; decide) (by rw [afStepF_eq]; decide)
+  Qual.afInner_eq_coe_of_fixed (game.toCSG game_wf) supp supp_spec target target target 1
+    (by decide) (by decide)
 
 /-- **Almost-sure reachability gets a strictly smaller answer**: the goal alone. -/
 theorem hr_AF : (game.toCSG game_wf).AF ↑target = (↑target : Set HR) :=
-  CsgQ.AF_eq_coe_of_fixed game game_wf target target afInner_at_target AF_le_target
+  Qual.AF_eq_coe_of_fixed (game.toCSG game_wf) target target afInner_at_target AF_le_target
 
 /-- **The separation, as a theorem.** `live` is a value-1 state for reaching `goal` from which no
     strategy wins almost surely -- the gap that makes `LF`, and not `AF`, the operator a

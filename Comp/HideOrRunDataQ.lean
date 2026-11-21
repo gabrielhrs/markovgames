@@ -14,10 +14,10 @@ The end of the line that began with `Comp/Basic.lean`. A model arrives as data; 
 posed of it; both are answered by running an algorithm and checking the result with `decide`; and
 the answers differ, in the way de Alfaro-Henzinger-Kupferman's hide-or-run game exists to show.
 
-`Comp/HideOrRunQ.lean` proves the same two facts about the same game with the operators written out
-for it directly -- its own support table, its own `aC`/`bC`/`lStepC`, its own `lw_fixed`, its own
-middle and outer chains. Here the game is thirty lines of lists and everything above them is
-`Comp/ModelDataQualitative.lean`, which is generic in the model.
+`Comp/HideOrRunQ.lean` proves the same two facts about the same game given as a Lean function, with
+its support table written out by hand and proved against the kernel. Here the game is thirty lines
+of lists and its support is read off them by `Comp/ModelData.lean`. Both files then run the same
+operators, `Comp/QualOps.lean`'s, on their own support function.
 
 **The two answers.** State `0` is the stand-off, `1` the goal, `2` death; row action `0` is *run*
 and `1` is *wait*; column action `0` is *throw* and `1` is *wait*.
@@ -102,6 +102,16 @@ theorem hrd_stochastic : hrd.Stochastic := by
 theorem hrd_wf : hrd.toCsgQ.WellFormed :=
   hrd.wellFormed hrd_shape hrd_stochastic
 
+/-- The model's support function: what `Comp/QualOps.lean`'s operators are applied to. -/
+abbrev hrdSupp : Fin hrd.nStates → Fin hrd.nAct1 → Fin hrd.nAct2 → Finset (Fin hrd.nStates) :=
+  hrd.supportOf hrd_shape
+
+/-- …and it is the support of the game's kernel, which is all `Comp/QualBridge.lean` asks. -/
+theorem hrdSupp_spec (s : Fin hrd.nStates) (a1 : Fin hrd.nAct1) (a2 : Fin hrd.nAct2) :
+    ((hrd.toCsgQ.toCSG hrd_wf).K s a1 a2).support
+      = (↑(hrdSupp s a1 a2) : Set (Fin hrd.nStates)) :=
+  hrd.support_toCSG hrd_shape hrd_stochastic hrd_nonzero s a1 a2
+
 /-! ## The question, and the regions the runs produce -/
 
 /-- Reaching the goal. -/
@@ -113,10 +123,10 @@ def hrdWinning : Finset (Fin hrd.nStates) := {0, 1}
 #eval decide hrd.Shape
 -- expect: true
 
-#eval (hrd.midOf hrd_shape 2 hrdTarget Finset.univ)^[2] ∅
+#eval (Qual.mid hrdSupp 2 hrdTarget Finset.univ)^[2] ∅
 -- expect: {0, 1}      the limit-sure middle chain at `univ`
 
-#eval (hrd.afStepOf hrd_shape hrdTarget hrdWinning)^[1] ∅
+#eval (Qual.afStep hrdSupp hrdTarget hrdWinning)^[1] ∅
 -- expect: {1}         the almost-sure chain, one outer step later, loses the stand-off
 
 /-! ## The innermost iteration, once and for all
@@ -126,16 +136,16 @@ states that rather than relying on it. One `decide`, over every pair of regions 
 which is `2 ^ 3 × 2 ^ 3 × 3` instances.
 
 Only the counted route needs it. `Comp/FixLoop.lean` proves the innermost loop terminates, so
-`ModelData.lwOf` is `CSG.LW` at every `x` without a hypothesis. -/
+`Qual.lw` is `CSG.LW` at every `x` without a hypothesis. -/
 
 theorem hrd_lw : ∀ (x y : Finset (Fin hrd.nStates)) (s : Fin hrd.nStates),
-    hrd.lStepOf hrd_shape x y s ((hrd.lStepOf hrd_shape x y s)^[2] ∅)
-      = (hrd.lStepOf hrd_shape x y s)^[2] ∅ := by
+    Qual.lStep hrdSupp x y s ((Qual.lStep hrdSupp x y s)^[2] ∅)
+      = (Qual.lStep hrdSupp x y s)^[2] ∅ := by
   decide
 
 /-! ## Limit-sure reachability -/
 
-#eval hrd.lfRegion hrd_shape hrdTarget
+#eval hrd.lfRegionTr hrd_shape hrdTarget
 -- expect: {0, 1}      three nested loops, run to termination
 
 -- The counted route reduces deeper than the loop route under the sparse-action shape: each
@@ -145,9 +155,9 @@ set_option maxRecDepth 4000 in
 /-- One outer step: `{0, 1}` bounds `LF` from above. The descent, one step at a time. -/
 theorem hrd_LF_le : (hrd.toCsgQ.toCSG hrd_wf).LF ↑hrdTarget
     ≤ (↑hrdWinning : Set (Fin hrd.nStates)) :=
-  hrd.LF_le_of_data_step hrd_shape hrd_stochastic hrd_nonzero 2 hrdTarget Finset.univ
+  Qual.LF_le_of_iter (hrd.toCsgQ.toCSG hrd_wf) hrdSupp hrdSupp_spec 2 hrdTarget Finset.univ
     hrdWinning 2 (fun x s => hrd_lw x Finset.univ s) (by decide) (by decide)
-    (CsgQ.LF_le_univ hrd.toCsgQ hrd_wf hrdTarget)
+    (Qual.LF_le_univ _ hrdTarget)
 
 /-- **The value-1 set, from the model.** One `decide`, naming the region.
 
@@ -175,24 +185,24 @@ theorem hrd_answers_LF_counted :
 /-- First outer step: the two modes still agree. -/
 theorem hrd_AF_le_winning : (hrd.toCsgQ.toCSG hrd_wf).AF ↑hrdTarget
     ≤ (↑hrdWinning : Set (Fin hrd.nStates)) :=
-  hrd.AF_le_of_data_step hrd_shape hrd_stochastic hrd_nonzero hrdTarget Finset.univ
-    hrdWinning 2 (by decide) (by decide) (CsgQ.AF_le_univ hrd.toCsgQ hrd_wf hrdTarget)
+  Qual.AF_le_of_iter (hrd.toCsgQ.toCSG hrd_wf) hrdSupp hrdSupp_spec hrdTarget Finset.univ
+    hrdWinning 2 (by decide) (by decide) (Qual.AF_le_univ _ hrdTarget)
 
 /-- Second outer step: and here they part. Restricted to the row actions safe for `{0, 1}`, the
     runner can only wait, and waiting against a wait returns to the stand-off. -/
 theorem hrd_AF_le_target : (hrd.toCsgQ.toCSG hrd_wf).AF ↑hrdTarget
     ≤ (↑hrdTarget : Set (Fin hrd.nStates)) :=
-  hrd.AF_le_of_data_step hrd_shape hrd_stochastic hrd_nonzero hrdTarget hrdWinning
+  Qual.AF_le_of_iter (hrd.toCsgQ.toCSG hrd_wf) hrdSupp hrdSupp_spec hrdTarget hrdWinning
     hrdTarget 1 (by decide) (by decide) hrd_AF_le_winning
 
-#eval hrd.afRegion hrd_shape hrdTarget
+#eval hrd.afRegionTr hrd_shape hrdTarget
 -- expect: {1}         the nested loops, run to termination
 
 /-- **Almost-sure reachability, from the model**: the goal alone.
 
     One `decide`, naming the region. The two outer steps above are the same descent taken one step
-    at a time, which shows *where* the stand-off is lost; `afRegion` locates it without being given
-    a step count. -/
+    at a time, which shows *where* the stand-off is lost; `afRegionTr` locates it without being
+    given a step count. -/
 theorem hrd_answers_AF :
     hrd.toCsgQ.Answers hrd_wf (Objective.almostReach hrdTarget) (Answer.region hrdTarget) :=
   hrd.answers_almostReach_of_fix hrd_shape hrd_stochastic hrd_nonzero hrdTarget hrdTarget

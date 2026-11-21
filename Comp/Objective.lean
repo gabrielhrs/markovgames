@@ -5,9 +5,7 @@ Authors: Gabriel Santos
 -/
 import Comp.Iterate
 import Comp.Reach
-import Comp.QualitativeFinset
-import Comp.QualitativeAlmostFinset
-import Comp.QualitativeLimitReach
+import Csg.QualitativeLimitSure
 
 /-!
 # The objective, as a separate object: what a model is asked, and what counts as an answer
@@ -42,18 +40,16 @@ constructor producing a `region` for a `discounted` objective, which is
 `not_answers_discounted_region` below.
 
 **The two answer kinds are not a defect, they are the honest state of the two lines.** A
-`region` answer is *exact*: `Comp/QualitativeFinset.lean` and its siblings identify a computed
+`region` answer is *exact*: `Comp/QualBridge.lean` identifies a computed
 `Finset` with the real-valued operator's fixed point on the nose. An `interval` or `approx` answer
 is a bound, because the Shapley fixed point of a concurrent game is generally irrational and no
 rational iterate equals it. The relation records which of the two a given result is, rather than
 flattening both into "the answer".
 
-**What this file does not do.** It does not solve anything. For `sureSafe` a generic solver-side
-wrapper exists (`answers_sureSafe`, from `G_eq_coe_of_fixed`) because that operator's chain is a
-plain `Function.iterate`; for `AF` and `LF` the chain length varies per instance and the outer steps
-are given one at a time, so there is no single wrapper to write and the constructor itself is the
-interface -- an instance supplies the equality however it obtained it. `Comp/SafetyChainQ.lean` and
-`Comp/HideOrRunQ.lean` do exactly that, in one line each.
+**What this file does not do.** It does not solve anything. A constructor is the interface: an
+instance supplies the equality however it obtained it, and for the three qualitative shapes
+`Comp/QualBridge.lean` is where it comes from. `Comp/SafetyChainQ.lean` and `Comp/HideOrRunQ.lean`
+do exactly that, in one line each.
 
 **Not here:** `until`, reward-until, Büchi and co-Büchi objectives, and the sure/almost-sure
 variants of reachability and the two `ω`-regular shapes (`SF`, `SFG`, `SGF`, `AGF`, `LGF`, `AFG`,
@@ -152,19 +148,11 @@ inductive Answers (G : CsgQ S A1 A2) (h : G.WellFormed) : Objective S → Answer
         < ((eps : ℚ) : ℝ)) :
       Answers G h (Objective.discounted l) (Answer.approx v eps)
 
-/-! ## Using it in both directions
+/-! ## Getting the equality back out
 
-An interface earns its keep only if nothing is lost on the way in and nothing has to be taken on
-trust on the way out. The wrapper below goes in; the three extraction lemmas come back out. -/
-
-/-- **In.** A `sureSafe` objective answered directly from a computed descent: the
-    `Comp/QualitativeFinset.lean` payoff, phrased as an answer. This is the one objective with a
-    generic wrapper, because its chain is a plain `Function.iterate` -- `AF` and `LF` take their
-    outer steps one at a time, so their constructors are the interface instead. -/
-theorem answers_sureSafe (G : CsgQ S A1 A2) (h : G.WellFormed) (region c : Finset S) (n : ℕ)
-    (hiter : (G.gStepF region)^[n] Finset.univ = c) (hfix : G.gStepF region c = c) :
-    G.Answers h (Objective.sureSafe region) (Answer.region c) :=
-  .sureSafe (G_eq_coe_of_fixed G h region c n hiter hfix)
+Going in, a constructor takes the equality a run established. Coming out, the three lemmas below
+return it with nothing else assumed, so an answer can be used wherever the `Csg/` statement
+could. -/
 
 /-- **Out.** An answer to a `sureSafe` objective is the sure-safety region, with nothing else
     assumed. -/

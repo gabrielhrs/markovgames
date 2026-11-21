@@ -98,7 +98,7 @@ theorem fixAux_eq_iterate (f : Finset S → Finset S) (n : ℕ) (x : Finset S) :
 /-! ## The loop never overshoots
 
 The two halves of a fixed-point identification are asymmetric: one comes from being an iterate, the
-other from a decidable check (see `Comp/Qualitative.lean`). These are the iterate halves, and the
+other from a decidable check (see `Comp/QualBridge.lean`). These are the iterate halves, and the
 point is that the loop supplies them without a count -- induction on the fuel, applying the
 corresponding one-step lemma whenever the loop decides to keep going. -/
 

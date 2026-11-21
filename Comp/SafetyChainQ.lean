@@ -4,7 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Gabriel Santos
 -/
 import Comp.Objective
-import Comp.QualitativeFinset
+import Comp.Qualitative
+import Comp.QualBridge
 
 /-!
 # A worked qualitative instance: a surviving cycle and a decaying chain
@@ -36,9 +37,9 @@ flip puts `1/2` in the kernel, and `1/2 : ℚ` normalises through `Nat.gcd`, whi
 cannot do -- exactly the obstruction that file hit. The fix is to confine every rational statement
 to one lemma. `supportF_eq_chainSupp` replaces the kernel's rational supports by the explicit table
 `chainSupp`, and it is proved by `rfl`-level unfolding plus `dirac_ne_zero_iff`/`coin_ne_zero_iff`,
-never by `decide`. *After* that rewrite there is no `ℚ` left: `pre1C` is a `Finset` computation over
-six states and two actions, and the kernel evaluates it happily. So the four descent steps and the
-fixed-point check are each a one-word `decide`.
+never by `decide`. *After* that there is no `ℚ` left: `Comp/QualOps.lean`'s operators applied to
+`chainSupp` are `Finset` computations over six states and two actions, and the kernel evaluates
+them happily. So the four descent steps and the fixed-point check are each a one-word `decide`.
 
 That split is the qualitative counterpart of the certificate methodology. In the quantitative line
 an untrusted search proposes and a verified checker disposes; here the arithmetic is quarantined in
@@ -46,7 +47,7 @@ one bridge lemma and the combinatorics above it is checked outright.
 
 **What is *not* assumed.** Nothing bounds the number of iterations, and no theorem says the descent
 must finish within `|S|` steps. `chain_iter4` is the record of a computation that was run, and
-`chain_fixed` the observation that it stopped; `CsgQ.G_eq_coe_of_fixed` needs no more than that.
+`chain_fixed` the observation that it stopped; `Qual.G_eq_coe_of_fixed` needs no more than that.
 -/
 
 -- `#eval` runs compiled code, which is how this library computes; see `Comp/Search.lean`.
@@ -222,55 +223,43 @@ theorem supportF_eq_chainSupp (s : Chain) (a1 a2 : Bool) :
       | exact supportF_dirac rfl
       | exact supportF_coin rfl
 
-/-! ## The combinatorial layer, which `decide` can reduce -/
-
-/-- The sure-safety region of interest: everything but the sink. -/
-def chainSafe : Finset Chain := {.c0, .c1, .d0, .d1, .d2}
-
-/-- `Pre1` with the support table substituted. No `ℚ` occurs in this definition, which is the whole
-    reason the steps below are decidable. -/
-def pre1C (x : Finset Chain) : Finset Chain :=
-  Finset.univ.filter fun s => ∃ a1, ∀ a2, chainSupp s a1 a2 ⊆ x
-
-/-- The game's `pre1F` is `pre1C`: `supportF_eq_chainSupp` rewritten inside the filter. -/
-theorem pre1F_eq_pre1C (x : Finset Chain) : chainGame.pre1F x = pre1C x := by
-  ext s
-  simp only [CsgQ.mem_pre1F, pre1C, Finset.mem_filter, Finset.mem_univ, true_and,
-    supportF_eq_chainSupp]
-
-/-- And so the computable sure-safety step is a purely combinatorial one. -/
-theorem gStepF_eq (x : Finset Chain) :
-    chainGame.gStepF chainSafe x = pre1C x ∩ chainSafe := by
-  unfold CsgQ.gStepF
-  rw [pre1F_eq_pre1C]
+/-- **The table is the support of the game's kernel**, which is the one hypothesis
+    `Comp/QualBridge.lean` asks for. From here on the operators are applied to `chainSupp`, in
+    which no `ℚ` occurs. -/
+theorem chainSupp_spec (s : Chain) (a1 a2 : Bool) :
+    ((chainGame.toCSG chainGame_wf).K s a1 a2).support = (↑(chainSupp s a1 a2) : Set Chain) := by
+  rw [CsgQ.toCSG_support, supportF_eq_chainSupp]
 
 /-! ## Running it
 
 Compiled code, not kernel reduction -- see `Comp/Search.lean` on why that distinction matters. The
 printed order follows this file's `Fintype.elems`. -/
 
+/-- The sure-safety region of interest: everything but the sink. -/
+def chainSafe : Finset Chain := {.c0, .c1, .d0, .d1, .d2}
+
 #eval decide chainGame.WellFormed
 -- expect: true
 
-#eval chainGame.gStepF chainSafe Finset.univ
+#eval Qual.gStep chainSupp chainSafe Finset.univ
 -- expect: {c0, c1, d0, d1, d2}  (all of `chainSafe`: one step cannot see past `bad`)
 
-#eval (chainGame.gStepF chainSafe)^[2] Finset.univ
+#eval (Qual.gStep chainSupp chainSafe)^[2] Finset.univ
 -- expect: {c0, c1, d0, d1}      (`d2`'s only successor is `bad`)
 
-#eval (chainGame.gStepF chainSafe)^[3] Finset.univ
+#eval (Qual.gStep chainSupp chainSafe)^[3] Finset.univ
 -- expect: {c0, c1, d0}          (`d1` has just lost `d2`)
 
-#eval (chainGame.gStepF chainSafe)^[4] Finset.univ
+#eval (Qual.gStep chainSupp chainSafe)^[4] Finset.univ
 -- expect: {c0, c1}              (`d0` has just lost `d1`)
 
-#eval (chainGame.gStepF chainSafe)^[5] Finset.univ
+#eval (Qual.gStep chainSupp chainSafe)^[5] Finset.univ
 -- expect: {c0, c1}              stabilised
 
 /-! ## The descent, step by step
 
-One `decide` each: after `gStepF_eq` these are finite set computations over six states and two
-actions per player. -/
+One `decide` each: these are finite set computations over six states and two actions per
+player. -/
 
 /-- The intermediate regions the `#eval`s above printed. -/
 def chainR2 : Finset Chain := {.c0, .c1, .d0, .d1}
@@ -281,28 +270,23 @@ def chainR3 : Finset Chain := {.c0, .c1, .d0}
 /-- The answer: the cycle, and nothing else. -/
 def chainGood : Finset Chain := {.c0, .c1}
 
-theorem chain_step1 : chainGame.gStepF chainSafe Finset.univ = chainSafe := by
-  rw [gStepF_eq]; decide
+theorem chain_step1 : Qual.gStep chainSupp chainSafe Finset.univ = chainSafe := by decide
 
-theorem chain_step2 : chainGame.gStepF chainSafe chainSafe = chainR2 := by
-  rw [gStepF_eq]; decide
+theorem chain_step2 : Qual.gStep chainSupp chainSafe chainSafe = chainR2 := by decide
 
-theorem chain_step3 : chainGame.gStepF chainSafe chainR2 = chainR3 := by
-  rw [gStepF_eq]; decide
+theorem chain_step3 : Qual.gStep chainSupp chainSafe chainR2 = chainR3 := by decide
 
-theorem chain_step4 : chainGame.gStepF chainSafe chainR3 = chainGood := by
-  rw [gStepF_eq]; decide
+theorem chain_step4 : Qual.gStep chainSupp chainSafe chainR3 = chainGood := by decide
 
 /-- The stabilisation: `chainGood` is a fixed point of the step. This is the hypothesis that
     supplies the *lower* half of the identification for free, a greatest fixed point being above
     every post-fixed point. -/
-theorem chain_fixed : chainGame.gStepF chainSafe chainGood = chainGood := by
-  rw [gStepF_eq]; decide
+theorem chain_fixed : Qual.gStep chainSupp chainSafe chainGood = chainGood := by decide
 
 /-- Four steps from `Finset.univ` reach `chainGood`. Chained from the single steps rather than
     evaluated in one go, so each `decide` stays small; the `(4 : ℕ) = 3 + 1` rewrites are only there
     to let `Function.iterate_succ_apply` see through the numeral. -/
-theorem chain_iter4 : (chainGame.gStepF chainSafe)^[4] Finset.univ = chainGood := by
+theorem chain_iter4 : (Qual.gStep chainSupp chainSafe)^[4] Finset.univ = chainGood := by
   have e4 : (4 : ℕ) = 3 + 1 := rfl
   have e3 : (3 : ℕ) = 2 + 1 := rfl
   have e2 : (2 : ℕ) = 1 + 1 := rfl
@@ -317,7 +301,8 @@ theorem chain_iter4 : (chainGame.gStepF chainSafe)^[4] Finset.univ = chainGood :
     and no appeal to any property of the search. -/
 theorem chain_G :
     (chainGame.toCSG chainGame_wf).G (↑chainSafe : Set Chain) = (↑chainGood : Set Chain) :=
-  CsgQ.G_eq_coe_of_fixed chainGame chainGame_wf chainSafe chainGood 4 chain_iter4 chain_fixed
+  Qual.G_eq_coe_of_fixed (chainGame.toCSG chainGame_wf) chainSupp chainSupp_spec chainSafe
+    chainGood 4 chain_iter4 chain_fixed
 
 /-- The same result as an answer to a `sureSafe` objective (`Comp/Objective.lean`), which is what
     connects this instance to the interface rather than to one hand-written statement. -/
