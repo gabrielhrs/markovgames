@@ -8,21 +8,16 @@ import Csg.CsgMonotone
 /-!
 # The safety Bellman operator, bundled as an `OrderHom`
 
-**Status: done, confirmed by a clean `lake build` (via `RockPaperScissorsSafety.lean`, its first
-concrete consumer -- no direct build of this file alone was needed to confirm it).** The dual of
-`ReachOp.lean`: `G safe`
-("always safe") rather than `F goal` ("eventually goal"). Reachability is a **least** fixed point
-because reaching `goal` is a one-off event that a candidate value can be pinned down from below;
-safety is a **greatest** fixed point because staying `safe` forever can only be falsified by an
-actual violation, so `⊤` (never falsified, i.e. never leaving `safe`) is the right thing to
-converge to from above. Per `VERIFICATION-FRAMEWORK.md`'s own taxonomy (Axis A, the temporal-shape
-row for "Safety/always"), this is exactly the "short, near-mechanical mirror" anticipated there --
-`safetyOpFun` is `reachOpFun` with the two branches' outcomes swapped (`0` on violation instead of
-`1` on absorption) and the case condition negated (`¬ safe s` instead of `goal s`), and
-`OrderHom.gfp` supplies the same free existence `OrderHom.lfp` did, off Mathlib's own
-`le_gfp`/`gfp_le` pinning lemmas (`Mathlib/Order/FixedPoints.lean`, checked directly rather than
-guessed -- both are already stated in terms of `f.gfp` itself, with no need to route through
-`f.dual` explicitly the way the file's own internal proofs do).
+**Status: confirmed by a clean `lake build`.** The dual of `ReachOp.lean`: `G safe` ("always
+safe") rather than `F goal` ("eventually goal"). Reachability is a **least** fixed point because
+reaching `goal` is a one-off event that a candidate value can be pinned down from below; safety is
+a **greatest** fixed point because staying `safe` forever can only be falsified by an actual
+violation, so `⊤` (never falsified, i.e. never leaving `safe`) is the right thing to converge to
+from above. `safetyOpFun` is `reachOpFun` with the two branches' outcomes swapped (`0` on
+violation instead of `1` on absorption) and the case condition negated (`¬ safe s` instead of
+`goal s`), and `OrderHom.gfp` supplies the same free existence `OrderHom.lfp` does, off Mathlib's
+`le_gfp`/`gfp_le` pinning lemmas (`Mathlib/Order/FixedPoints.lean`), both stated in terms of
+`f.gfp` itself.
 
 Why the branches are the way they are, stated explicitly since it is easy to get backwards: `safe`
 holding at `s` is *not* itself a reason to stop and declare victory (unlike `reachOp`'s `goal`

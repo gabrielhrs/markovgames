@@ -28,8 +28,8 @@ than falling out for free.
 is small and symmetric enough to hand-solve. Building an interval certificate here does not
 demonstrate a case where the interval technique was *necessary*; it demonstrates that the general
 combinator (`CSG.reachOp_lfp_mem_Icc_of_certificate`) actually works, against an instance simple
-enough to check by hand that the sandwich is correct. The real payoff `VERIFICATION-FRAMEWORK.md`
-flags this technique for -- a `CSG` too large or asymmetric to solve exactly -- is not attempted
+enough to check by hand that the sandwich is correct. The case this technique is for -- a `CSG`
+too large or asymmetric to solve exactly -- is not attempted
 here; this file's candidates are deliberately *not* tightened all the way to `1/2`, so the interval
 stays genuinely non-degenerate rather than silently smuggling in the exact answer via two copies of
 `rpsVStar`.

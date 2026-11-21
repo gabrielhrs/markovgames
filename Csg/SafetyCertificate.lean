@@ -8,12 +8,11 @@ import Csg.SafetyOp
 /-!
 # A reusable safety-value certificate, dual to `ReachCertificate.lean`
 
-**Status: done, confirmed by a clean `lake build` (via `RockPaperScissorsSafety.lean`, its first
-concrete consumer).** Mirrors `ReachCertificate.lean` on the
-`gfp` side of Knaster-Tarski rather than the `lfp` side, closing out the last unstarted row of
-`VERIFICATION-FRAMEWORK.md`'s Axis A (temporal shape) for zero-sum: step-bounded (`bwInd`),
-unbounded reachability/until (`reachOp`/`untilOp`), reward-until-absorption
-(`RewardUntilCertificate.lean`), and now safety/always.
+**Status: confirmed by a clean `lake build`.** Mirrors `ReachCertificate.lean` on the `gfp` side
+of Knaster-Tarski rather than the `lfp` side. With it the zero-sum temporal shapes each have a
+certificate: step-bounded (`bwInd`), unbounded reachability/until (`reachOp`/`untilOp`),
+reward-until-absorption (`RewardUntilCertificate.lean`), and safety/always.
+`RockPaperScissorsSafety.lean` is a worked instance.
 
 As anticipated there, this came out close to a mechanical mirror. `OrderHom.gfp_eq_of_certificate`
 below is `OrderHom.lfp_eq_of_certificate` with `le_gfp`/`gfp_le` in place of `le_lfp`/`lfp_le_fixed`

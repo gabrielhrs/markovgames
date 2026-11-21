@@ -9,8 +9,8 @@ import Csg.MatchingPennies
 /-!
 # Worked example: rock-paper-scissors
 
-**Status: confirmed by a clean `lake build`.** Stage B of the reachability worked example,
-straight from the FMSD paper: rock-paper-scissors as a four-state CSG
+**Status: confirmed by a clean `lake build`.** The reachability worked example from the FMSD
+paper: rock-paper-scissors as a four-state CSG
 (`initial`, `win1`, `win2`, `draw`), checked against plain step-bounded reachability, `F<=k win2`
 (the paper's own `Pmax=? [!win2 U<=k win2]`, restated in the clearer `F<=k` form -- see
 `BoundedReachability.lean`'s own docstring) for concrete `k`. Convention: this
@@ -28,7 +28,7 @@ reward-accumulation one.
 
 Three pieces:
 
-1. `MatrixGame.value_eq_of_forall_eq`: a one-line corollary of `MatrixGameMonotone.lean`'s two
+1. `MatrixGame.value_eq_of_forall_eq`: a one-line corollary of `MatrixGame.lean`'s two
    sandwich lemmas -- a *constant* payoff matrix has that constant as its value. This is exactly
    what makes `win1` and `draw`'s stage games trivial: their transition doesn't depend on the joint
    action at all, so the payoff matrix is constant in both arguments.
@@ -48,7 +48,7 @@ Three pieces:
    raw `CSG` steps except when it resolves immediately, and the sequence's *distinct* values are
    exactly the naive one-step-per-round recursion `x_{n+1} = 1/3 + x_n / 3` (solving to the
    textbook `x_n \to 1/2`), each now appearing at two consecutive `k`. The exact `k \to \infty`
-   limit is not proved here -- that needs the `OrderHom.lfp` machinery scoped in `PHASE0-NOTES.md`.
+   limit is not proved here; `RockPaperScissorsLfp.lean` computes it through `OrderHom.lfp`.
 -/
 
 namespace Csg.MatrixGame
@@ -57,7 +57,7 @@ variable {I J : Type*} [Fintype I] [Fintype J] [Nonempty I] [Nonempty J] [Decida
   [DecidableEq J] (G : MatrixGame I J)
 
 /-- A constant payoff matrix has that constant as its value -- immediate from sandwiching `value`
-    between the same constant from both sides (`MatrixGameMonotone.lean`). Exactly what makes a
+    between the same constant from both sides (`MatrixGame.lean`). Exactly what makes a
     self-looping / deterministically-passing-through state's stage game trivial to evaluate below:
     its payoff matrix doesn't depend on the joint action at all. -/
 theorem value_eq_of_forall_eq {c : ℝ} (h : ∀ i j, G.A i j = c) : G.value = c :=

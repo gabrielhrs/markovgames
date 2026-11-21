@@ -11,14 +11,9 @@ import Csg.QualitativeAlmostSure
 **Status: confirmed by a clean `lake build`.** `Lpre1_empty_x` (a small general degeneracy fact,
 `Lpre1 ∅ y = ∅`) supports `Csg.SkirmishProperties`'s limit-sure reachability argument.
 
-**Why this file exists.** `Csg.QualitativeSure` and `Csg.QualitativeAlmostSure` split the
-qualitative line along the *mode* axis the paper itself uses -- sure, almost-sure, limit-sure, each
-computing the same four objective shapes (safety `G`, reachability `F`, co-Büchi `FG`, Büchi `GF`)
--- rather than along the order the pieces happened to get built in. This file is everything
-limit-sure mode needs: `Lpre1` (the limit-sure analogue of `Apre1`), `LF`/`LGF` (reachability/
-Büchi, both relocated from the old `QualitativeReachability.lean`), and `LFpre1`/`LFG` (the
-3-argument predecessor and the co-Büchi construction on top of it, relocated from the old
-`QualitativeLimitRecurrence.lean`).
+**What is here.** Everything limit-sure mode needs: `Lpre1` (the limit-sure analogue of `Apre1`),
+`LF`/`LGF` (reachability/Büchi), and `LFpre1`/`LFG` (the 3-argument predecessor and the co-Büchi
+construction on top of it).
 
 **`Lpre1` (`lpreXY` in the Java), the one primitive this mode needs beyond
 `Csg.QualitativeAlmostSure`.** Unlike `Apre1`, which is computed *directly* from `A`/`B` with no

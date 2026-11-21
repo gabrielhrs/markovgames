@@ -11,15 +11,10 @@ import Mathlib.Analysis.Normed.Group.Basic
 /-!
 # Discounted Markov Decision Processes
 
-**Status: `bellman_contracting` and `exists_unique_fixedPoint` both compile clean, zero
-`sorry`s** — confirmed by `lake build`. Together these are Phase 1's core for the finite-state
-case: the Bellman contraction (`contraction_ℒ` from `MDP_reward.thy`) and, via Mathlib's
-`ContractingWith`, existence/uniqueness of the optimal value function (`ν_opt`) — the payoff for
-using that machinery instead of reproving Banach by hand the way `MDP_reward.thy` has to (see
-`is_contraction`/`banach'` there). Every Mathlib name involved (`PMF.tsum_coe`, `tsum_fintype`,
-`dist_pi_le_iff`, `LipschitzWith.of_dist_le_mul`, `ContractingWith`, `edist_ne_top`, …) turned out
-correct as guessed; every bug across three build rounds was homegrown proof-shape mismatches, not
-wrong Mathlib API.
+**Status: confirmed by a clean `lake build`.** The core of the finite-state case: the Bellman
+contraction (`contraction_ℒ` from `MDP_reward.thy`) and, via Mathlib's `ContractingWith`,
+existence/uniqueness of the optimal value function (`ν_opt`) -- using that machinery instead of
+reproving Banach by hand the way `MDP_reward.thy` has to (see `is_contraction`/`banach'` there).
 
 This is the Lean counterpart of the Isabelle/HOL AFP entries this project ports:
 
@@ -29,14 +24,12 @@ This is the Lean counterpart of the Isabelle/HOL AFP entries this project ports:
 * `MDP-Rewards/Bounded_Functions.thy` — the `bfun` type (`'a ⇒⇩b 'b`, bounded functions,
                                      a Banach space for any domain, no topology required)
 
-Scope for this first file: **finite** state and action spaces only, matching the
-`MDP_finite_type` / `MDP_PI_finite` layer in the Isabelle development (the layer the code-export
-and the two evaluated examples actually run on). This sidesteps the general `bfun`/
-`BoundedContinuousFunction` question for now, since on a `Fintype` every real-valued function is
-automatically bounded and `Π i, ℝ` already gets a complete sup-norm space for free from Mathlib
-(`Pi.normedAddCommGroup`, `Pi.completeSpace`) — no extra boundedness proof obligation, unlike the
-Isabelle development which has to carry `bfun` because it *doesn't* restrict to finite state
-spaces at this layer. Worth revisiting once Phase 2 needs the general case.
+Scope: **finite** state and action spaces only, matching the `MDP_finite_type` / `MDP_PI_finite`
+layer in the Isabelle development (the layer the code-export and the two evaluated examples run
+on). On a `Fintype` every real-valued function is automatically bounded and `Π i, ℝ` gets a
+complete sup-norm space from Mathlib (`Pi.normedAddCommGroup`, `Pi.completeSpace`), so there is no
+boundedness proof obligation -- unlike the Isabelle development, which carries `bfun` because it
+does not restrict to finite state spaces at this layer.
 -/
 
 namespace Mdp
@@ -98,10 +91,9 @@ decision rule via `push_exp (K_st d)`; here specialised to a single state-action
 the more primitive notion the Isabelle development builds `\<P>\<^sub>1` out of via `K_st d s = d s
 \<bind> (\<lambda>a. K (s,a))`).
 
-This turned out to type-check as a direct `∑ s', (M.K s a s').toReal * v s'` — `PMF S` coerces to
-`S → ℝ≥0∞` and `ENNReal.toReal` gets us back to `ℝ`. Confirmed by `lake build`, not just hoped
-for; still worth a `simp`/`norm_num` sanity check that this sum actually equals 1 when `v = 1`
-before trusting it in a real proof. -/
+It is the direct sum `∑ s', (M.K s a s').toReal * v s'`: `PMF S` coerces to `S → ℝ≥0∞` and
+`ENNReal.toReal` gets back to `ℝ`. `expect_kernel_sum_one` below is the check that the weights
+sum to one. -/
 noncomputable def expect (s : S) (a : A) (v : S → ℝ) : ℝ :=
   ∑ s', (M.K s a s').toReal * v s'
 
@@ -155,7 +147,7 @@ theorem abs_expect_sub_le (s : S) (a : A) (v u : S → ℝ) :
         exact mul_le_mul_of_nonneg_left hv ENNReal.toReal_nonneg
     _ = dist v u := by rw [← Finset.sum_mul, M.expect_kernel_sum_one s a, one_mul]
 
-/-- **The theorem Phase 1 exists to port.** The Bellman operator is an `l`-Lipschitz contraction
+/-- **The contraction.** The Bellman operator is an `l`-Lipschitz contraction
     in sup distance. Corresponds to `contraction_ℒ` in `MDP_reward.thy`:
 
     `dist (\<L>\<^sub>b v) (\<L>\<^sub>b u) \<le> l * dist v u`

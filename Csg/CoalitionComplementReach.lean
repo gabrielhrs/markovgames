@@ -9,22 +9,19 @@ import Csg.ReachOp
 /-!
 # `⟨⟨C⟩⟩P_min =?[F goal]` and `⟨⟨Cᶜ⟩⟩P_max =?[F goal]` agree
 
-**Status: confirmed by a clean `lake build`.** The lift
-`CoalitionComplement.lean`'s own docstring named as "free once [`reduceMin_stageValue_eq`] holds
-(`reachOp`'s own type doesn't mention the action types at all)": this file states and proves the
-actual `n`-player identity `Csg/Coalition.lean` promised under "Not attempted here" --
-`⟨⟨C⟩⟩P_min` and `⟨⟨Cᶜ⟩⟩P_max` are the *same* reachability fixed point, for any coalition `C`
-and any reward-free `NCSG`.
+**Status: confirmed by a clean `lake build`.** The `n`-player identity: `⟨⟨C⟩⟩P_min` and
+`⟨⟨Cᶜ⟩⟩P_max` are the *same* reachability fixed point, for any coalition `C` and any reward-free
+`NCSG`. It is `CoalitionComplement.lean`'s `reduceMin_stageValue_eq`, lifted.
 
 **Why this is free, not a new argument.** `CSG.reachOp goal hr : (S → Set.Icc (0:ℝ) 1) →o
 (S → Set.Icc (0:ℝ) 1)` is an `OrderHom` whose *type* depends only on `S`, never on the underlying
 `CSG`'s action types `A1`/`A2` -- unlike `MatrixGame.value`, which lives at a different type for
-every choice of row/column index type and needed `MatrixGameCongr`/`MatrixGameCongrCol`'s explicit
-`Equiv` transport machinery to compare across index types at all. So `(G.reduceMax Cᶜ).reachOp` and
-`(G.reduceMin C).reachOp` are two terms of the *literally same* `OrderHom` type, directly comparable
-by plain equality with no relabelling step needed -- all the relabelling work
-`reduceMin_stageValue_eq` already did (via `MatrixGameCongr.value_relabelRow`) stays entirely inside
-the proof of the one pointwise fact this file needs, and never resurfaces at this level.
+every choice of row/column index type and needs `MatrixGame.relabelRow`/`relabelCol`'s explicit
+`Equiv` transport to compare across index types at all. So `(G.reduceMax Cᶜ).reachOp` and
+`(G.reduceMin C).reachOp` are two terms of the *literally same* `OrderHom` type, directly
+comparable by plain equality with no relabelling step needed -- all the relabelling work
+`reduceMin_stageValue_eq` does (via `MatrixGame.value_relabelRow`) stays inside the proof of the
+one pointwise fact this file needs, and never resurfaces at this level.
 
 **The shape of the argument**, three steps:
 

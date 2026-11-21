@@ -11,16 +11,12 @@ import Mathlib.Probability.ProbabilityMassFunction.Constructions
 # SKIRMISH with a third thrower action: `value(M) ≠ value(Mᵀ)` for a real instance
 
 **Status: confirmed by a clean `lake build`.** `PMF.pure`/`PMF.pure_apply` live in
-`Mathlib...Monad` and `PMF.ofFinset` in `Mathlib...Constructions`, both imported directly above
-rather than relied on transitively through `Csg.Basic`/`Csg.MatrixGameLP`: this project's
-toolchain is on Lean 4's newer module system, where a plain `import` does not re-export the
-imported module's names to further downstream importers, so any file whose own mathematics uses
-these needs both PMF modules imported directly, matching `Csg.ConcurrentCoBuchiExample.lean`'s own
-`Mathlib...Monad`/`Mathlib...Uniform` imports. Likewise, expanding a three-or-more-term sum via
-nested `Finset.sum_insert`/`Finset.sum_singleton` (as `throwerAction_sum`/`skirmishState_sum` do
-below) leaves the result right-associated (`f a + (f b + f c)`) against the stated left-associated
-form (`f a + f b + f c`), so such expansions need a trailing `abel` to close the gap, matching
-`Csg.ConcurrentCoBuchiExample.cbState_sum`'s own five-term version.
+`Mathlib...Monad` and `PMF.ofFinset` in `Mathlib...Constructions`; both are imported directly,
+since a plain `import` does not re-export the imported module's names to further downstream
+importers. Expanding a three-or-more-term sum via nested `Finset.sum_insert`/
+`Finset.sum_singleton` (as `throwerAction_sum`/`skirmishState_sum` do below) leaves the result
+right-associated (`f a + (f b + f c)`) against the stated left-associated form
+(`f a + f b + f c`), so such expansions end with `abel`.
 
 **What this is and why.** SKIRMISH (de Alfaro & Henzinger, LICS 2000): a hider at a hiding spot
 (`s_hide`) can `hide` or `run` for home (`s_home`); a thrower can `wait` or `throw`. The plain
@@ -61,31 +57,25 @@ directions below.
 
 **The two matrix games, and why they are transposes of each other.** `jointK`/`jointR` below fix
 the transition/reward for the joint action `(hiderAction, throwerAction)`, in that order, once and
-for all -- one source of truth for the actual game mechanics. `skirmishMinCSG` and `skirmishMaxCSG`
-both build their `CSG.K`/`CSG.r` from `jointK`/`jointR`, the first taking `(hider, thrower)` as
-`(A1, A2)` (hider row/minimising, thrower column/maximising -- `Csg.Basic`'s fixed convention,
-confirmed by `Gabriel`'s own read of every matrix-game file in this project: the column player is
-*always* the maximiser here), the second taking `(thrower, hider)` as `(A1, A2)` (thrower
-row/minimising, hider column/maximising). Since both reduce to literally the same `jointK`/`jointR`
-call, just with the two arguments swapped, `skirmishMaxCSG.stageGame s v`'s payoff matrix is
-`skirmishMinCSG.stageGame s v`'s own matrix with rows and columns swapped -- the transpose relation
-holds *by construction* here, not merely numerically. This is deliberately the `Csg.Coalition`
-picture, one level down: `reduceMin {hider}` puts the hider in the row/minimising slot (`⟨⟨hider⟩⟩
-P_min`), `reduceMax {hider}` puts the hider in the column/maximising slot (`⟨⟨hider⟩⟩ P_max`) --
-`skirmishMinCSG`/`skirmishMaxCSG` are the plain two-player shape those two reductions would produce
-for a genuinely two-player `NCSG`, without yet paying for `CoalitionAction`/`ComplementAction`'s
-dependent-product bookkeeping (`Csg.Coalition`'s own docstring flags relating `reduceMin {p1}` back
-to a bare two-action-type `CSG` as needing new infrastructure -- an `Equiv`-invariance lemma for
-`MatrixGame.value` -- not yet exercised anywhere; `MatrixGameCongr.value_relabelRow` is exactly that
-lemma, so lifting this file to a genuine `NCSG` instance through `Csg.Coalition` is believed
-straightforward, but is deliberately left for a follow-up file, matching this project's practice of
-shipping one new piece of infrastructure at a time).
+for all -- one source of truth for the game mechanics. `skirmishMinCSG` and `skirmishMaxCSG` both
+build their `CSG.K`/`CSG.r` from `jointK`/`jointR`, the first taking `(hider, thrower)` as
+`(A1, A2)` (hider row/minimising, thrower column/maximising -- `Csg.Basic`'s fixed convention: the
+column player is always the maximiser), the second taking `(thrower, hider)` as `(A1, A2)`
+(thrower row/minimising, hider column/maximising). Since both reduce to the same `jointK`/`jointR`
+call with the two arguments swapped, `skirmishMaxCSG.stageGame s v`'s payoff matrix is
+`skirmishMinCSG.stageGame s v`'s own matrix with rows and columns swapped -- the transpose
+relation holds *by construction*, not merely numerically. This is the `Csg.Coalition` picture, one
+level down: `reduceMin {hider}` puts the hider in the row/minimising slot (`⟨⟨hider⟩⟩ P_min`),
+`reduceMax {hider}` puts the hider in the column/maximising slot (`⟨⟨hider⟩⟩ P_max`) --
+`skirmishMinCSG`/`skirmishMaxCSG` are the plain two-player shape those two reductions produce for
+a two-player `NCSG`, without `CoalitionAction`/`ComplementAction`'s dependent-product bookkeeping.
+`SkirmishFeintCoalition.lean` lifts this file to an `NCSG` instance through `Csg.Coalition`,
+using `MatrixGame.value_relabelRow`/`value_relabelCol`.
 
-**The two values**, each pinned down by `MatrixGameLP.lean`'s
+**The two values**, each pinned down by `MatrixGame.lean`'s
 `value_isLeast_rowLPFeasible`/`value_isGreatest_colLPFeasible` (`le_antisymm` between one witness
-strategy per side, exactly the reuse that file's own docstring anticipated -- neither
-`RockPaperScissors.lean` nor `MatchingPennies.lean` needed this route, since both exploit a
-row/column-sum symmetry `MatrixGameLP.lean` predicted wouldn't always be available):
+strategy per side; `RockPaperScissors.lean` and `MatchingPennies.lean` do not need this route,
+since both exploit a row/column-sum symmetry that is not available here):
 
 * `stageValue_min_eq`: with the hider row/minimising, the thrower column/maximising, the
   self-consistent value at `s_hide` is exactly `4/5` -- witnessed by the hider always hiding
@@ -303,8 +293,8 @@ noncomputable def throwerMinMix : ThrowerAction → ℝ
     column/maximising, the stage game at `s_hide` -- once the continuation already carries `s_hide`
     itself at the self-consistent value `4/5` -- has value exactly `4/5`. Witnessed on the row side
     by `hiderPureHide` (always hide) and on the column side by `throwerMinMix`
-    (`wait`/`throw`, `4/5`-`1/5`) via `le_antisymm` between `MatrixGameLP.lean`'s two LP
-    characterizations, exactly the reuse that file's own docstring anticipated. -/
+    (`wait`/`throw`, `4/5`-`1/5`) via `le_antisymm` between `MatrixGame.lean`'s two LP
+    characterizations. -/
 theorem stageValue_min_eq (v : SkirmishState → ℝ) (vhide : v .hide = 4 / 5) (vhome : v .home = 1)
     (vwet : v .wet = 0) :
     (skirmishMinCSG.stageGame .hide v).value = 4 / 5 := by

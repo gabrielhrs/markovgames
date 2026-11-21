@@ -8,15 +8,11 @@ import Csg.Basic
 /-!
 # Backward induction for bounded-horizon concurrent stochastic games
 
-**Status: done, confirmed by a clean `lake build`, zero `sorry`s (one caught-and-fixed regression
-along the way, from a mistaken self-review edit to the recursive call in `bwInd` -- see
-`PHASE0-NOTES.md`).** Builds on the now-confirmed `Csg.Basic`
-(`CSG`, `CSG.stageGame`, `CSG.stageValue`, `MatrixGame.value`) without touching that file, same
-pattern as `Basic.lean` → `Csg/Basic.lean`.
+**Status: confirmed by a clean `lake build`.** Builds on `Csg/Basic.lean` (`CSG`,
+`CSG.stageGame`, `CSG.stageValue`, `MatrixGame.value`).
 
-This is the actual point of the CSG scoping worked out in the heavy debrief (`PHASE0-NOTES.md`):
-bounded rPATL objectives (everything except `until`/reachability) reduce to a backward-induction
-recursion, mirroring this project's own `MDP-Algorithms/Backward_Induction.thy`
+Bounded rPATL objectives (everything except `until`/reachability) reduce to a backward-induction
+recursion, mirroring `MDP-Algorithms/Backward_Induction.thy`
 
 ```
 function bw_ind_aux where
@@ -27,14 +23,13 @@ function bw_ind_aux where
 ```
 
 with the per-stage `\<Squnion>a \<in> A s` (an MDP's single-player supremum,
-`DiscountedMDP.bellman`'s `Finset.sup'` in this project's own Phase 1/2 port) replaced by
-`CSG.stageValue`, the two-player zero-sum matrix game's value. Per the debrief, this swap is
-licensed because the whole
-`Backward_Induction.thy` correctness pipeline only ever uses two facts about the per-stage
-aggregation step: that it exists, and that it's monotone in the continuation -- both of which
-`MatrixGame.value` has too (existence unconditionally, from `Sion.exists_isSaddlePointOn`; this
-file doesn't yet need or prove monotonicity, since `bwInd` below doesn't compare two different
-reward functions against each other).
+`DiscountedMDP.bellman`'s `Finset.sup'` in `Mdp/`) replaced by `CSG.stageValue`, the two-player
+zero-sum matrix game's value. The swap is licensed because the `Backward_Induction.thy`
+correctness pipeline only ever uses two facts about the per-stage aggregation step: that it
+exists, and that it is monotone in the continuation -- both of which `MatrixGame.value` has too
+(existence unconditionally, from `Sion.exists_isSaddlePointOn`; monotonicity is
+`MatrixGame.value_mono`, not needed in this file, since `bwInd` does not compare two reward
+functions against each other).
 
 One simplification relative to the Isabelle source, in the same spirit as `ValueIteration.lean`
 sidestepping Isabelle's well-founded-recursion termination proof: `bwInd` is parametrised by steps

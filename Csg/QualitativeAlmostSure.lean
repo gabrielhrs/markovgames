@@ -8,32 +8,22 @@ import Csg.QualitativeSure
 /-!
 # Qualitative winning regions: almost-sure mode
 
-**Status: confirmed by a clean `lake build`.** `A_univ_v2` (a small general degeneracy fact about
-`A`: its safety test always succeeds when every column is already excused, i.e. `v2 = univ`),
-alongside `B_empty_x`/`B_empty_v1` (two degeneracy facts about `B`: its escape test always fails
-when either argument -- the escape target or the row-action pool -- is `∅`), support
-`Csg.SkirmishProperties`'s almost-sure co-Büchi (`AFG`) argument. Following L. de Alfaro and
-T. Henzinger, "Concurrent Omega-Regular Games," LICS 2000, and
-ported directly from the already-implemented, already-validated Java in `prism-games`'s
-`explicit/CSGModelChecker.java` (methods `A`, `B`, `AF`, `AGF`, `AFG`).
+**Status: confirmed by a clean `lake build`.** Following L. de Alfaro and T. Henzinger,
+"Concurrent Omega-Regular Games," LICS 2000, and ported from `prism-games`'s
+`explicit/CSGModelChecker.java` (methods `A`, `B`, `AF`, `AGF`, `AFG`). `A_univ_v2` (the safety
+test of `A` always succeeds when every column is already excused, i.e. `v2 = univ`) and
+`B_empty_x`/`B_empty_v1` (the escape test of `B` always fails when either argument -- the escape
+target or the row-action pool -- is `∅`) support `Csg.SkirmishProperties`'s almost-sure co-Büchi
+(`AFG`) argument.
 
-**Why this file exists.** `Csg.QualitativeSure` and this file's sibling `Csg.QualitativeLimitSure`
-split the qualitative line along the *mode* axis the paper itself uses -- sure, almost-sure,
-limit-sure, each computing the same four objective shapes (safety `G`, reachability `F`, co-Büchi
-`FG`, Büchi `GF`) -- rather than along the order the pieces happened to get built in. This file is
-everything almost-sure mode needs and nothing else: `A`/`B` (the one-step combinators) and `Apre1`
-were relocated from the old `QualitativeAlgorithms.lean`; `AF` from the old
-`QualitativeReachability.lean`; `AFpre1`/`AFG` from the old `QualitativeRecurrence.lean`. `AGF` sits
-between `AF` and `AFpre1`/`AFG` below, reordered from its original position (before `AF`, in the
-old file split) to read in order of increasing complexity: `Apre1` (no fixed point of its own) →
-`AF` (coupled `νY.μX`, no case split) → `AGF` (coupled `νY.μX`, with a case split on `b`) →
+**What is here.** Everything almost-sure mode needs and nothing else, in order of increasing
+complexity: `A`/`B` (the one-step combinators) → `Apre1` (no fixed point of its own) → `AF`
+(coupled `νY.μX`, no case split) → `AGF` (coupled `νY.μX`, with a case split on `b`) →
 `AFpre1`/`AFG` (the 3-argument predecessor, and the `νZ.μX.νY` triple built on it).
 
-`A_mono_v2` (monotonicity of `A` in its excused-columns argument) also moved here from the old
-`QualitativeReachability.lean`, ahead of where it used to live: it is a plain fact about `A` itself,
-needed by *both* `AFpre1` below (this file) and `Lpre1` (`Csg.QualitativeLimitSure`), so it belongs
-with `A`/`B`'s other monotonicity lemmas rather than filed under whichever mode happened to need it
-first historically.
+`A_mono_v2` (monotonicity of `A` in its excused-columns argument) is a plain fact about `A`
+itself, needed by *both* `AFpre1` below and `Lpre1` (`Csg.QualitativeLimitSure`), so it sits with
+`A`/`B`'s other monotonicity lemmas.
 
 **Scope**: every almost-sure operator (`A`, `B`, `Apre1`, `AF`, `AGF`, `AFpre1`, `AFG`). Every
 `OrderHom` bundling step below reuses `OrderHom.lfp_mono_of_le`/`gfp_mono_of_le` from `Csg.BuchiOp`

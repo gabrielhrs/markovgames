@@ -8,12 +8,10 @@ import Csg.CsgMonotone
 /-!
 # The Büchi Bellman operator, bundled as a genuine nested fixed point
 
-**Status: confirmed by a clean `lake build` and clean in VS Code.** The first genuinely new
-architectural piece in the `Csg/` line since
-`ReachOp.lean`/`SafetyOp.lean`/`UntilOp.lean` were first built: every operator so far has been a
-*single-level* `OrderHom.lfp` or `.gfp`. This file's `buchiOp` is a *fixed point of a fixed point*
--- `νy.μx.(...)` -- following de Alfaro and Majumdar, "Quantitative Solution of Omega-Regular
-Games," JCSS 68 (2004) 374-397, eq. (4):
+**Status: confirmed by a clean `lake build`.** Every operator in `ReachOp.lean`, `SafetyOp.lean`
+and `UntilOp.lean` is a *single-level* `OrderHom.lfp` or `.gfp`. This file's `buchiOp` is a
+*fixed point of a fixed point* -- `νy.μx.(...)` -- following de Alfaro and Majumdar,
+"Quantitative Solution of Omega-Regular Games," JCSS 68 (2004) 374-397, eq. (4):
 
 `⟨1⟩□◇U = νy·μx·((¬U ∧ Ppre₁(x)) ∨ (U ∧ Ppre₁(y)))`
 
@@ -27,18 +25,14 @@ visit end the game, it only resets which continuation (`x`, the still-searching-
 `y`, the just-reset value) gets one more step of `Ppre₁` applied to it.
 
 This is also the *general* form of the LTL-shaped recurrence claim
-`IntrusionDetectionRecurrence.lean` proves for one specific instance via a from-scratch probability
-argument (Borel-Cantelli, an oblivious attacker only): `buchiOp` instead characterises `⟨1⟩□◇U` as
-a fixed point, for *any* reward-free `CSG` and *any* opponent (not just oblivious ones), the way
-`reachOp`/`safetyOp` already do for reachability and safety. The two are complementary, not
-competing -- `IntrusionDetectionRecurrence.lean`'s result is a genuine probability-1 recurrence fact
-reached by a shortcut specific to IDS's
-uniform-strategy structure; `buchiOp` is the reusable machinery for the general case, still needing
-a `BuchiCertificate.lean`-style pinning combinator and a worked instance (a natural candidate: the
-paper's own Example 3/Fig. 1, a small co-Büchi game demonstrating that the MDP trick of reducing
-Büchi conditions to plain reachability of the almost-surely-winning set fails for concurrent games)
-before it says anything about a concrete model. This file stops at the operator and its
-well-definedness, mirroring `ReachOp.lean`'s own stated scope.
+`IntrusionDetectionRecurrence.lean` proves for one specific instance via a probability argument
+(Borel-Cantelli, an oblivious attacker only): `buchiOp` instead characterises `⟨1⟩□◇U` as a fixed
+point, for *any* reward-free `CSG` and *any* opponent, the way `reachOp`/`safetyOp` do for
+reachability and safety. The two are complementary: `IntrusionDetectionRecurrence.lean`'s result
+is a probability-1 recurrence fact reached by a shortcut specific to that game's uniform-strategy
+structure; `buchiOp` is the reusable machinery for the general case. This file stops at the
+operator and its well-definedness, as `ReachOp.lean` does; no instance of `buchiOp` itself is
+worked here, and `ConcurrentCoBuchiExample.lean` works one for the dual, `coBuchiOp`.
 
 **The one genuinely new ingredient**, beyond everything `CsgMonotone.lean` already supplies:
 bundling the outer (`νy`) level as an `OrderHom` needs knowing that `y ↦ (buchiInnerOp U hr y).lfp`

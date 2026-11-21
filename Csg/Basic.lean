@@ -9,25 +9,22 @@ import Csg.MatrixGame
 /-!
 # Finite-state concurrent stochastic games
 
-**Status: confirmed by a clean `lake build`.** Builds on `Csg.MatrixGame` (`MatrixGame.lean`),
-which supplies `value` directly, matching how `ValueIteration.lean`/`PolicyIteration.lean` build
-on `Basic.lean` in the MDP line.
+**Status: confirmed by a clean `lake build`.** Builds on `Csg/MatrixGame.lean`, which supplies
+`value`.
 
-One thing happens in this file now: `CSG`, the concurrent-stochastic-game analogue of
-`DiscountedMDP` (`Basic.lean`, the MDP-line file of the same name): same
-`K : S → A1 → A2 → PMF S`/`r : S → A1 → A2 → ℝ` shape, but with two independently-chosen
-actions per step instead of one, since both players move simultaneously at each state. No
-discount factor -- per the CSG scoping in `PHASE0-NOTES.md`, bounded objectives use backward
-induction and infinite-horizon objectives use undiscounted reachability/until, neither of which
-needs one. Same simplification `DiscountedMDP` already makes: every action available in every
-state (Isabelle's per-state `A1 s`/`A2 s` restriction is a TODO there too, not done here
-either).
+`CSG` is the concurrent-stochastic-game analogue of `Mdp/Basic.lean`'s `DiscountedMDP`: the same
+`K : S → A1 → A2 → PMF S`/`r : S → A1 → A2 → ℝ` shape, but with two independently-chosen actions
+per step instead of one, since both players move simultaneously at each state. There is no
+discount factor: bounded objectives use backward induction and infinite-horizon objectives use
+undiscounted reachability/until, neither of which needs one (`Csg/Discounted.lean` adds one where
+a contraction is wanted). As in `DiscountedMDP`, every action is available in every state;
+Isabelle's per-state `A1 s`/`A2 s` restriction is not modelled.
 
 `CSG.stageGame`/`CSG.stageValue` are the actual point of this file: the per-state, per-continuation
 one-shot matrix game that a `Backward_Induction.thy`-style recursion calls at each step, replacing
 `DiscountedMDP.bellman v s`'s `Finset.sup'` with a `MatrixGame.value`. Nothing about backward
-induction itself (the recursion, `bw_ind_aux`-style, or its correctness) is in this file -- that's
-the next artifact, once this structure exists to state it over.
+induction itself (the recursion, `bw_ind_aux`-style, or its correctness) is in this file; that is
+`BackwardInduction.lean`.
 -/
 
 namespace Csg
@@ -63,9 +60,8 @@ noncomputable def expect (s : S) (a1 : A1) (a2 : A2) (v : S → ℝ) : ℝ :=
 
 /-- The one-shot matrix game played at state `s` against continuation value `v`: the row player's
     `a1` and the column player's `a2` are chosen simultaneously, and the payoff is the immediate
-    reward plus the expected continuation value -- exactly the per-state aggregation step that
-    replaces `DiscountedMDP.bellman`'s `Finset.sup'` for concurrent games (see the CSG scoping
-    notes in `PHASE0-NOTES.md`). -/
+    reward plus the expected continuation value -- the per-state aggregation step that replaces
+    `DiscountedMDP.bellman`'s `Finset.sup'` for concurrent games. -/
 noncomputable def stageGame (s : S) (v : S → ℝ) : MatrixGame A1 A2 where
   A a1 a2 := C.r s a1 a2 + C.expect s a1 a2 v
 

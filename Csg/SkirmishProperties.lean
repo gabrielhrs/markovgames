@@ -11,15 +11,12 @@ import Csg.QualitativeLimitSure
 /-!
 # Plain SKIRMISH: the 14 `skirmish.prism.props` sure/almost/limit facts
 
-**Status: confirmed by a clean `lake build` through Section 7.** All 14 `sure`/`almost`/`limit`
-facts from `skirmish.prism.props`, plus the three Büchi
-facts Section 7 adds (`sure`/`almost` `false`, `limit` `true` -- the second headline
-sure/almost-vs-limit divergence, alongside Section 3/4's reachability one), are now proven.
-The single home for every qualitative fact about `Csg.Skirmish`'s model, one file rather than
-branching into a new file per mode or per objective shape -- renamed from this file's original
-name, `SkirmishSafety`, now that it is meant to grow past just safety. Organised into `##`-headed
-sections below, one per `skirmish.prism.props` result group, in the order that file lists them and
-in the agreed easier-first pace.
+**Status: confirmed by a clean `lake build`.** All 14 `sure`/`almost`/`limit` facts from
+`skirmish.prism.props`, plus the three Büchi facts Section 7 adds (`sure`/`almost` `false`,
+`limit` `true` -- the second sure/almost-vs-limit divergence, alongside Section 3/4's
+reachability one). The single home for every qualitative fact about `Csg.Skirmish`'s model,
+organised into `##`-headed sections below, one per `skirmish.prism.props` result group, in the
+order that file lists them.
 
 **Section 1: safety (`G`), and its trivial co-Büchi corollary -- done, confirmed clean.**
 * `<<p1>> sure [ G !(s=1) ]` -- `RESULT: true` -- `skirmish_G_safe_true`.

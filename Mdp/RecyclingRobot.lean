@@ -8,15 +8,11 @@ import Mdp.PolicyIteration
 /-!
 # Worked example: the recycling robot
 
-**Status: confirmed by a clean `lake build`; `robotMDP.vOpt` matches the hand-solved closed form
-exactly — see `PHASE0-NOTES.md`.** This status line had gone stale (it said "drafted, not yet run
-through `lake build`" long after the build had actually gone clean); corrected in place rather
-than treated as still-open work. A concrete instantiation of `DiscountedMDP`, used to check the
-abstract Phase 1/2 machinery against a hand-solved, closed-form ground truth rather than just
-`lake build` accepting it. This is Sutton & Barto's "recycling robot" (the canonical minimal
-example used to introduce discounted MDPs in the first place): a robot with battery level `high`
-or `low`, choosing at each step to `search` for cans (risky when low on battery), `wait` (safe,
-low reward), or `recharge` (only useful when low).
+**Status: confirmed by a clean `lake build`.** A concrete instantiation of `DiscountedMDP`, used
+to check the abstract machinery against a hand-solved, closed-form ground truth. This is Sutton &
+Barto's "recycling robot" (the canonical minimal example used to introduce discounted MDPs): a
+robot with battery level `high` or `low`, choosing at each step to `search` for cans (risky when
+low on battery), `wait` (safe, low reward), or `recharge` (only useful when low).
 
 Numbers, picked for clean arithmetic rather than taken from a published source (the textbook
 itself leaves them symbolic): `α = β = 1/2` (chance of staying in the current battery state while
@@ -31,10 +27,9 @@ there (self-loop, reward `r_wait`) purely so `K`/`r` are total functions, and th
 harmless since `search` already strictly dominates `wait` at `high` regardless of what `recharge`
 does there.
 
-Hand-solved optimal value function, checked against *every* alternative action at both states —
-not just the guessed-optimal policy. (The first guess, "always search," turned out not to be
-optimal at `low`; only checking the full Bellman optimality condition against all three actions
-caught it.)
+Hand-solved optimal value function, checked against *every* alternative action at both states,
+not just the optimal policy's own. ("Always search" is not optimal at `low`, which only the full
+Bellman optimality condition against all three actions shows.)
 
   `v_high = 10/3`, `v_low = 2`, optimal policy: `search` at `high`, `wait` at `low`.
 
@@ -42,7 +37,7 @@ All six action/state Q-values checked strictly, so there's no tie-breaking ambig
 
 `robotMDP_vOpt` proves `robotMDP.vOpt` equals this vector *exactly* — not "converges toward" —
 by exhibiting it as a fixed point of `bellman` and invoking `ContractingWith.fixedPoint_unique`
-(Phase 2a), the same route `policyStep_fixedPoint_value_eq_vOpt` uses. This is a genuinely
+(`ValueIteration.lean`), the same route `policyStep_fixedPoint_value_eq_vOpt` uses. This is a
 different kind of check than everything before it in this project: `ℝ` and `PMF` are both
 noncomputable in Mathlib (confirmed against the source — `PMF`'s whole file is a `noncomputable
 section`), so none of this can be `#eval`'d to watch numbers converge. The payoff here is a
@@ -198,7 +193,7 @@ private theorem expect_low_recharge : robotMDP.expect .low .recharge robotV0 = 1
 
 /-- **The payoff.** `robotMDP`'s optimal value function is *exactly* the hand-solved vector, not
     an approximation of it — checked by exhibiting it as a `bellman` fixed point and invoking
-    Banach uniqueness (Phase 2a), the same route `policyStep_fixedPoint_value_eq_vOpt` uses. -/
+    Banach uniqueness, the same route `policyStep_fixedPoint_value_eq_vOpt` uses. -/
 theorem robotMDP_vOpt : robotMDP.vOpt = robotV0 := by
   refine (robotMDP.contractingWith_bellman.fixedPoint_unique ?_).symm
   funext s

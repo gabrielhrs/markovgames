@@ -8,24 +8,17 @@ import Csg.BuchiOp
 /-!
 # Qualitative winning regions: sure mode
 
-**Status: confirmed by a clean `lake build`.** Two small general lemmas (`G safe ⊆ safe`,
-`b ⊆ SF b`, each read straight off `map_gfp`/`map_lfp`'s fixed-point equation) support
-`Csg.SkirmishProperties`'s worked instances. Following L. de Alfaro
-and T. Henzinger, "Concurrent Omega-Regular Games," LICS 2000, and ported directly from the
-already-implemented, already-validated Java in
-`prism-games`'s `explicit/CSGModelChecker.java` (methods `G`, `SF`, `SFG`, `SGF`, read directly off
-that file rather than re-derived from the paper from scratch).
+**Status: confirmed by a clean `lake build`.** Following L. de Alfaro and T. Henzinger,
+"Concurrent Omega-Regular Games," LICS 2000, and ported from `prism-games`'s
+`explicit/CSGModelChecker.java` (methods `G`, `SF`, `SFG`, `SGF`). Two small general lemmas
+(`G safe ⊆ safe`, `b ⊆ SF b`, each read off `map_gfp`/`map_lfp`'s fixed-point equation) support
+`Csg.SkirmishProperties`'s worked instances.
 
-**Why this file, and its two siblings, exist.** The qualitative line was originally split into
-four files (`QualitativeAlgorithms`/`QualitativeReachability`/`QualitativeRecurrence`/
-`QualitativeLimitRecurrence`) named for *when* each fixed-point shape was built during
-development, not for the axis the paper itself organises around: three *modes* -- sure,
-almost-sure, limit-sure -- each computing the same four objective shapes (safety `G`, reachability
-`F`, co-Büchi `FG`, Büchi `GF`). This file and its two siblings (`QualitativeAlmostSure.lean`,
-`QualitativeLimitSure.lean`, importing in that order) now split along the mode axis instead. This
-file is everything sure mode needs and nothing else, relocated line-for-line from its old home in
-`QualitativeAlgorithms.lean` (`Pre1`, `G`, `SF`, `SFG`, `SGF`; the almost-sure combinators `A`/`B`
-and `Apre1`/`AGF` that used to share that file moved to `QualitativeAlmostSure.lean`).
+**How the three files divide.** The qualitative line is split along the axis the paper itself
+organises around: three *modes* -- sure, almost-sure, limit-sure -- each computing the same four
+objective shapes (safety `G`, reachability `F`, co-Büchi `FG`, Büchi `GF`). This file is
+everything sure mode needs and nothing else (`Pre1`, `G`, `SF`, `SFG`, `SGF`);
+`QualitativeAlmostSure.lean` and `QualitativeLimitSure.lean` import it in that order.
 
 **Representation choice.** Winning regions live in `Set S` rather than `S → Set.Icc (0:ℝ) 1`:
 `Set S` is a `CompleteBooleanAlgebra` (hence a `CompleteLattice`) unconditionally in Mathlib --

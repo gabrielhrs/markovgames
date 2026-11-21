@@ -9,24 +9,18 @@ import Mathlib.Analysis.Convex.StdSimplex
 /-!
 # Finite two-player zero-sum matrix games
 
-**Status: confirmed by a clean `lake build`.** This is the first artifact for Goal 02
-(concurrent stochastic games), and plays the same role for the CSG line of work that
-`RecyclingRobot.lean` played for the discounted-MDP line: a small, self-contained, hands-on
-exercise that checks a genuinely nontrivial piece of Mathlib before any downstream theory gets
-built on top of it. Here the load-bearing dependency is `Mathlib.Topology.Sion`
-(`Sion.exists_isSaddlePointOn`), a 2025 formalisation of Sion's minimax theorem, which that file's
-own docstring notes specialises to von Neumann's minimax theorem in the finite bilinear case —
-exactly the finite zero-sum matrix game below.
+**Status: confirmed by a clean `lake build`.** Finite zero-sum matrix games and their value. The
+load-bearing dependency is `Mathlib.Topology.Sion` (`Sion.exists_isSaddlePointOn`), a
+formalisation of Sion's minimax theorem, which that file's own docstring notes specialises to von
+Neumann's minimax theorem in the finite bilinear case -- exactly the finite zero-sum matrix game
+below.
 
-Why this matters for the project as a whole (see `PHASE0-NOTES.md`, "Heavy debrief" section): the
-per-state value computation of a *concurrent* stochastic game, at every stage of a
-`Backward_Induction.thy`-style bounded computation, is not a plain `Finset.sup'` over actions the
-way it is for MDPs (`DiscountedMDP.bellman` in `Basic.lean`) — it's the value of a one-shot finite
-zero-sum matrix game between the two players, since both choose actions simultaneously at a
-state. Existence of that value (as a mixed-strategy saddle point) was, before this file, the
-single biggest unconfirmed dependency in the CSG roadmap. `exists_optimal_strategies` below closes
-it: it exists in Mathlib, and it is usable directly, without reproving von Neumann from scratch the
-way the rest of this project avoids reproving Banach from scratch for the MDP case.
+Why it matters here: the per-state value computation of a *concurrent* stochastic game is not a
+plain `Finset.sup'` over actions the way it is for MDPs (`DiscountedMDP.bellman` in
+`Mdp/Basic.lean`) -- it is the value of a one-shot finite zero-sum matrix game between the two
+players, since both choose actions simultaneously at a state. `exists_optimal_strategies` below
+gives existence of that value (as a mixed-strategy saddle point) from Mathlib directly, without
+reproving von Neumann from scratch, the way `Mdp/` avoids reproving Banach.
 
 `value` and its supporting API (`optimalRow`, `optimalCol`, `value_row_optimal`,
 `value_col_optimal`, `value_unique`) live here rather than in `Basic.lean`: none of it is about
@@ -225,8 +219,7 @@ theorem value_col_optimal : ∀ q' ∈ stdSimplex ℝ J, G.payoff G.optimalRow q
     optimal strategies are not), proved directly from `value_row_optimal`/`value_col_optimal` by
     chaining both pairs' optimality conditions against each other.
 
-    **Relocated here from `Basic.lean`**, which had itself relocated it from `MatchingPennies.lean`
-    once `MatrixGameMonotone.lean`'s `value_add_const` needed it too: a general fact about `value`
+    `value_add_const` below and the worked instances both use it: a general fact about `value`
     that doesn't depend on anything `CSG`- or worked-example-specific belongs beside `value` and
     `exists_optimal_strategies` themselves, in the file that owns `MatrixGame`, not in a file about
     a different structure built on top of it. Pure relocation, second hop -- the statement and
@@ -244,19 +237,13 @@ theorem value_unique {p : I → ℝ} {q : J → ℝ} (hp : p ∈ stdSimplex ℝ 
 
 /-! ## Monotonicity and boundedness of `value`
 
-**Status: confirmed by a clean `lake build`.** First building block for the infinite-horizon half of
-Phase 3 (`until`/reachability) -- see `PHASE0-NOTES.md`'s "reachability iterate" section for the
-plan this feeds. Builds on `Csg/Basic.lean`, adding lemmas to the existing `MatrixGame` namespace
-rather than reopening anything else -- the same pattern `MatchingPennies.lean` used for
-`value_unique`.
+**Status: confirmed by a clean `lake build`.**
 
-Why this file, and why now: reachability/until values for CSGs, unlike the bounded objectives
-`BackwardInduction.lean` already covers, aren't computed by a fixed number of recursion steps --
-they're the least fixed point of a per-state Bellman-style operator (Knaster-Tarski, not plain
-structural recursion), per the reachcert architecture scoped in the debrief. Existence of that
-fixed point needs the operator to be *monotone* on a *complete lattice*, neither of which
-`BackwardInduction.lean` needed (`bwInd` never compares two different reward functions against
-each other). This section supplies the two facts about `MatrixGame.value` that argument is built on:
+Reachability/until values for CSGs, unlike the bounded objectives `BackwardInduction.lean` covers,
+are not computed by a fixed number of recursion steps -- they are the least fixed point of a
+per-state Bellman-style operator (Knaster-Tarski, not structural recursion). Existence of that
+fixed point needs the operator to be *monotone* on a *complete lattice*. This section supplies the
+two facts about `MatrixGame.value` that argument is built on:
 
 1. `value_mono`: if one payoff matrix dominates another entrywise, its value is at least as large.
    Needed so the per-state stage-game step (`CSG.stageValue`, `Basic.lean`) is monotone in the
@@ -266,24 +253,16 @@ each other). This section supplies the two facts about `MatrixGame.value` that a
    into itself, so the fixed point can be found inside `Set.Icc (0:ℝ) 1` rather than needing all of
    `ℝ` to be a complete lattice (it isn't -- `ℝ` has no top or bottom element).
 
-Confirmed directly against the cached Mathlib source before writing this file (not guessed):
-`Set.Icc a b` in a `ConditionallyCompleteLattice` (`ℝ` qualifies) gets a `CompleteLattice` instance
-for free (`Set.Icc.completeLattice`, `Mathlib/Order/CompleteLatticeIntervals.lean`), and `Pi` types
-of complete lattices are complete lattices (`Pi.instCompleteLattice`,
-`Mathlib/Order/CompleteLattice/Basic.lean`). So `S → Set.Icc (0:ℝ) 1` is a complete lattice, and
-Mathlib's Knaster-Tarski (`OrderHom.lfp`/`gfp`, `Mathlib/Order/FixedPoints.lean`) applies to any
-bundled monotone self-map of it directly -- no need to redo the whole `MatrixGame`/`Sion`-based
-value-existence layer over `ℝ≥0∞` the way reachcert's own `F_inf`/`F_sup` do it for plain MDPs
-(Sion's theorem needs genuine real-vector-space structure `ℝ≥0∞` doesn't have, so that detour would
-have meant a second, from-scratch saddle-point existence proof). The entire real-valued stack built
-so far can be reused as-is; only the two facts below needed adding before the reachability operator
-itself, its boundedness, and its fixed point can be stated.
+`Set.Icc a b` in a `ConditionallyCompleteLattice` (`ℝ` qualifies) has a `CompleteLattice` instance
+(`Set.Icc.completeLattice`, `Mathlib/Order/CompleteLatticeIntervals.lean`), and `Pi` types of
+complete lattices are complete lattices (`Pi.instCompleteLattice`). So `S → Set.Icc (0:ℝ) 1` is a
+complete lattice, and Mathlib's Knaster-Tarski (`OrderHom.lfp`/`gfp`,
+`Mathlib/Order/FixedPoints.lean`) applies to any bundled monotone self-map of it directly -- there
+is no need to redo the `MatrixGame`/`Sion`-based value-existence layer over `ℝ≥0∞` (Sion's theorem
+needs real-vector-space structure `ℝ≥0∞` does not have).
 
-Neither lemma is deep -- both are direct consequences of `value_row_optimal`/`value_col_optimal`
-(the same two facts `value_unique` in `MatchingPennies.lean` chains) plus the nonnegativity half of
-`stdSimplex` membership. What's new is that nothing built so far needed them: `bwInd` never compares
-two reward functions, and the worked example fixed one concrete matrix rather than reasoning about
-matrices in general.
+Both lemmas are direct consequences of `value_row_optimal`/`value_col_optimal` plus the
+nonnegativity half of `stdSimplex` membership.
 -/
 
 /-- `payoff` is monotone in the payoff matrix, for any fixed pair of nonnegative (not necessarily
@@ -355,10 +334,9 @@ theorem le_value_of_forall_le {c : ℝ} (h : ∀ i j, c ≤ G.A i j) : c ≤ G.v
   unfold value
   exact G.le_payoff_of_forall_le G.optimalRow_mem G.optimalCol_mem h
 
-/-- **Added for the reachability-iterate convergence plan (see `PHASE0-NOTES.md`).** Shifting
-    every entry of a payoff matrix by the same constant shifts the payoff at any fixed strategy
-    pair by that constant -- both players' weights sum to `1`, so the shift factors straight out.
-    The per-state building block `value_add_const` below chains against. -/
+/-- Shifting every entry of a payoff matrix by the same constant shifts the payoff at any fixed
+    strategy pair by that constant -- both players' weights sum to `1`, so the shift factors
+    straight out. The per-state building block `value_add_const` below chains against. -/
 theorem payoff_add_const {G G' : MatrixGame I J} (c : ℝ) (h : ∀ i j, G'.A i j = G.A i j + c)
     {x : I → ℝ} {y : J → ℝ} (hx : x ∈ stdSimplex ℝ I) (hy : y ∈ stdSimplex ℝ J) :
     G'.payoff x y = G.payoff x y + c := by
@@ -417,7 +395,7 @@ theorem value_le_add_of_forall_le {G G' : MatrixGame I J} {ε : ℝ}
   linarith
 
 /-- **The payoff.** `MatrixGame.value` is `1`-Lipschitz in the sup-norm on the payoff matrix --
-    the fact the reachability-iterate convergence plan actually needs (see `PHASE0-NOTES.md`):
+    the fact `ReachConverge.lean` needs:
     once this lifts through `CSG.expect`/`stageValue` to the continuation `v`, it is exactly what
     `ωScottContinuous (C.reachOp goal hr)` requires. Both directions of `value_le_add_of_forall_le`
     (`G` against `G'`, then `G'` against `G`) assembled into one `abs`-valued statement via
@@ -432,33 +410,25 @@ theorem abs_value_sub_le {G G' : MatrixGame I J} {ε : ℝ}
 
 /-! ## `value` is invariant under relabelling the row player's action type
 
-**Status: confirmed by a clean `lake build`.** `mem_stdSimplex_comp`/`_symm` need only `Fintype`
-on the relabelled type, so each carries an `omit` for the `Nonempty`/`DecidableEq` instances the
-surrounding `variable` block would otherwise attach. The one genuinely new piece of infrastructure
-`Csg/Coalition.lean`'s own
-docstring flagged as missing: nothing in `MatrixGame.lean`/`Csg/Basic.lean` states that a matrix
-game's value doesn't care how the row player's action type is labelled, only what it's in bijection
-with.
+**Status: confirmed by a clean `lake build`.** A matrix game's value does not depend on how the
+row player's action type is labelled, only on what it is in bijection with.
+`mem_stdSimplex_comp`/`_symm` need only `Fintype` on the relabelled type, so each carries an `omit`
+for the `Nonempty`/`DecidableEq` instances the surrounding `variable` block would otherwise
+attach.
 
-Checked against the FMSD paper (Kwiatkowska, Norman, Parker, Santos, "Automatic verification of
-concurrent stochastic systems") before drafting this, rather than assuming the shape needed: its
-Definition 13 (the coalition-game construction reducing an `n`-player CSG to two-player form for a
-coalition `C`) reduces to exactly this shape once its own `⊥`/idle-action machinery (Definition 7's
-per-state *partial* action availability -- some players can have no enabled action at some states)
-is set aside. This project's `CSG`/`NCSG` already make that simplification everywhere (`Basic.lean`
-itself notes "every action available in every state", matching `DiscountedMDP`'s own MDP-side
-simplification), so under it `Definition 13`'s `A_C1`/`A_C2` -- built there as
-`(A_1 ∪ {⊥}) × ⋯ × (A_n' ∪ {⊥}) \ {(⊥,…,⊥)}` to handle a coalition whose members might all be
-idling -- degenerate exactly to the plain product `Csg.Coalition.CoalitionAction`/`ComplementAction`
-already built, with no exclusion needed (a coalition of players who always have a real action
-available is never in the all-idle corner case). So nothing already built needs to change; the
-simplification already standing throughout this project is consistent with the paper's own general
-construction, just a special case of it. The paper also states the resulting zero-sum identity
-`⟨⟨C⟩⟩P_max=?[ψ] ≡ ⟨⟨N∖C⟩⟩P_min=?[ψ]` without proof, "as a consequence of CSG determinacy" -- i.e.
-exactly the free/relabelling-level fact this section exists to actually *prove*, not merely assert.
-(As of `SkirmishFeintCoalition.lean`, this is no longer just anticipated: `reduceMax_ne_reduceMin`
-there is a genuine worked instance of `⟨⟨C⟩⟩P_max ≠ ⟨⟨C⟩⟩P_min` built on exactly this and the
-`value_relabelCol` section below.)
+In the FMSD paper (Kwiatkowska, Norman, Parker, Santos, "Automatic verification of concurrent
+stochastic systems"), Definition 13 (the coalition-game construction reducing an `n`-player CSG to
+two-player form for a coalition `C`) reduces to exactly this shape once its `⊥`/idle-action
+machinery (Definition 7's per-state *partial* action availability -- some players can have no
+enabled action at some states) is set aside. `CSG`/`NCSG` make that simplification everywhere
+(every action available in every state, as in `DiscountedMDP`), so under it Definition 13's
+`A_C1`/`A_C2` -- built there as `(A_1 ∪ {⊥}) × ⋯ × (A_n' ∪ {⊥}) \ {(⊥,…,⊥)}` to handle a coalition
+whose members might all be idling -- degenerate to the plain product
+`Csg.Coalition.CoalitionAction`/`ComplementAction`, with no exclusion needed. The paper also
+states the resulting zero-sum identity `⟨⟨C⟩⟩P_max=?[ψ] ≡ ⟨⟨N∖C⟩⟩P_min=?[ψ]` without proof, "as a
+consequence of CSG determinacy"; the relabelling-level fact behind it is what this section proves.
+`SkirmishFeintCoalition.lean`'s `reduceMax_ne_reduceMin` is a worked instance of
+`⟨⟨C⟩⟩P_max ≠ ⟨⟨C⟩⟩P_min` built on this and the `value_relabelCol` section below.
 
 The column side follows below (`value_relabelCol`).
 
@@ -551,16 +521,12 @@ theorem value_relabelRow (e : I' ≃ I) : (G.relabelRow e).value = G.value := by
 /-! ## `value` is invariant under relabelling the column player's action type
 
 **Status: confirmed by a clean `lake build`.** The mirror image of the row-relabelling section
-above ("not attempted here, would be a direct mirror of everything below with `I`/`J` swapped") --
-needed for the `Csg.Coalition` lift of
-`Csg.SkirmishFeint` (`SkirmishFeintCoalition.lean`), which has to relabel *both* sides of a stage
-game at once: the row and column index types coming out of `NCSG.reduceMin`/`reduceMax`
-(`CoalitionAction`/`ComplementAction`, dependent products over a `Finset` subtype) are each only in
-bijection with, not literally equal to, the bare per-player action types a hand-built `CSG` uses.
-`value_relabelRow` above handles one side; this section supplies the other, so the two can be
-composed (`relabelRow` then `relabelCol`, or either order -- they touch disjoint fields of
-`MatrixGame.A`) to relabel a whole `MatrixGame` at once -- exactly how `SkirmishFeintCoalition.lean`
-uses them.
+above. `SkirmishFeintCoalition.lean` relabels *both* sides of a stage game at once: the row and
+column index types coming out of `NCSG.reduceMin`/`reduceMax` (`CoalitionAction`/
+`ComplementAction`, dependent products over a `Finset` subtype) are each only in bijection with,
+not literally equal to, the bare per-player action types a hand-built `CSG` uses.
+`value_relabelRow` above handles one side and this section the other, so the two can be composed
+(in either order -- they touch disjoint fields of `MatrixGame.A`) to relabel a whole `MatrixGame`.
 
 Every theorem below is `value_relabelRow`'s own proof (above) with `I ↔ J`, row ↔ column,
 `optimalRow`/`value_row_optimal` ↔ `optimalCol`/`value_col_optimal` swapped throughout -- same
@@ -632,18 +598,14 @@ theorem value_relabelCol (e : J' ≃ J) : (G.relabelCol e).value = G.value := by
 
 /-! ## `value` as a linear program, for any action counts
 
-**Status: confirmed by a clean `lake build`.** `payoff_ge_of_row_ge`/`payoff_le_of_col_le` below
-serve the need that first motivated bound lemmas here -- certifying an explicit `value` for a worked
-instance, since `RockPaperScissorsLfp.lean`'s technique (a uniform strategy optimal regardless of
-the continuation) is a lucky accident of that game's cyclic symmetry, not something available in
-general. But a file motivated by "what does this one example need" is exactly the kind of
-narrowly-triggered "core" file worth avoiding when the underlying fact is actually general, so this
-section proves something more general than any one example needs: a fact true of *every*
-`MatrixGame`, at *every* action count, with no reference to any specific worked instance anywhere
-in a statement or proof: `value` is not just *some* real number pinned down by `Classical.choose`
-over Sion's minimax existence proof, it is *exactly* the optimal value of a genuine finite linear
-program, in the textbook sense -- `value_isLeast_rowLPFeasible`/`value_isGreatest_colLPFeasible`
-below.
+**Status: confirmed by a clean `lake build`.** `value` is not just *some* real number pinned down
+by `Classical.choose` over Sion's minimax existence proof: it is *exactly* the optimal value of a
+finite linear program, in the textbook sense -- `value_isLeast_rowLPFeasible`/
+`value_isGreatest_colLPFeasible` below. This holds for *every* `MatrixGame`, at *every* action
+count. `payoff_ge_of_row_ge`/`payoff_le_of_col_le` are the bound lemmas it rests on; they also
+certify an explicit `value` for a worked instance whose optimal strategies are not uniform, where
+`RockPaperScissorsLfp.lean`'s technique (a uniform strategy optimal regardless of the
+continuation, by that game's cyclic symmetry) is not available.
 
 **The two characterizations, precisely.** Writing `colVal p j := ∑ i, p i * G.A i j` (a row
 strategy `p`'s expected payoff against the *pure* column strategy `j`) and `rowVal q i := ∑ j, G.A
@@ -666,9 +628,9 @@ Neither theorem needs anything beyond what already exists: `payoff_single_left`/
 already established above (`value_row_optimal`, `value_col_optimal`) plus one of the two bound
 lemmas below, chained with `le_antisymm`'s two halves packaged as `IsLeast`/`IsGreatest` instead.
 
-**Where this is meant to be reused, and what it doesn't do.** Any future worked instance needing an
-explicit `value` (the very case that prompted this section, and later `SkirmishFeint.lean`'s own
-worked instance) has a route besides `value_unique`: exhibit a `p`/`q` pair achieving the *same*
+**Where this is reused, and what it doesn't do.** A worked instance needing an explicit `value`
+(`SkirmishFeint.lean`'s, for one) has a route besides `value_unique`: exhibit a `p`/`q` pair
+achieving the *same*
 number as both an element of `rowLPFeasible`/`colLPFeasible` and a lower/upper bound of it, and
 `le_antisymm` between the two `IsLeast`/`IsGreatest` facts pins the value directly, with the
 LP-shaped bookkeeping handled once, here, rather than re-derived per example. It also gives the

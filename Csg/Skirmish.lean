@@ -48,9 +48,8 @@ because `CSG` requires an `r` field, never consulted by anything downstream of t
 `SkirmishPos`, their `Fintype`/`DecidableEq`/`Inhabited` instances, `skirmishK`/`skirmishR`/
 `skirmishCSG`) plus the six case-by-case transition equalities and their `.support` corollaries
 (`PMF.support_pure`), which is exactly the raw material every qualitative operator (`Pre1`, `A`,
-`B`, ...) unfolds to. The actual 14 `sure`/`almost`/`limit` facts from `skirmish.prism.props` are
-deliberately left to a follow-up file, per the agreed easier-first pacing: get the model itself
-confirmed clean before building any fixed-point argument on top of it.
+`B`, ...) unfolds to. The 14 `sure`/`almost`/`limit` facts from `skirmish.prism.props` are in
+`SkirmishProperties.lean`.
 -/
 
 namespace Csg
@@ -104,7 +103,7 @@ noncomputable def skirmishK : SkirmishPos → SoldierMove → SniperMove → PMF
   | .hide, .run, .wait => PMF.pure .home
   | .hide, .run, .throw => PMF.pure .wet
 
-/-- Reward-free throughout: every qualitative operator this file's follow-up will use (`Pre1`, `A`,
+/-- Reward-free throughout: every qualitative operator `SkirmishProperties.lean` uses (`Pre1`, `A`,
     `B`, ...) reads only `K`'s support, never `r`. -/
 noncomputable def skirmishR : SkirmishPos → SoldierMove → SniperMove → ℝ := fun _ _ _ => 0
 

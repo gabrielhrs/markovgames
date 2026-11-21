@@ -8,12 +8,10 @@ import Csg.ReachOp
 /-!
 # A reusable reachability-value certificate
 
-**Status: confirmed by a clean `lake build`.** Pulls the assembly step of
+**Status: confirmed by a clean `lake build`.** The assembly step of
 `RockPaperScissorsLfp.lean`'s headline theorem -- `le_antisymm` applied to Knaster-Tarski's two
-pinning lemmas, `OrderHom.lfp_le_fixed`/`OrderHom.le_lfp` -- out of that one instance and into a
-combinator any `CSG`/goal/candidate can call directly. This is the first concrete artifact
-proposed in `VERIFICATION-FRAMEWORK.md`'s routing taxonomy: the "exact closed form" branch of that
-document's candidate-form axis, generalised from its one worked example.
+pinning lemmas, `OrderHom.lfp_le_fixed`/`OrderHom.le_lfp` -- as a combinator any
+`CSG`/goal/candidate can call directly.
 
 What this combinator automates is exactly the assembly, and nothing more: given a candidate `v`
 that the caller has *already* shown to be an exact fixed point of `reachOp`, and to lower-bound
@@ -22,7 +20,7 @@ does not, and cannot, discharge those two hypotheses itself -- that is the actua
 content of any correctness proof for a specific model, and stays exactly as hard as that model
 makes it (a handful of case splits closed by `linarith` for something rock-paper-scissors-sized
 and symmetric; realistically an external numeric solver plus a widened interval version of this
-same combinator for anything larger, per `VERIFICATION-FRAMEWORK.md`'s own scope note).
+same combinator for anything larger).
 
 **The assembly step itself has nothing to do with `CSG`s.** `le_antisymm` applied to
 `OrderHom.lfp_le_fixed`/`OrderHom.le_lfp` never touches `reachOp`, `stageValue`, or any `CSG` field

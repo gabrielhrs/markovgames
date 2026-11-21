@@ -9,37 +9,21 @@ import Mathlib.Order.FixedPoints
 import Mathlib.Order.OmegaCompletePartialOrder
 
 /-!
-# Stage 3: the reachability operator is `ωScottContinuous`, and the convergence theorem
+# The reachability operator is `ωScottContinuous`, and the convergence theorem
 
-**Status: confirmed by a clean `lake build`.** A per-file
-`lake build` on the pinned toolchain surfaced real errors this file's original "confirmed" status
-had not actually earned. **Round 1**: the Kleene theorem is `fixedPoints.lfp_eq_sSup_iterate`
-(its own top-level namespace, distinct from the `Function.fixedPoints` this file separately opens),
-not `OrderHom.lfp_eq_sSup_iterate`, and takes the `OrderHom` as an explicit first argument, not just
-the continuity proof; `le_ωSup _ 0` left the chain as a metavariable Lean's unifier couldn't pin
-down from a goal already reduced to a state-`s` value, fixed by supplying it explicitly; two
-`simp only [reachOpFun, ite_eq_right hgoal]` calls left a residual goal identifying a fresh
-occurrence of
-a `set`-abbreviated term (`g`/`d n`) with its own definition, closed by an explicit trailing `rfl`
-(`set`'s local-let unfolding is visible to `rfl` but isn't replayed by `simp` for occurrences that
-appear only *after* the `set` call). **Round 2**: `stageValue_lipschitz`'s state argument `s` is
-implicit and appears only in its *conclusion*, never in the hypotheses supplied at its one call
-site -- with no expected type on the enclosing `have` to unify against, Lean had nothing to infer
-it from ("don't know how to synthesize implicit argument"), fixed by supplying `(s := s)` directly.
-Confirmed clean by `lake build` after round 2. **Cosmetic pass**: the six `show ...` tactic
-calls that actually changed the goal (Lean's `show`-linter flags this -- `show` is meant only to
-*restate* the current goal for readability; `change` is the tactic for genuinely changing it via
-defeq) were all rewritten to `change`, no other edits.
-Stage 3 of the infinite-horizon build order
-(`PHASE0-NOTES.md`): shows `C.reachOp goal hr` (`ReachOp.lean`) is `ωScottContinuous`, using
-`stageValue_lipschitz` (`CsgMonotone.lean`) to bridge pointwise monotone convergence of a chain to
-convergence of the operator applied along it, then invokes Mathlib's Kleene fixed-point theorem
-(`fixedPoints.lfp_eq_sSup_iterate`) to conclude `(C.reachOp goal hr).lfp` -- the least fixed point
-Knaster-Tarski already hands us for free, the moment `ReachOp.lean` typechecks -- equals
-`⨆ n, (C.reachOp goal hr)^[n] ⊥`, the naive Kleene iterate sequence starting from `⊥`. That is
-the actual convergence guarantee this build order has been working towards: unrolling the
-reachability step finitely often, in the limit, reaches the same value Knaster-Tarski already
-promised existed in the abstract.
+**Status: confirmed by a clean `lake build`.** Shows `C.reachOp goal hr` (`ReachOp.lean`) is
+`ωScottContinuous`, using `stageValue_lipschitz` (`CsgMonotone.lean`) to bridge pointwise monotone
+convergence of a chain to convergence of the operator applied along it, then invokes Mathlib's
+Kleene fixed-point theorem (`fixedPoints.lfp_eq_sSup_iterate`) to conclude that
+`(C.reachOp goal hr).lfp` -- the least fixed point Knaster-Tarski gives for free -- equals
+`⨆ n, (C.reachOp goal hr)^[n] ⊥`, the naive Kleene iterate sequence starting from `⊥`: unrolling
+the reachability step finitely often reaches, in the limit, the value Knaster-Tarski promised in
+the abstract.
+
+Two interface notes. The Kleene theorem is `fixedPoints.lfp_eq_sSup_iterate`, in its own top-level
+namespace (distinct from `Function.fixedPoints`), and takes the `OrderHom` as an explicit first
+argument. `stageValue_lipschitz`'s state argument is implicit and appears only in its conclusion,
+so its one call site supplies `(s := s)`.
 
 `Set.Icc (0:ℝ) 1` needs `[Fact ((0:ℝ) ≤ 1)]` in scope to get Mathlib's `CompleteLattice`
 instance (`Set.Icc.completeLattice`, `Mathlib/Order/CompleteLatticeIntervals.lean` -- confirmed
@@ -172,12 +156,11 @@ theorem reachOp_ωScottContinuous (goal : S → Prop) [DecidablePred goal]
       rfl
     rw [hLHS_eq, hRHS_eq, hkey]
 
-/-- **Stage 3, the payoff.** `(C.reachOp goal hr).lfp` -- Knaster-Tarski's least fixed point,
+/-- **The payoff.** `(C.reachOp goal hr).lfp` -- Knaster-Tarski's least fixed point,
     already available for free the moment `ReachOp.lean` typechecks -- is genuinely the limit of
     the naive iterate sequence starting from `⊥`: Kleene's fixed-point theorem
     (`fixedPoints.lfp_eq_sSup_iterate`), applicable now that `reachOp_ωScottContinuous` supplies its
-    hypothesis. This upgrades `VERIFICATION-FRAMEWORK.md`'s "numeric iterate, undiscounted" row from
-    open to done, with no computable convergence *rate* attached (Kleene's theorem gives none). -/
+    hypothesis. No computable convergence *rate* comes with it (Kleene's theorem gives none). -/
 theorem reachOp_lfp_eq_sSup_iterate (goal : S → Prop) [DecidablePred goal]
     (hr : ∀ s a1 a2, C.r s a1 a2 = 0) :
     (C.reachOp goal hr).lfp = ⨆ n, (C.reachOp goal hr)^[n] ⊥ :=

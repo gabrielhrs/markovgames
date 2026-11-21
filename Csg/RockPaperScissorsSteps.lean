@@ -13,28 +13,23 @@ import Csg.RewardUntilCertificate
 instead of a probability (`Pmax=? [F win2]`, already done in
 `RockPaperScissorsLfp.lean`/`RockPaperScissorsUntil.lean`), the expected number of raw `CSG` steps
 until *some* round is won (`win1` or `win2`, either player), under the same uniform play that was
-already optimal for every stage game in this line. Hand-solved before any code was written: let
+already optimal for every stage game in this line. Solved by hand: let
 `x` = expected steps from `initial`, `y` = expected steps from `draw`. Each round at `initial`
 resolves immediately (`win1`/`win2`, contributing no further steps) with probability `2/3`, or
 drifts to `draw` with probability `1/3`; `draw` always costs exactly one more step back to
 `initial`. That gives `x = 1 + y/3` and `y = 1 + x`, with the unique real solution `x = 2`, `y = 3`.
 
-**Deliberately scoped as a bespoke instance, not a general reward-until operator.** Reachability
-values live in `[0, 1]`, which is what let `Set.Icc (0:ℝ) 1` be a `CompleteLattice` for free;
-expected steps has no such bound (a state from which absorption isn't certain could legitimately
-need `⊤`), so a fully general version needs `ℝ≥0∞`, not `ℝ`, to state `.lfp` over at all -- exactly
-the layer the reachcert debrief flagged as the hard one (its own `R_inf` completeness theorem was
-left `sorry` in the source). Building that first, before knowing what a concrete proof actually
-needs, would repeat the mistake this project has avoided everywhere else (`RecyclingRobot.lean`,
-`MatchingPennies.lean`, `RockPaperScissorsLfp.lean` all validated a concrete instance before any
-generic combinator existed). So this file works directly in `ℝ`, reusing the *already fully
-general* `CSG.stageGame`/`stageValue`/`MatrixGame.value` machinery -- none of which was ever
-restricted to a reward-free `CSG`, only `CsgMonotone.lean`'s `[0, 1]`-boundedness lemmas needed
-`C.r ≡ 0` -- against a *new* `CSG` instance, `rpsCSGSteps`, scored by a constant reward of `1` per
-step instead of `rpsR`'s `0`. No new matrix-game infrastructure, no `OrderHom` bundling, no `goal`
-parameter: `rpsK` (the transition kernel) is reused unchanged, and the "someone has won" absorption
-is hard-coded to `win1 ∨ win2` directly in `rpsStepsStep` below, rather than threaded through as a
-general predicate.
+**Scoped as a bespoke instance, not a general reward-until operator.** Reachability values live in
+`[0, 1]`, which is what lets `Set.Icc (0:ℝ) 1` be a `CompleteLattice` for free; expected steps has
+no such bound (a state from which absorption isn't certain could legitimately need `⊤`), so a
+fully general version needs `ℝ≥0∞`, not `ℝ`, to state `.lfp` over at all. This file works directly
+in `ℝ`, reusing the fully general `CSG.stageGame`/`stageValue`/`MatrixGame.value` machinery -- none
+of which is restricted to a reward-free `CSG`; only `CsgMonotone.lean`'s `[0, 1]`-boundedness
+lemmas need `C.r ≡ 0` -- against a *new* `CSG` instance, `rpsCSGSteps`, scored by a constant reward
+of `1` per step instead of `rpsR`'s `0`. No new matrix-game infrastructure, no `OrderHom` bundling,
+no `goal` parameter: `rpsK` (the transition kernel) is reused unchanged, and the "someone has won"
+absorption is hard-coded to `win1 ∨ win2` directly in `rpsStepsStep` below, rather than threaded
+through as a general predicate.
 
 **Working in plain `ℝ`, rather than `ℝ≥0∞`, sidesteps the spurious-solution issue by construction,
 not just by convenience.** Reachability's Knaster-Tarski certificate
@@ -61,18 +56,10 @@ fully formal a.s.-absorption/properness argument is exactly the piece reachcert'
 ranking-function machinery exists for, and is not attempted here -- matching how reachcert's own
 `R_inf` completeness theorem was left `sorry` in its source rather than treated as a solved problem.
 
-**Retrofit, added after `RewardUntilCertificate.lean` existed.** `rpsSteps_fixed`/`rpsSteps_unique`
-below predate that file's general combinator -- this was, per that file's own docstring, the
-bespoke pair `CSG.rewardUntilOp_eq_of_certificate` generalised away from. Left unretrofitted, that
-generalisation was untested against the one instance it was extracted from, the same gap that made
-`RockPaperScissorsLfp.lean → ReachCertificate.lean`'s own retrofit worth doing rather than
-cosmetic. `rpsCSGSteps_rewardUntilOp_unique` closes it: feeding the same two hand-proved
-hypotheses through `rewardUntilOp_eq_of_certificate` instead of packaging the `∃!` conclusion
-inline exercises the combinator against real, previously-existing proof terms rather than only the
-fully abstract statement it specialises -- if the generalisation had silently dropped a hypothesis
-or flipped a direction, this would fail to typecheck even though the two source lemmas above still
-would. Closes `VERIFICATION-FRAMEWORK.md`'s Axis A note that this worked instance had never run
-through its own combinator. **Confirmed by a clean `lake build`.**
+**Through the general combinator.** `rpsCSGSteps_rewardUntilOp_unique` feeds `rpsSteps_fixed` and
+`rpsSteps_unique` through `RewardUntilCertificate.lean`'s `CSG.rewardUntilOp_eq_of_certificate`,
+so the combinator is exercised against this instance's own proof terms and not only in the
+abstract.
 -/
 
 namespace Csg

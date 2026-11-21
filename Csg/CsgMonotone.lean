@@ -8,18 +8,13 @@ import Csg.Basic
 /-!
 # Monotonicity and boundedness of `CSG.stageValue`
 
-**Status: confirmed by a clean `lake build`, including both the monotonicity/boundedness family
-(`expect_mono` through `stageValue_le_one`) and the Lipschitz-continuity family
-(`expect_lipschitz` through `stageValue_lipschitz`, Lipschitz continuity of `stageValue` in the
-continuation).**
-Stage 2 of the infinite-horizon build order (`PHASE0-NOTES.md`): lifts `MatrixGameMonotone.lean`'s
-facts about `MatrixGame.value` (monotone in the payoff matrix; sandwiched between constant bounds
-on the matrix; Lipschitz in the matrix) up through `CSG.expect` and `CSG.stageGame` to
-`CSG.stageValue` itself. Monotonicity and boundedness are exactly the ingredient the reachability
-Bellman operator (next artifact) needs to be a genuine `OrderHom` on `S → Set.Icc (0:ℝ) 1`;
-Lipschitz continuity is the ingredient Stage 3 needs to show that operator is `ωScottContinuous`,
-hence that its `.lfp` equals the limit of the naive iterate sequence
-(`OrderHom.lfp_eq_sSup_iterate`).
+**Status: confirmed by a clean `lake build`.** Lifts `MatrixGame.lean`'s facts about
+`MatrixGame.value` (monotone in the payoff matrix; sandwiched between constant bounds on the
+matrix; Lipschitz in the matrix) up through `CSG.expect` and `CSG.stageGame` to `CSG.stageValue`
+itself. Monotonicity and boundedness are the ingredients `ReachOp.lean`'s Bellman operator needs
+to be an `OrderHom` on `S → Set.Icc (0:ℝ) 1`; Lipschitz continuity is the ingredient
+`ReachConverge.lean` needs to show that operator is `ωScottContinuous`, hence that its `.lfp`
+equals the limit of the naive iterate sequence (`OrderHom.lfp_eq_sSup_iterate`).
 
 Boundedness needs one extra hypothesis monotonicity and the Lipschitz bound don't: a reward-free
 `CSG` (`C.r ≡ 0` everywhere). This is not a real restriction for reachability -- every reachability
@@ -33,11 +28,11 @@ bound need no such hypothesis (a reward term that doesn't depend on `v` cancels 
 *difference* of stage values, whether or not it's zero) and don't get one.
 
 Four layers, `expect` → `stageGame.A` → `stageValue`, each following the same shape
-`MatrixGameMonotone.lean`'s own families already used: a monotonicity fact free of any side
-condition, two boundedness facts (`nonneg`/`le_one`) that do need one, and a Lipschitz fact
-(needs `0 ≤ ε` explicitly, since `S` isn't assumed `Nonempty` here, so `ε`'s sign can't be
-recovered from a pointwise bound the way it could if some `s'` were guaranteed to exist) that,
-like monotonicity, doesn't.
+`MatrixGame.lean`'s own families use: a monotonicity fact free of any side condition, two
+boundedness facts (`nonneg`/`le_one`) that do need one, and a Lipschitz fact (needs `0 ≤ ε`
+explicitly, since `S` isn't assumed `Nonempty` here, so `ε`'s sign can't be recovered from a
+pointwise bound the way it could if some `s'` were guaranteed to exist) that, like monotonicity,
+doesn't.
 -/
 
 namespace Csg
@@ -107,7 +102,7 @@ theorem stageGame_A_le_one (hr : ∀ s a1 a2, C.r s a1 a2 = 0) {s : S} {v : S �
 
 /-- **The payoff.** `stageValue` is monotone in the continuation `v`: `MatrixGame.value_mono`
     applied to `stageGame_A_mono`. This is exactly what makes the reachability Bellman operator
-    (next artifact) an `OrderHom`, not just a function. -/
+    (`ReachOp.lean`) an `OrderHom`, not just a function. -/
 theorem stageValue_mono {s : S} {v w : S → ℝ} (hle : ∀ s', v s' ≤ w s') :
     C.stageValue s v ≤ C.stageValue s w := by
   change (C.stageGame s v).value ≤ (C.stageGame s w).value
@@ -130,11 +125,11 @@ theorem stageValue_le_one (hr : ∀ s a1 a2, C.r s a1 a2 = 0) {s : S} {v : S →
   exact (C.stageGame s v).value_le_of_forall_le fun a1 a2 => C.stageGame_A_le_one hr hv a1 a2
 
 /-- One-directional half of `expect_lipschitz`, in the `value_le_add_of_forall_le`/
-    `payoff_add_const` style already used in `MatrixGameMonotone.lean`: shifting every state's
-    continuation value up by at most `ε` shifts the expectation up by at most `ε`, since the
-    transition weights are nonnegative and sum to at most `1` (`expect_le_one`'s own `hmass`
-    argument, reused verbatim). Needs `0 ≤ ε` explicitly for the final `mul_le_mul_of_nonneg_right`
-    step: without it, `(Σ weights) * ε ≤ 1 * ε` could point the wrong way. -/
+    `payoff_add_const` style of `MatrixGame.lean`: shifting every state's continuation value up by
+    at most `ε` shifts the expectation up by at most `ε`, since the transition weights are
+    nonnegative and sum to at most `1` (`expect_le_one`'s own `hmass` argument). Needs `0 ≤ ε`
+    explicitly for the final `mul_le_mul_of_nonneg_right` step: without it,
+    `(Σ weights) * ε ≤ 1 * ε` could point the wrong way. -/
 theorem expect_le_add_of_forall_le {s : S} {a1 : A1} {a2 : A2} {v w : S → ℝ} {ε : ℝ} (hε : 0 ≤ ε)
     (h : ∀ s', v s' ≤ w s' + ε) : C.expect s a1 a2 v ≤ C.expect s a1 a2 w + ε := by
   unfold expect
@@ -158,11 +153,10 @@ theorem expect_le_add_of_forall_le {s : S} {a1 : A1} {a2 : A2} {v w : S → ℝ}
         linarith [mul_le_mul_of_nonneg_right hmass hε]
     _ = (∑ s' : S, (C.K s a1 a2 s').toReal * w s') + ε := by rw [one_mul]
 
-/-- **Stage 2's key lemma.** `expect` moves by at most `ε` when the continuation does, in either
-    direction -- the one-step version of the Lipschitz bound this project already has for
-    `MatrixGame.value` (`MatrixGameMonotone.lean`'s `abs_value_sub_le`), needed to lift that bound
-    up through `stageGame`/`stageValue` in turn. Same `abs_le`-splitting shape as
-    `abs_value_sub_le` itself. -/
+/-- `expect` moves by at most `ε` when the continuation does, in either direction -- the one-step
+    version of the Lipschitz bound `MatrixGame.lean` has for `MatrixGame.value`
+    (`abs_value_sub_le`), needed to lift that bound up through `stageGame`/`stageValue` in turn.
+    Same `abs_le`-splitting shape as `abs_value_sub_le` itself. -/
 theorem expect_lipschitz {s : S} {a1 : A1} {a2 : A2} {v w : S → ℝ} {ε : ℝ} (hε : 0 ≤ ε)
     (h : ∀ s', |v s' - w s'| ≤ ε) : |C.expect s a1 a2 v - C.expect s a1 a2 w| ≤ ε := by
   have hub : ∀ s', v s' ≤ w s' + ε := fun s' => by linarith [(abs_le.mp (h s')).2]
@@ -185,8 +179,8 @@ theorem stageGame_A_lipschitz {s : S} {v w : S → ℝ} {ε : ℝ} (hε : 0 ≤ 
   exact C.expect_lipschitz hε h
 
 /-- **The payoff.** `stageValue` moves by at most `ε` when the continuation does, in the sup-norm
-    sense (`h`): `MatrixGame.abs_value_sub_le` applied to `stageGame_A_lipschitz`. This is exactly
-    the ingredient Stage 3 needs for `ωScottContinuous`: a monotone chain converging pointwise
+    sense (`h`): `MatrixGame.abs_value_sub_le` applied to `stageGame_A_lipschitz`. This is what
+    `ReachConverge.lean` needs for `ωScottContinuous`: a monotone chain converging pointwise
     forces its `stageValue` images to converge to the same limit's `stageValue`, since Lipschitz
     continuity (in particular, plain continuity) commutes with limits of monotone real sequences
     the same way it does with any convergent sequence. -/

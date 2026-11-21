@@ -12,36 +12,15 @@ import Mathlib.Probability.Distributions.Uniform
 /-!
 # Worked instance: de Alfaro and Majumdar's Example 3 / Fig. 1
 
-**Status: confirmed by a clean `lake build`.** Five rounds of fixes against real `lake build`
-output, briefly: missing imports and a broken pair of fully-general `MatrixGame` lemmas replaced
-by concrete `RowMove`/`ColMove`-specific ones (round 1); `cbR_zero` restated against `cbCSG.r`
-plus assorted tactic-level fixes -- `ring`→`abel`, `norm_num`→`simp` on custom-inductive
-`if`-conditions, `← mul_add`/`← add_mul` factoring, explicit `mul_le_mul_of_nonneg_left/right`
-hints in place of bare `nlinarith` (round 2); a stray `ℝ≥0∞` that failed to parse (`ENNReal`
-instead), and `coBuchiInnerOpFun`'s `Set.Icc`-subtype packaging defeating `rw`'s motive-checking
-on `ite_eq_left`/`ite_eq_right`, fixed by adding `CSG.coBuchiInnerOpFun_coe` (`CoBuchiOp.lean`) as a
-subtype-free `ℝ`-valued `if`-`then`-`else` (round 3); a `rw [lemma (by tac)]`/`exact lemma (by
-tac)` pattern in `cbCoin_apply_left`/`_right`/`_other` leaving the embedded tactic block's target
-as a genuinely separate unsolved goal, fixed by naming the side condition with an explicit `have`
-first, plus a missing `.t5` case in `cbExpect_t3d`'s `rw` chain and several `cbInnerGfp_eq` spots
-needing an explicit trailing `rfl` where `rw`'s own reflexivity check didn't unfold
-`cbGClosed`/`cbGClosedVal` as aggressively as a standalone `rfl` (round 4); round 4's `have`
-extraction for `cbCoin_apply_left`/`_right`/`_other` still filled the wrong argument slot --
-`PMF.uniformOfFinset_apply_of_mem`/`_of_notMem` take `hs : s.Nonempty` as an *explicit* argument
-*before* the membership proof -- fixed by supplying the witness explicitly,
-`PMF.uniformOfFinset_apply_of_mem ⟨x, by simp⟩ hx` (round 5). **Cosmetic pass**: the 25 `show ...`
-tactic calls that actually changed the goal (Lean's `show`-linter flags this) were all rewritten
-to `change`; term-mode `show ... from rfl`/`show ... by decide` used as plain arguments inside
-`rw [...]` are a different, unaffected construct and were left alone. The worked instance
-`BuchiOp.lean`'s and `CoBuchiOp.lean`'s
-docstrings both flagged as the natural next step: de Alfaro and Majumdar, "Quantitative Solution of
-Omega-Regular Games," JCSS 68 (2004) 374-397, Example 3 / Fig. 1 (p. 395), the paper's own
-demonstration that the MDP shortcut -- reducing a Büchi/co-Büchi condition to plain reachability of
-the almost-surely-winning set -- fails for concurrent games. Five states `t1,...,t5`,
-`U = {t1, t2, t4}`, co-Büchi objective `◇□U`. The paper states `⟨1⟩◇□U(t2) = 2/3` and
-`⟨1⟩◇□U(t3) = 1/3` exactly (Section 7); this file proves
-`(cbCSG.coBuchiOp cbU cbR_zero).lfp = cbVStar` with `cbVStar` matching those two values (and `1` at
-`t1`, `0` at `t4`/`t5`) on the nose, via `OrderHom.lfp_eq_of_certificate`/`gfp_eq_of_certificate`.
+**Status: confirmed by a clean `lake build`.** A worked instance of `coBuchiOp`: de Alfaro and
+Majumdar, "Quantitative Solution of Omega-Regular Games," JCSS 68 (2004) 374-397, Example 3 /
+Fig. 1 (p. 395), the paper's own demonstration that the MDP shortcut -- reducing a
+Büchi/co-Büchi condition to plain reachability of the almost-surely-winning set -- fails for
+concurrent games. Five states `t1,...,t5`, `U = {t1, t2, t4}`, co-Büchi objective `◇□U`. The paper
+states `⟨1⟩◇□U(t2) = 2/3` and `⟨1⟩◇□U(t3) = 1/3` exactly (Section 7); this file proves
+`(cbCSG.coBuchiOp cbU cbR_zero).lfp = cbVStar` with `cbVStar` matching those two values (and `1`
+at `t1`, `0` at `t4`/`t5`) on the nose, via `OrderHom.lfp_eq_of_certificate`/
+`gfp_eq_of_certificate`.
 
 Board (row player picks first coordinate of each action label, column picks second, per the
 paper's own Fig. 1 caption): `t1` self-loops with probability `1`. At `t2`, only the row player

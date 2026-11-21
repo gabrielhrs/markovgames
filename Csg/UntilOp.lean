@@ -12,8 +12,7 @@ import Csg.ReachOp
 **Status: confirmed by a clean `lake build`.**
 
 Generalises `ReachOp.lean`'s reachability-only operator to a genuine `φ U goal` ("stay in `φ`
-until `goal`") operator, per
-`VERIFICATION-FRAMEWORK.md`'s temporal-shape axis: unbounded reachability is the special case
+until `goal`") operator: unbounded reachability is the special case
 `φ := fun _ => True`, but `until` is the more expressive primitive most model-checking treatments
 actually start from. Written as a sibling of `ReachOp.lean`, importing `CsgMonotone.lean` directly,
 rather than on top of it -- there is no reachability-specific content either file needs from the

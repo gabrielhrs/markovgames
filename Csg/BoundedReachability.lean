@@ -8,21 +8,17 @@ import Csg.Basic
 /-!
 # Bounded reachability for concurrent stochastic games
 
-**Status: done, confirmed by a clean `lake build`.** First half of the rock-paper-scissors
-worked example: the general step-bounded reachability operator, before any concrete game is
-instantiated over it. Builds on `Csg/Basic.lean` (`CSG.stageValue`); only imports
-`MatrixGameMonotone.lean` for now (not yet used here) since the next artifact -- boundedness of
-`reachBounded` in `[0, 1]`, checked against a concrete instance -- will want it immediately.
+**Status: confirmed by a clean `lake build`.** The general step-bounded reachability operator,
+which `Csg/RockPaperScissors.lean` instantiates. Builds on `Csg/Basic.lean` (`CSG.stageValue`).
 
 `reachBounded goal k s`: the value, at state `s`, of reaching a `goal` state within `k` steps,
 played optimally by both players (row minimising, column maximising, `MatrixGame.lean`'s own
-convention). Per the discussion in `PHASE0-NOTES.md`: this is the *opposite* of the row-maximises/
-column-minimises convention the FMSD paper itself uses, deliberately not threaded through the rest
-of the project as a sign flip -- so whichever player benefits from reaching `goal` is the *column*
-player here, regardless of which paper-side "player 1"/"player 2" label it carries in a given
-property. This computes plain step-bounded reachability, `F<=k goal` (equivalently `rPATL`'s
-`Pmax=? [true U<=k goal]`) -- exactly the shape of the property in the rock-paper-scissors example
-this is being built for.
+convention). This is the *opposite* of the row-maximises/column-minimises convention the FMSD
+paper uses, and is deliberately not threaded through the rest of the project as a sign flip -- so
+whichever player benefits from reaching `goal` is the *column* player here, regardless of which
+paper-side "player 1"/"player 2" label it carries in a given property. This computes plain
+step-bounded reachability, `F<=k goal` (equivalently `rPATL`'s `Pmax=? [true U<=k goal]`), the
+shape of the property in the rock-paper-scissors example.
 
 Structurally this is `bwInd` (`BackwardInduction.lean`) with one real difference: `bwInd` has no
 notion of a goal at all, so its only per-step choice is "play the stage game." `reachBounded` folds

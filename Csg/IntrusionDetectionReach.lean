@@ -9,12 +9,10 @@ import Csg.ReachCertificate
 /-!
 # A genuine reachability instance on the IDS model, separate from `bwInd`'s reward question
 
-**Status: confirmed by a clean `lake build`.** `idsVStar_fixed`'s `compromised` case is a reminder
-that `simp only` rewriting only the goal -- turning `fun s' => (idsVStar s' : ℝ)` into
-`fun s' => 1` -- while a hypothesis such as `hle`/`hge` still carries the un-rewritten form, leaves
-`linarith` comparing syntactically different `.value` atoms for what is definitionally the same real
-number: pinning the needed equality (`idsVStar .compromised = 1`) as its own fact and rewriting only
-the side that needs it keeps the `.value` term itself untouched, so it matches `hle`/`hge` exactly.
+**Status: confirmed by a clean `lake build`.** One proof-shape note: in `idsVStar_fixed`'s
+`compromised` case the needed equality (`idsVStar .compromised = 1`) is pinned as its own fact and
+rewritten only where needed, so the `.value` term stays syntactically the one `hle`/`hge` carry
+and `linarith` can match them.
 
 `IntrusionDetection.lean` asks a *reward* question of this model: how much cumulative damage does
 optimal play produce (`bwInd`). This file asks a completely different, plain *reachability*
@@ -22,10 +20,9 @@ question about the exact same transition structure: ignoring damage entirely, ca
 guarantee the system returns to `healthy`, no matter what the attacker does? That is squarely a
 `P[F healthy]`-style property in rPATL's sense -- the same restricted, single-path-operator
 fragment `ReachOp.lean`/`ReachCertificate.lean` already implement, just a new instance of it, not
-new scope. (A genuinely stronger claim -- `healthy` recurs *infinitely often*, `P[G F healthy]` --
-is full LTL, outside rPATL's syntax and this project's whole fixed-point architecture; it would
-need an automata-theoretic model-checking technique this project doesn't have, and is deliberately
-not attempted here. See `PHASE0-NOTES.md` for the fuller discussion of that boundary.)
+new scope. (A stronger claim -- `healthy` recurs *infinitely often*, `P[G F healthy]` -- is
+outside rPATL's syntax; `IntrusionDetectionRecurrence.lean` proves it against oblivious attackers,
+and `BuchiOp.lean` has the general fixed-point characterisation.)
 
 `reachOp` needs a reward-free `CSG` (`hr : C.r ≡ 0`), so this file pairs `IntrusionDetection.lean`'s
 `idsK` with a fresh, all-zero reward function, `idsGameCSG` -- the *same* transitions, a different

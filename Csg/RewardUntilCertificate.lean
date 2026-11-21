@@ -8,16 +8,12 @@ import Csg.Basic
 /-!
 # A reusable reward-until-absorption certificate, in plain `ℝ`
 
-**Status: confirmed by a clean `lake build`.**
-Generalises `RockPaperScissorsSteps.lean`'s
-bespoke `rpsStepsStep`/`rpsSteps_fixed`/`rpsSteps_unique` pattern from a hard-coded `win1 ∨ win2`
-goal to an arbitrary `CSG` and `goal : S → Prop`, exactly the way `ReachCertificate.lean`
-generalised `RockPaperScissorsLfp.lean`'s `rpsVStar`-specific certificate, the natural next step
-once `RockPaperScissorsSteps.lean` built clean. Chose the `ℝ`-valued route explicitly over a
-fully general `ℝ≥0∞`-valued `CSG.rewardUntilOp` (see `PHASE0-NOTES.md`'s writeup of the
-extended-value minimax obstruction that choice sidesteps: `Sion.exists_isSaddlePointOn`, which
-every stage-value computation in this project relies on, needs a genuine real topological vector
-space, and `ℝ≥0∞` is not one).
+**Status: confirmed by a clean `lake build`.** Generalises `RockPaperScissorsSteps.lean`'s
+`rpsStepsStep`/`rpsSteps_fixed`/`rpsSteps_unique` pattern from a hard-coded `win1 ∨ win2` goal to
+an arbitrary `CSG` and `goal : S → Prop`, the way `ReachCertificate.lean` generalises
+`RockPaperScissorsLfp.lean`'s `rpsVStar`-specific certificate. The values are `ℝ`, not `ℝ≥0∞`:
+`Sion.exists_isSaddlePointOn`, which every stage-value computation in this project relies on,
+needs a real topological vector space, and `ℝ≥0∞` is not one.
 
 **Deliberately still bespoke in one respect, by design, not by oversight.** Reachability's
 `reachOp`/`untilOp` are bundled `OrderHom`s on the complete lattice `S → Set.Icc (0:ℝ) 1`, so

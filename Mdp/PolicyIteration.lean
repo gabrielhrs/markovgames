@@ -6,40 +6,36 @@ Authors: Gabriel Santos
 import Mdp.ValueIteration
 
 /-!
-# Policy iteration — Phase 2c
+# Policy iteration
 
-**Status: confirmed by a clean `lake build`, zero `sorry`s (Phase 2c) — see `PHASE0-NOTES.md`.**
-This status line had gone stale (it said "drafted, not yet run through `lake build`" long after
-the build had actually gone clean, across two passes: one fix round for `value_policyStep_ge`,
-then everything after it confirmed first try); corrected in place rather than treated as
-still-open work. Ports the whole of `Policy_Iteration.thy` for the finite-state/finite-action
-case: policy improvement never hurts, no improvement possible means already optimal, the
-algorithm reaches a fixed point in finitely many steps, and that fixed point's value is exactly
-`vOpt`.
+**Status: confirmed by a clean `lake build`.** Ports the whole of `Policy_Iteration.thy` for the
+finite-state/finite-action case: policy improvement never hurts, no improvement possible means
+already optimal, the algorithm reaches a fixed point in finitely many steps, and that fixed
+point's value is exactly `vOpt`.
 
 Isabelle proves the first, hardest piece (`policy_eval_mon`) via a
 Neumann-series/`blinfun`-inverse argument (`lemma_6_1_2_b`, `inv_norm_le'`), because its Banach
 fixed-point machinery at that layer doesn't hand it a monotone-convergence shortcut. This port
-takes a different route, available precisely *because* Phase 1/2a went through Mathlib's
-`ContractingWith` instead of reproving Banach by hand: `Lpolicy d'` is monotone (`Lpolicy_mono`,
-a nonneg-weighted-sum argument, same shape as `abs_expect_sub_le`), a policy-improvement step only
-ever raises the value at the start (`Lpolicy_policyStep_ge`, from the improvement bridge lemma
-plus `bellman`'s `sup'` being `≥` any one term), and a monotone operator applied to a rising start
-keeps rising under iteration, converging (Phase 2a machinery) to something `≥` the start
-(`Monotone.ge_of_tendsto`). No Neumann series needed anywhere in this file.
+takes a different route, available because `Basic.lean` and `ValueIteration.lean` go through
+Mathlib's `ContractingWith`: `Lpolicy d'` is monotone (`Lpolicy_mono`, a nonneg-weighted-sum
+argument, same shape as `abs_expect_sub_le`), a policy-improvement step only ever raises the value
+at the start (`Lpolicy_policyStep_ge`, from the improvement bridge lemma plus `bellman`'s `sup'`
+being `≥` any one term), and a monotone operator applied to a rising start keeps rising under
+iteration, converging (`Lpolicy_iterate_tendsto`) to something `≥` the start
+(`Monotone.ge_of_tendsto`). No Neumann series is needed anywhere in this file.
 
-The termination argument is handled the same way Phase 2b handled `value_iteration`'s: rather
-than a native Lean `termination_by`/`decreasing_by` mirroring Isabelle's well-founded recursion
-on a strict order over the finite decision-rule set, `policyIteration` is defined directly in
-closed form via `Nat.find` on an existence proof (`exists_policyStep_fixedPoint`) built from
-pigeonhole (`Finite.exists_ne_map_eq_of_infinite`, applicable because `S → A` is finite via
-`Pi.finite` — no `DecidableEq` needed, resolving an earlier-flagged concern) plus the same
+The termination argument is handled the same way `ValueIterationAlgorithm.lean` handles
+`value_iteration`'s: rather than a native Lean `termination_by`/`decreasing_by` mirroring
+Isabelle's well-founded recursion on a strict order over the finite decision-rule set,
+`policyIteration` is defined directly in closed form via `Nat.find` on an existence proof
+(`exists_policyStep_fixedPoint`) built from pigeonhole (`Finite.exists_ne_map_eq_of_infinite`,
+applicable because `S → A` is finite via `Pi.finite`, with no `DecidableEq` needed) plus the same
 monotone-convergence machinery used for `value_policyStep_ge`.
 
 Maps to `Policy_Iteration.thy`:
 
 * `policyImprove` — `policy_improvement`: keep `d s` if it's already a maximiser, else switch to
-  a genuine maximiser (`findPolicy`, Phase 2a). The "prefer to keep" behaviour is what lets
+  a genuine maximiser (`findPolicy`). The "prefer to keep" behaviour is what lets
   `eval_eq_imp_policy_eq` conclude `d = policy_step d` from "no improvement possible", rather
   than just "some equally-good policy".
 * `policyStep` — `policy_step`.
@@ -53,11 +49,10 @@ Maps to `Policy_Iteration.thy`:
   and `policy_iteration` itself, reached via `Nat.find` rather than Isabelle's `termination`
   proof (`finite_D𝔻`/`finite_acyclic_wf`).
 * `policyStep_fixedPoint_value_eq_vOpt`, `policy_iteration_correct` — a
-  `policyStep`-fixed policy's value is a `bellman`-fixed point too, hence (Banach uniqueness,
-  Phase 2a) exactly `vOpt`.
+  `policyStep`-fixed policy's value is a `bellman`-fixed point too, hence (Banach uniqueness)
+  exactly `vOpt`.
 
-Modified Policy Iteration and the splitting methods remain optional stretch, not prerequisites
-for Goal 02 (CSGs).
+Modified Policy Iteration and the splitting methods are not ported.
 
 **Least certain parts of this file**, all confirmed against the actual Mathlib source rather than
 guessed: `Ne.lt_or_gt (h : a ≠ b) : a < b ∨ b < a` (`Mathlib/Order/Basic.lean`, not the guessed
@@ -88,7 +83,7 @@ noncomputable def policyImprove (d : S → A) (v : S → ℝ) (s : S) : A :=
 
 /-- Applying `Lpolicy` with the improved policy reproduces `bellman` exactly, whichever branch of
     `policyImprove` fired: if `d s` was kept, that's because its own value already equals the
-    `sup`; if it was switched, `bellman_eq_Lpolicy_findPolicy` (Phase 2a) gives it directly.
+    `sup`; if it was switched, `bellman_eq_Lpolicy_findPolicy` gives it directly.
     Corresponds to `is_arg_max_find_policy` / `\<L>\<^sub>b_eq_argmax_L\<^sub>a` in
     `Value_Iteration.thy`, specialised to the improved policy. -/
 theorem Lpolicy_policyImprove_eq_bellman (d : S → A) (v : S → ℝ) :
@@ -109,7 +104,7 @@ noncomputable def policyStep (d : S → A) : S → A :=
 /-- `Lpolicy d` is monotone: a nonneg-weighted average (`expect`) of a pointwise-larger function
     is pointwise larger, and scaling by `M.l ≥ 0` and adding the (unchanged) reward preserve that.
     Same shape as `abs_expect_sub_le`, with `≤` in place of `abs`. New in this file — not a
-    corollary of anything in Phase 1/2a/2b. -/
+    corollary of anything in the files this one imports. -/
 theorem Lpolicy_mono (d : S → A) : Monotone (M.Lpolicy d) := by
   intro v w hvw
   have hexpect : ∀ s a, M.expect s a v ≤ M.expect s a w := by
@@ -126,9 +121,8 @@ theorem Lpolicy_mono (d : S → A) : Monotone (M.Lpolicy d) := by
   linarith [hstep]
 
 /-- Iterating `Lpolicy d` from any starting value function converges to `d`'s own value function.
-    Exact proof shape of Phase 2a's `bellman_iterate_tendsto`, specialised to a fixed policy
-    instead of the `sup`-taking Bellman operator; new in this file since Phase 2a never needed it
-    for a general policy. -/
+    Exact proof shape of `bellman_iterate_tendsto`, specialised to a fixed policy instead of the
+    `sup`-taking Bellman operator. -/
 theorem Lpolicy_iterate_tendsto (d : S → A) (v : S → ℝ) :
     Filter.Tendsto (fun n => (M.Lpolicy d)^[n] v) Filter.atTop (nhds (M.value d)) :=
   (M.contractingWith_Lpolicy d).tendsto_iterate_fixedPoint v
@@ -273,7 +267,7 @@ theorem exists_policyStep_fixedPoint (d : S → A) :
 
 /-- The least number of `policyStep` iterations from `d` after which a fixed point is reached.
     Corresponds to the measure `policy_iteration`'s Isabelle `termination` proof shows strictly
-    decreases, restated here directly as a `Nat.find`, mirroring `numIters` in Phase 2b. -/
+    decreases, restated here directly as a `Nat.find`, mirroring `numIters`. -/
 noncomputable def policyIterNum (d : S → A) : ℕ :=
   @Nat.find _ (Classical.decPred _) (M.exists_policyStep_fixedPoint d)
 
@@ -295,7 +289,7 @@ theorem policyIteration_isFixedPt (d : S → A) :
 /-- If `d` is already a fixed point of `policyStep`, its value function is already the global
     optimum. Corresponds to the heart of `policy_iteration_correct` in `Policy_Iteration.thy`: a
     policy admitting no further improvement has already-optimal value, because its value function
-    is then a fixed point of `bellman` itself — which, by Banach (Phase 2a's `vOpt`), has only
+    is then a fixed point of `bellman` itself — which, by Banach uniqueness, has only
     one. -/
 theorem policyStep_fixedPoint_value_eq_vOpt (d : S → A) (hd : M.policyStep d = d) :
     M.value d = M.vOpt := by

@@ -7,15 +7,12 @@ import Mdp.Basic
 import Mathlib.Data.Finset.Max
 
 /-!
-# Value iteration for discounted MDPs — Phase 2a
+# Value iteration for discounted MDPs
 
-**Status: confirmed by a clean `lake build`, zero `sorry`s (Phase 2a) — see `PHASE0-NOTES.md`.**
-This status line had gone stale (it said "drafted, not yet run through `lake build`" long after
-the build had actually gone clean); corrected in place rather than treated as still-open work.
-Ports the parts of `Value_Iteration.thy` that come essentially for free once `Basic.lean`'s
-`bellman_contracting` / `contractingWith_bellman` are in hand, plus stationary policy evaluation
-(needed to state what "value iteration converges to an ε-optimal *policy*", not just an
-ε-optimal *value*, means).
+**Status: confirmed by a clean `lake build`.** Ports the parts of `Value_Iteration.thy` that come
+essentially for free once `Basic.lean`'s `bellman_contracting` / `contractingWith_bellman` are in
+hand, plus stationary policy evaluation (needed to state what "value iteration converges to an
+ε-optimal *policy*", not just an ε-optimal *value*, means).
 
 What this file does **not** yet do: translate `value_iteration` itself, the recursive function in
 `Value_Iteration.thy` that repeatedly applies `\<L>\<^sub>b` until

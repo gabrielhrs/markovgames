@@ -8,17 +8,12 @@ import Csg.Coalition
 /-!
 # `⟨⟨Cᶜ⟩⟩P_max`'s stage value equals `⟨⟨C⟩⟩P_min`'s
 
-**Status: confirmed by a clean `lake build`.** `combine_compl` needs none of the per-player
-`Fintype`/`Nonempty`/`DecidableEq` instances, so it carries an explicit `omit` for them. Second and
-larger of the two pieces
-`Csg/Coalition.lean`'s own docstring named as missing (`MatrixGameCongr.lean` was the first): the
-complement bookkeeping, and the one place it actually needs `value_relabelRow` rather than pure
-type-level rewriting. Stops at `stageValue` equality, one state and one continuation at a time --
-lifting that to `reachOp`/`.lfp` equality (and so to the actual `⟨⟨C⟩⟩P_min = ⟨⟨Cᶜ⟩⟩P_max` theorem
-promised in `Coalition.lean`'s "Not attempted here") is free once this holds (`reachOp`'s own type
-doesn't mention the action types at all), but is deliberately not attempted in this file -- a
-separate, smaller artifact, matching how `MatrixGameCongr.lean` was kept to exactly the one lemma
-it needed to be.
+**Status: confirmed by a clean `lake build`.** The complement bookkeeping for coalitions, and the
+one place it needs `MatrixGame.value_relabelRow` rather than pure type-level rewriting.
+`combine_compl` needs none of the per-player `Fintype`/`Nonempty`/`DecidableEq` instances, so it
+carries an explicit `omit` for them. This file stops at `stageValue` equality, one state and one
+continuation at a time; `CoalitionComplementReach.lean` lifts that to `reachOp` and its `.lfp`,
+which is the `⟨⟨C⟩⟩P_min = ⟨⟨Cᶜ⟩⟩P_max` identity.
 
 **The shape of the argument**, all bookkeeping except one real step:
 
@@ -35,13 +30,12 @@ it needed to be.
    condition in each branch, same proof-irrelevance closing.
 4. `reduceMin_stageValue_eq`: lifts (3) through `G.K`/`G.r` to show `(G.reduceMax Cᶜ).stageGame s
    v` is literally `((G.reduceMin C).stageGame s v).relabelRow (complCoalitionEquiv C)` (same
-   payoff matrix, rows relabelled) -- the *only* place `MatrixGameCongr.value_relabelRow` gets
+   payoff matrix, rows relabelled) -- the *only* place `MatrixGame.value_relabelRow` gets
    used, and the one step that isn't pure bookkeeping: without it, there would be no reason the two
    reduced games' *values* (as opposed to their payoff matrices) agree.
 
-The column side needs nothing from `MatrixGameCongr`: `ComplementAction A C` and
-`CoalitionAction A Cᶜ` are the same `abbrev` unfolding already, exactly as `Csg/Coalition.lean`'s
-own docstring noted.
+The column side needs no relabelling: `ComplementAction A C` and `CoalitionAction A Cᶜ` are the
+same `abbrev` unfolding already.
 
 **Two standing proof-technique notes, both relevant beyond this file:**
 
@@ -116,7 +110,7 @@ theorem reduceMax_r_zero (hrG : ∀ s a, G.r s a = 0) :
 
 /-- **The one real step.** `⟨⟨Cᶜ⟩⟩P_max`'s stage game at `s` against continuation `v` is literally
     `⟨⟨C⟩⟩P_min`'s own stage game, rows relabelled by `complCoalitionEquiv C` -- `combine_compl`
-    lifted through `G.K`/`G.r`. `MatrixGameCongr.value_relabelRow` then reads the two stage
+    lifted through `G.K`/`G.r`. `MatrixGame.value_relabelRow` then reads the two stage
     *values* off as equal, not just the payoff matrices. -/
 theorem reduceMin_stageValue_eq (s : S) (v : S → ℝ) :
     (G.reduceMax Cᶜ).stageValue s v = (G.reduceMin C).stageValue s v := by

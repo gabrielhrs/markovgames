@@ -9,16 +9,13 @@ import Csg.SafetyOp
 /-!
 # A reusable interval certificate: bounding a fixed point rather than pinning it exactly
 
-**Status: done, confirmed by a clean `lake build` (via `RockPaperScissorsInterval.lean`, its first
-concrete consumer).** The last open row of
-`VERIFICATION-FRAMEWORK.md`'s Axis C (candidate form): every certificate built so far
-(`ReachCertificate.lean`, `SafetyCertificate.lean`) pins `f.lfp`/`f.gfp` down to a single guessed
-candidate *exactly*, via Knaster-Tarski's two-sided lemmas. That approach's one real limitation,
-flagged in both those files' own docstrings, is that solving for an exact closed form by hand only
-works for small, highly symmetric games like rock-paper-scissors -- anything larger or less
-symmetric has no reason to admit one at all. This file builds the weaker, realistic fallback:
-sandwiching `f.lfp`/`f.gfp` between two one-sided candidates, `lo ≤ f.lfp ≤ hi` (respectively
-`lo ≤ f.gfp ≤ hi`), rather than pinning it to a single point.
+**Status: confirmed by a clean `lake build`.** `ReachCertificate.lean` and
+`SafetyCertificate.lean` pin `f.lfp`/`f.gfp` down to a single guessed candidate *exactly*, via
+Knaster-Tarski's two-sided lemmas. Solving for an exact closed form by hand only works for small,
+highly symmetric games like rock-paper-scissors -- anything larger or less symmetric has no reason
+to admit one at all. This file builds the weaker, realistic fallback: sandwiching `f.lfp`/`f.gfp`
+between two one-sided candidates, `lo ≤ f.lfp ≤ hi` (respectively `lo ≤ f.gfp ≤ hi`), rather than
+pinning it to a single point. `RockPaperScissorsInterval.lean` is a worked instance.
 
 **The key fact making this cheap, confirmed directly against
 `Mathlib/Order/FixedPoints.lean`.** The exact-pinning certificates used

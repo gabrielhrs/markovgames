@@ -20,13 +20,13 @@ the concurrent-game analogue of `DiscountedMDP.bellman` (`Mdp/Basic.lean`) in ex
 `Finset.sup'`.
 
 **Why a discount, when `Csg/Basic.lean` deliberately omits one.** That omission is right for what
-it scopes: bounded objectives use backward induction, and the infinite-horizon objectives built so
-far (`reachOp`, `untilOp`, `SafetyOp`, `BuchiOp`/`CoBuchiOp`) are undiscounted. The cost, recorded
-in `PHASE0-NOTES.md`'s scoping note on executable algorithms, is that an undiscounted operator has
-no contraction ratio and therefore no computable stopping bound -- `ReachConverge.lean` gets
-convergence of the naive iterate sequence but no rate, and says so. A discount supplies the ratio,
-which is what a value iteration needs in order to stop. Nothing here replaces or competes with the
-undiscounted operators; it sits beside them as the one shape that carries an error bound.
+it scopes: bounded objectives use backward induction, and the infinite-horizon objectives
+(`reachOp`, `untilOp`, `SafetyOp`, `BuchiOp`/`CoBuchiOp`) are undiscounted. The cost is that an
+undiscounted operator has no contraction ratio and therefore no computable stopping bound --
+`ReachConverge.lean` gets convergence of the naive iterate sequence but no rate, and says so. A
+discount supplies the ratio, which is what a value iteration needs in order to stop. Nothing here
+replaces or competes with the undiscounted operators; it sits beside them as the one shape that
+carries an error bound.
 
 **Why the contraction proof is short: both halves are already here.** `CSG.expect` is
 `1`-Lipschitz in the continuation (`CsgMonotone.lean`'s `expect_lipschitz`), so scaling it by `l`

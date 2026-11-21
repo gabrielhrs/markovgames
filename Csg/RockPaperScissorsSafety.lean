@@ -9,10 +9,9 @@ import Csg.RockPaperScissorsLfp
 /-!
 # Worked example: a genuine safety property for rock-paper-scissors
 
-**Status: confirmed by a clean `lake build`.** The first
-concrete instance for `SafetyOp.lean`/`SafetyCertificate.lean`, which until now had no worked
-example anywhere in the project -- only the general operator and certificate combinator, dual to
-`reachOp`/`ReachCertificate.lean` via `.gfp`, but never exercised against an actual `CSG`.
+**Status: confirmed by a clean `lake build`.** A worked instance for
+`SafetyOp.lean`/`SafetyCertificate.lean`: the general operator and certificate combinator, dual
+to `reachOp`/`ReachCertificate.lean` via `.gfp`, exercised against an actual `CSG`.
 
 **Finding a safety property on rock-paper-scissors at all takes some care.** `win1 ↦ 0`,
 `win2 ↦ 1`, `initial ↦ draw ↦ 1/2` (`RockPaperScissorsLfp.lean`'s `rpsVStar`) is already the value

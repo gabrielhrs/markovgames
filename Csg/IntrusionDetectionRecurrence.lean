@@ -12,81 +12,42 @@ import Mathlib.Probability.ProbabilityMassFunction.Constructions
 /-!
 # `healthy` recurs infinitely often, almost surely, against an oblivious attacker
 
-**Status: done, confirmed by a clean `lake build` and clean in VS Code, after three real fix
-rounds.** The first `lake build` attempt failed with a long cascade of errors, all traced to three
-genuine mistakes, none of them the flagged `idsPlay_indepSet_healthy` bridging step (that step's
-overall *strategy* was right, only its execution needed to change):
+**Status: confirmed by a clean `lake build`.** Notes on the Mathlib interfaces this file leans
+on:
 
-1. **Two missing imports.** `PMF.uniformOfFintype`/`uniformOfFintype_apply` live in
-   `Mathlib.Probability.Distributions.Uniform`, and `PMF.map` lives in
-   `Mathlib.Probability.ProbabilityMassFunction.Constructions` -- *not* `.Monad`, confirmed by
-   reading all three files' raw source directly. Neither was imported, so both were reported as
-   "unknown constant," and that failure inside `idsRoundPMF`'s own body then poisoned every
-   downstream call site's inferred signature, producing a long, misleading cascade of "argument
-   `q` has type ... but is expected to have type ..." errors that had nothing to do with `q`
-   itself.
-2. **A real shape mismatch with `iIndepFun_infinitePi`.** The first draft defined
-   `idsRoundHealthy` as a function of *both* the round `n` and the whole trajectory `ω` (baking in
-   the coordinate projection `ω n` itself), but `iIndepFun_infinitePi`'s actual signature (checked
-   directly against `Mathlib/Probability/Independence/InfinitePi.lean`) wants a *per-factor*
-   function `X i : Ω_i → 𝓧`, and produces the coordinate-composed family `fun i ω ↦ X i (ω i)`
-   itself -- the caller supplies the factor-level map, not the whole-trajectory one.
-   `idsRoundHealthy` below is now that per-factor map alone (`PolicyAction × AttackAction → Bool`,
-   the *same* function at every round, since `idsNext` doesn't depend on the round number).
-3. **`Measurable.setOf` isn't a real Mathlib lemma.** Checked directly against
-   `Mathlib/MeasureTheory/MeasurableSpace/Defs.lean`: the actual names are
-   `MeasurableSet.of_discrete` (any set, directly) and `Measurable.of_discrete` (any function, from
-   a `DiscreteMeasurableSpace` domain) -- no `.setOf` combinator exists on either.
-
-The one deliberately-flagged risk from the first draft, `idsPlay_indepSet_healthy`'s
-`iIndepFun → iIndepSet` bridge, turned out to need re-routing too, but not because the underlying
-idea was wrong: `Mathlib/Probability/Independence/Basic.lean` (read again, directly) confirms there
-is still no ready-made lemma doing this conversion in one step. The fix uses a cleaner pair of
-lemmas than the original comap/`generateFrom` attempt, both confirmed directly against that same
-file: `iIndepFun_iff_measure_inter_preimage_eq_mul` restates `iIndepFun` as a bare measure identity
-over finite intersections of preimages, and `iIndepSet_iff_iIndepSets_singleton` +
-`iIndepSets_singleton_iff` restate `iIndepSet` as the *same shape* of identity for the events
-themselves -- instantiating the first at the fixed target set `{true}` at every index lands
-exactly on the second, with no σ-algebra bookkeeping needed at all.
-
-The second `lake build` attempt narrowed to a single genuine error: `infinitePi_map_eval` is
-declared inside `namespace MeasureTheory.Measure` (checked directly against
-`Mathlib/Probability/ProductMeasure.lean`'s own `namespace`/`end` structure), so
-`open MeasureTheory` alone doesn't bring it into scope unqualified --
-`Mathlib/Probability/Independence/InfinitePi.lean` itself opens `MeasureTheory Measure
-ProbabilityTheory` for exactly this reason, and this file now does the same rather than qualifying
-every call site by hand.
-
-The third `lake build` attempt narrowed further, to one call:
-`PMF.toMeasure_apply_eq_toOuterMeasure_apply` takes its own `PMF` value `p` as an *explicit*
-argument before the `MeasurableSet` hypothesis (checked directly against
-`Mathlib/Probability/ProbabilityMassFunction/Basic.lean`'s own `variable (p : PMF α) {s : Set α}`
-line -- `p` explicit, `s` implicit), so supplying only `hT` positionally bound it to `p`'s slot
-instead of the hypothesis's, exactly the "expected `PMF ?m` but got `MeasurableSet ...`" error
-reported. Fixed with dot notation, `(idsRoundPMF q n).toMeasure_apply_eq_toOuterMeasure_apply hT`,
-the same pitfall (and the same fix) `IntrusionDetectionReach.lean` hit with
-`MatrixGame.value_le_of_forall_le`/`le_value_of_forall_le`.
+* `PMF.uniformOfFintype` lives in `Mathlib.Probability.Distributions.Uniform` and `PMF.map` in
+  `Mathlib.Probability.ProbabilityMassFunction.Constructions`; both are imported directly.
+* `iIndepFun_infinitePi` (`Mathlib/Probability/Independence/InfinitePi.lean`) wants a *per-factor*
+  function `X i : Ω_i → 𝓧` and produces the coordinate-composed family `fun i ω ↦ X i (ω i)`
+  itself. `idsRoundHealthy` below is that per-factor map (`PolicyAction × AttackAction → Bool`,
+  the same function at every round, since `idsNext` does not depend on the round number).
+* Measurability on these discrete types is `MeasurableSet.of_discrete`/`Measurable.of_discrete`.
+* There is no one-step lemma taking `iIndepFun` to `iIndepSet`. `idsPlay_indepSet_healthy` goes
+  through `iIndepFun_iff_measure_inter_preimage_eq_mul`, which restates `iIndepFun` as a measure
+  identity over finite intersections of preimages, and `iIndepSet_iff_iIndepSets_singleton` with
+  `iIndepSets_singleton_iff`, which restate `iIndepSet` as the same shape of identity for the
+  events themselves; instantiating the first at the target set `{true}` at every index lands on
+  the second, with no σ-algebra bookkeeping.
+* `infinitePi_map_eval` is declared inside `namespace MeasureTheory.Measure`, so this file opens
+  `MeasureTheory Measure ProbabilityTheory`, as `InfinitePi.lean` itself does.
+* `PMF.toMeasure_apply_eq_toOuterMeasure_apply` takes its `PMF` as an explicit argument before the
+  `MeasurableSet` hypothesis, so it is called with dot notation.
 
 ## What this is, and what it deliberately is not
 
-`IntrusionDetectionReach.lean` proved a plain reachability fact: `P[F healthy] = 1` from either
-state, a `bwInd`/`lfp`-shaped rPATL claim. This file proves the genuinely stronger, LTL-shaped
-claim that motivated it in the first place: `healthy` is visited *infinitely often*, almost surely
--- `P[G F healthy] = 1` in the earlier discussion's notation -- against a specific, honestly-scoped
-class of attacker: **oblivious**, meaning the attacker's round-`n` action may be adversarially
-chosen per round (even a different distribution at every round), but *not* as a function of the
-realized history so far. A fully **adaptive** attacker (one whose round-`n` choice can react to
-everything that happened in rounds `1..n-1`) is a strictly harder, separate claim, needing the
-Ionescu-Tulcea construction (`Mathlib.Probability.Kernel.IonescuTulcea.Traj`) and Lévy's
-generalized Borel-Cantelli lemma (`MeasureTheory.ae_mem_limsup_atTop_iff`) in place of the
-machinery this file uses -- scoped, not started, deliberately left as its own future step so this
-file's actual (narrower) guarantee isn't overstated. See `PHASE0-NOTES.md` for the fuller debrief,
-including why this doesn't need any of the general concurrent-Büchi-game machinery (nested
-`gfp(lfp(...))` fixed points, strategy-existence pathologies known to affect even *deterministic*
-concurrent Büchi games) that a fully general treatment of recurrence properties on concurrent games
-would need: the uniform defender strategy already established in `IntrusionDetectionReach.lean`
-makes this a classical independence
-argument, not a game-theoretic fixed-point one.
+`IntrusionDetectionReach.lean` proves a plain reachability fact: `P[F healthy] = 1` from either
+state, a `bwInd`/`lfp`-shaped rPATL claim. This file proves the stronger, LTL-shaped claim:
+`healthy` is visited *infinitely often*, almost surely -- `P[G F healthy] = 1` -- against a
+specific class of attacker: **oblivious**, meaning the attacker's round-`n` action may be
+adversarially chosen per round (even a different distribution at every round), but *not* as a
+function of the realized history so far. A fully **adaptive** attacker (one whose round-`n` choice
+can react to everything that happened in rounds `1..n-1`) is a strictly harder, separate claim,
+needing the Ionescu-Tulcea construction (`Mathlib.Probability.Kernel.IonescuTulcea.Traj`) and
+Lévy's generalized Borel-Cantelli lemma (`MeasureTheory.ae_mem_limsup_atTop_iff`) in place of the
+machinery this file uses; it is not attempted here. Nor does this file need the general
+concurrent-Büchi-game machinery (nested `gfp(lfp(...))` fixed points, as in `BuchiOp.lean`): the
+uniform defender strategy established in `IntrusionDetectionReach.lean` makes this a classical
+independence argument, not a game-theoretic fixed-point one.
 
 ## The construction
 

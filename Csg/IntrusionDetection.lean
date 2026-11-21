@@ -11,27 +11,19 @@ import Mathlib.Probability.ProbabilityMassFunction.Monad
 # A non-toy `bwInd` instance: intrusion detection, sourced from PRISM-games' IDS case study
 
 **Status: confirmed by a clean `lake build`.** The two hand-checked instances
-(`idsV1`/`idsCSG_bwInd_one*` and `idsV2`/`idsCSG_bwInd_two*`) are the first in this project to
-exercise `bwInd`'s recursion against a non-uniform, state-dependent continuation. Two further
-`∀ n` facts, `idsCSG_bwInd_compromised_eq_healthy_add_one` and `idsCSG_bwInd_mono` (see that
-section's own docstring), build on them. `idsK` uses `PMF.pure`, which lives in
-`Mathlib.Probability.ProbabilityMassFunction.Monad` (the monadic-operations file, not `.Basic`,
-per that file's own docstring), imported directly above rather than relied on transitively:
-this project's toolchain is on Lean 4's newer module system, where a plain `import` does not
-re-export the imported module's names to further downstream importers, so any file whose own
-mathematics uses `PMF.pure` (or other `.Monad` operations) needs `.Monad` imported directly, even
-when some file reachable through its `Csg.*` imports already imports it -- `Csg.BackwardInduction`'s
-own transitive imports stop at `.Basic`. `MatchingPennies.lean` imports `.Monad` directly for the
-same reason; `RockPaperScissors.lean` gets it for free only because it separately imports
-`Csg.MatchingPennies`.
+(`idsV1`/`idsCSG_bwInd_one*` and `idsV2`/`idsCSG_bwInd_two*`) exercise `bwInd`'s recursion against
+a non-uniform, state-dependent continuation. Two further `∀ n` facts,
+`idsCSG_bwInd_compromised_eq_healthy_add_one` and `idsCSG_bwInd_mono` (see that section's own
+docstring), build on them. `idsK` uses `PMF.pure`, which lives in
+`Mathlib.Probability.ProbabilityMassFunction.Monad` and is imported directly: a plain `import`
+does not re-export the imported module's names to further downstream importers, and
+`Csg.BackwardInduction`'s own imports stop at `.Basic`.
 
-`RockPaperScissors.lean`'s stage games are all "toy" in the specific sense flagged in
-`PHASE0-NOTES.md`: at every state, the optimal strategy for both players is the *same* uniform
-mixture, regardless of the continuation value. This file's stage games are not: `idsP`/`idsQ`
-below are a genuinely non-uniform mixed strategy pair, and (unlike a hand-picked example) they
-come from a real, published, third-party model -- PRISM-games' "Intrusion Detection Policies"
-case study (Zhu & Başar 2009), `ids_simple.prism`
-(<https://www.prismmodelchecker.org/casestudies/ids.php>).
+`RockPaperScissors.lean`'s stage games are all of one kind: at every state, the optimal strategy
+for both players is the *same* uniform mixture, regardless of the continuation value. This file's
+stage games are not: `idsP`/`idsQ` below are a non-uniform mixed strategy pair, and they come from
+a published, third-party model -- PRISM-games' "Intrusion Detection Policies" case study (Zhu &
+Başar 2009), `ids_simple.prism` (<https://www.prismmodelchecker.org/casestudies/ids.php>).
 
 Two players: `policy` (the defender, row/minimizer, actions `defend1`/`defend2`) versus
 `attacker` (column/maximizer, actions `attack1`/`attack2`). Two states: `healthy`/`compromised`.
@@ -41,17 +33,14 @@ Transitions are deterministic and state-independent: `(defend1,attack1) -> healt
 `attacker`) is *not* symmetric between the two "mismatch" action pairs -- `idsR` below is quoted
 directly from the case study's published table. That reward-side asymmetry is exactly what
 `IntervalCertificate.lean`/`ReachOp.lean`/`SafetyOp.lean` cannot see (they all require
-`hr : C.r ≡ 0`), which is why this instance targets `BackwardInduction.lean`'s `bwInd` instead --
-see `PHASE0-NOTES.md` for the fuller comparison against PRISM's "jamming" case study, deferred as
-a future `IntervalCertificate.lean` candidate for exactly the opposite reason (genuine
-*transition*-side uncertainty, symmetric rewards).
+`hr : C.r ≡ 0`), which is why this instance targets `BackwardInduction.lean`'s `bwInd` instead.
 
 This file's target is the one-step (one round remaining) instance: `idsCSG.bwInd (fun _ => 0) 1`.
 Both states' stage games (continuation `fun _ => 0`, matching PRISM's convention of no reward
 *at* the horizon) turn out to be solved by the *same* mixed-strategy pair `idsP`/`idsQ` -- a
 genuine numeric coincidence of this particular reward table, not something engineered in, and not
-something that holds at every round (the two-rounds-remaining instance, a natural follow-up, needs
-a different pair). The resulting values, `1/3` at `healthy` and `4/3` at `compromised`, were
+something that holds at every round (the two-rounds-remaining instance below needs a different
+pair). The resulting values, `1/3` at `healthy` and `4/3` at `compromised`, were
 independently checked against a real local PRISM-games run of
 `<<policy>>R{"damage"}min=?[F r=rounds]` at `rounds=1`: `0.3333333333333333`, matching `1/3`
 exactly.
@@ -257,7 +246,7 @@ The optimal strategies change from `idsP`/`idsQ` to a new pair, `idsP2`/`idsQ2` 
 between both states, this time because `idsR`'s `compromised` row is `idsR`'s `healthy` row plus
 the constant `1` at every joint action (visible directly in the reward table above), so the two
 states' two-rounds-remaining stage games differ only by that same additive constant throughout,
-and `MatrixGameMonotone.lean`'s `value_add_const` says shifting every payoff by a constant never
+and `MatrixGame.lean`'s `value_add_const` says shifting every payoff by a constant never
 changes which strategies are optimal, only the value. That structural fact isn't invoked directly
 below (the two states are still checked by separate, explicit `cases s` computations, matching
 this file's style so far), but it is the real reason a single strategy pair keeps working, at both
@@ -408,7 +397,7 @@ theorem idsCSG_stageGame_compromised_eq_healthy_add_one (v : IDSState → ℝ) (
   cases a1 <;> cases a2 <;> simp [idsR] <;> ring
 
 /-- **The general fact.** `compromised`'s stage value is always exactly `healthy`'s plus `1`, for
-    *any* continuation `v` -- `MatrixGameMonotone.lean`'s `value_add_const` (shifting every payoff
+    *any* continuation `v` -- `MatrixGame.lean`'s `value_add_const` (shifting every payoff
     entry of a matrix game by a constant shifts the value by that same constant) applied to the
     fact above. This is the real, structural reason the same mixed-strategy pair solved *both*
     states' stage games at both `k = 1` and `k = 2` above: it was never a coincidence specific to

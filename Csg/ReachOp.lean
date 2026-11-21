@@ -8,30 +8,27 @@ import Csg.CsgMonotone
 /-!
 # The reachability Bellman operator, bundled as an `OrderHom`
 
-**Status: drafted, not yet run through `lake build`.** Stage 3 of the infinite-horizon build
-order: the per-state reachability step -- `reachBounded`'s recursive case
-(`BoundedReachability.lean`), goal states pinned to `1`, everywhere else the stage-game value
-against the continuation -- bundled as a genuine `OrderHom (S → Set.Icc (0 : ℝ) 1)
-(S → Set.Icc (0 : ℝ) 1)` rather than a bare function on `S → ℝ`. `CsgMonotone.lean` supplied exactly
-what this needs: `stageValue_mono` for the monotonicity proof `OrderHom` bundling demands,
+**Status: confirmed by a clean `lake build`.** The per-state reachability step -- `reachBounded`'s
+recursive case (`BoundedReachability.lean`), goal states pinned to `1`, everywhere else the
+stage-game value against the continuation -- bundled as an `OrderHom (S → Set.Icc (0 : ℝ) 1)
+(S → Set.Icc (0 : ℝ) 1)` rather than a bare function on `S → ℝ`. `CsgMonotone.lean` supplies what
+this needs: `stageValue_mono` for the monotonicity proof `OrderHom` bundling demands, and
 `stageValue_nonneg`/`_le_one` (both needing the same `C.r ≡ 0` hypothesis carried through here) to
-show the operator actually lands back in `[0, 1]`, not just `ℝ`.
+show the operator lands back in `[0, 1]`, not just `ℝ`.
 
-Why bundle at all, rather than keep working with plain functions the way `reachBounded` does:
-`S → Set.Icc (0 : ℝ) 1` is a genuine `CompleteLattice` (confirmed against the cached Mathlib source
-in `MatrixGameMonotone.lean`'s own docstring -- `Set.Icc.completeLattice` plus
-`Pi.instCompleteLattice`), so Mathlib's own Knaster-Tarski (`OrderHom.lfp`, in
+Why bundle at all, rather than work with plain functions the way `reachBounded` does:
+`S → Set.Icc (0 : ℝ) 1` is a `CompleteLattice` (`Set.Icc.completeLattice` plus
+`Pi.instCompleteLattice`), so Mathlib's Knaster-Tarski (`OrderHom.lfp`, in
 `Mathlib/Order/FixedPoints.lean`) applies to any bundled monotone self-map of it *for free*: no
-extra existence proof to write, `(reachOp goal hr).lfp` is already a term the moment `reachOp`
-below typechecks. That's the entire payoff of doing the monotonicity/boundedness work in
-`CsgMonotone.lean` first -- an `OrderHom` is a structure with a monotonicity proof attached, and
-Mathlib's fixed-point machinery is stated for exactly that bundle, not for a bare function plus a
-side lemma.
+extra existence proof to write, `(reachOp goal hr).lfp` is a term the moment `reachOp` below
+typechecks. An `OrderHom` is a structure with a monotonicity proof attached, and Mathlib's
+fixed-point machinery is stated for exactly that bundle, not for a bare function plus a side
+lemma.
 
-This file stops at the operator and its monotonicity -- it does not yet state or prove anything
+This file stops at the operator and its monotonicity -- it does not state or prove anything
 connecting `(reachOp goal hr).lfp` to `reachBounded`'s own sequence (e.g. via
-`OrderHom.lfp_eq_sSup_iterate`), or compute it for the concrete rock-paper-scissors instance. That
-connection is the next artifact, once this one is confirmed.
+`OrderHom.lfp_eq_sSup_iterate`), or compute it for the concrete rock-paper-scissors instance.
+`ReachConverge.lean` and `RockPaperScissorsLfp.lean` do those.
 -/
 
 namespace Csg
@@ -78,8 +75,8 @@ theorem reachOpFun_mono (goal : S → Prop) [DecidablePred goal]
     least (and greatest) fixed point is now free, no further work needed: `(C.reachOp goal hr).lfp`
     (Knaster-Tarski, `Mathlib/Order/FixedPoints.lean`) already typechecks the moment this
     definition does, since `OrderHom.lfp` is defined for *any* monotone self-map of *any*
-    `CompleteLattice`. Relating it to `reachBounded`'s own sequence, and computing it for the
-    concrete rock-paper-scissors instance, is the next artifact. -/
+    `CompleteLattice`. `ReachConverge.lean` relates it to the iterate sequence, and
+    `RockPaperScissorsLfp.lean` computes it for the concrete rock-paper-scissors instance. -/
 noncomputable def reachOp (goal : S → Prop) [DecidablePred goal]
     (hr : ∀ s a1 a2, C.r s a1 a2 = 0) :
     (S → Set.Icc (0 : ℝ) 1) →o (S → Set.Icc (0 : ℝ) 1) where

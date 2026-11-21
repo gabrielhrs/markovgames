@@ -28,11 +28,8 @@ genuine two-player `NCSG`, built by hand there to avoid paying for `CoalitionAct
 `ComplementAction`'s dependent-product bookkeeping up front. This file pays for it: builds the
 actual two-player `NCSG` (`skirmishNCSG`), the actual coalition `{hider}` (`hiderC`), and connects
 `(skirmishNCSG.reduceMin hiderC).stageValue`/`(skirmishNCSG.reduceMax hiderC).stageValue` back to
-the `4/5`/`1/2` values `Csg.SkirmishFeint` established -- the one piece of new, reusable
-infrastructure `Csg.Coalition`'s own docstring flagged as missing ("Not attempted here: any worked
-instance"),
-using `MatrixGameCongr.value_relabelRow`/`MatrixGameCongrCol.value_relabelCol` exactly as that
-docstring anticipated.
+the `4/5`/`1/2` values `Csg.SkirmishFeint` establishes, using
+`MatrixGame.value_relabelRow`/`value_relabelCol`.
 
 **Why both a row and a column relabelling are needed.** `CoalitionAction SkirmishAction hiderC`
 (`= ∀ i : ↥hiderC, SkirmishAction i`, a dependent product over a one-element `Finset` subtype) is
