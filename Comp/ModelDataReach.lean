@@ -3,7 +3,7 @@ Copyright (c) 2026 Gabriel Santos. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Gabriel Santos
 -/
-import Comp.ModelData
+import Comp.ModelDataQualitative
 import Comp.ReachTrace
 import Comp.Search
 
@@ -20,7 +20,7 @@ so a table that is too short reads as `0` instead of failing; a wrong or missing
 step's check false, never unsound.
 
 **Finding a run.** `ModelData.reachRun d target start n` iterates the operator `n` times from the
-constant `start`, solving each state's stage game with `MatrixGameQ.findValueCert`. It is for
+vector `start`, solving each state's stage game with `MatrixGameQ.findValueCert`. It is for
 `#eval`: its output is printed, pasted into the instance file as a literal `ReachRun`, and
 forgotten. Nothing is proved about it.
 
@@ -29,6 +29,12 @@ forgotten. Nothing is proved about it.
 each run. `decide +kernel` settles them, by having the kernel evaluate the game's rational
 arithmetic directly. The conclusion is an `Answers` statement about the real-valued game the model
 denotes.
+
+**A tighter upper run.** `ModelData.answers_reach_of_runs_avoiding` lets the upper run start at `0`
+on a set `z` of states and `1` elsewhere. It asks that `z` avoid the target and that
+`z ⊆ Qual.pre1 (d.supportOf hs) z`, which plain `decide` settles since no weight is involved. The
+sure-safety region `d.gRegionTr hs (Finset.univ \ target)` is the largest such `z`, and `#eval`
+prints it.
 
 The stage games here are over the global action namespaces, with disabled actions padded as
 `ModelData.toCsgQ` pads them, so a strategy in a run has one entry per global action.
@@ -79,11 +85,12 @@ def reachStepRun (d : ModelData) [NeZero d.nAct1] [NeZero d.nAct2]
       | some c => (c.1, (List.finRange d.nAct1).map c.2.1, (List.finRange d.nAct2).map c.2.2)
       | none => (0, [], [])
 
-/-- `n` steps of the search from the constant vector `start`, as a `ReachRun` to print. `start` is
-    `0` for a lower run and `1` for an upper one. For `#eval`. -/
+/-- `n` steps of the search from the vector `start`, as a `ReachRun` to print. `start` is the
+    constant `0` for a lower run and the constant `1`, or a tightened start, for an upper one. For
+    `#eval`. -/
 def reachRun (d : ModelData) [NeZero d.nAct1] [NeZero d.nAct2]
-    (target : Finset (Fin d.nStates)) (start : ℚ) : ℕ → ReachRun
-  | 0 => ⟨[(List.finRange d.nStates).map fun _ => start], [], []⟩
+    (target : Finset (Fin d.nStates)) (start : Fin d.nStates → ℚ) : ℕ → ReachRun
+  | 0 => ⟨[(List.finRange d.nStates).map start], [], []⟩
   | n + 1 =>
     let r := reachRun d target start n
     let st := d.reachStepRun target (r.val n)
@@ -107,6 +114,26 @@ theorem answers_reach_of_runs (d : ModelData) [NeZero d.nAct1] [NeZero d.nAct2]
     d.toCsgQ.Answers (d.wellFormed hs h2) (Objective.reach target)
       (Answer.interval (lo.val n) (hi.val m)) :=
   CsgQ.answers_reach_of_steps d.toCsgQ (d.wellFormed hs h2) hrf target
+    lo.val lo.row lo.col n hi.val hi.row hi.col m hlo0 hlo hhi0 hhi
+
+/-- **Reachability, with the upper run started on a sure-avoid set.** As
+    `answers_reach_of_runs`, except that `hi` starts at `0` on `z` and `1` elsewhere. The two
+    conditions on `z` are closed and decidable without arithmetic; `Nonzero` is what lets the
+    model's supports be read off its transition keys. -/
+theorem answers_reach_of_runs_avoiding (d : ModelData) [NeZero d.nAct1] [NeZero d.nAct2]
+    (hs : d.Shape) (h2 : d.Stochastic) (hnz : d.Nonzero) (hrf : d.toCsgQ.RewardFree)
+    (target z : Finset (Fin d.nStates))
+    (hz : z ⊆ Qual.pre1 (d.supportOf hs) z) (hdisj : ∀ s ∈ z, s ∉ target)
+    (lo hi : ReachRun) (n m : ℕ)
+    (hlo0 : ∀ s : Fin d.nStates, lo.val 0 s = 0)
+    (hlo : ∀ k < n, d.toCsgQ.ReachStep target (lo.val k) (lo.val (k + 1)) (lo.row k) (lo.col k))
+    (hhi0 : ∀ s : Fin d.nStates, hi.val 0 s = if s ∈ z then 0 else 1)
+    (hhi : ∀ k < m,
+      d.toCsgQ.ReachStep target (hi.val k) (hi.val (k + 1)) (hi.row k) (hi.col k)) :
+    d.toCsgQ.Answers (d.wellFormed hs h2) (Objective.reach target)
+      (Answer.interval (lo.val n) (hi.val m)) :=
+  CsgQ.answers_reach_of_steps_avoiding d.toCsgQ (d.wellFormed hs h2) hrf target
+    (d.supportOf hs) (d.support_toCSG hs h2 hnz) z hz hdisj
     lo.val lo.row lo.col n hi.val hi.row hi.col m hlo0 hlo hhi0 hhi
 
 end ModelData

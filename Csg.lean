@@ -24,6 +24,7 @@ import Csg.IntrusionDetectionRecurrence
 import Csg.BuchiOp
 import Csg.CoBuchiOp
 import Csg.QualitativeSure
+import Csg.ReachZero
 import Csg.QualitativeAlmostSure
 import Csg.QualitativeLimitSure
 import Csg.QualitativeDet

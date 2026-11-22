@@ -4,6 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Gabriel Santos
 -/
 import Comp.Objective
+import Comp.QualBridge
+import Csg.ReachZero
 
 /-!
 # A checked trace for probabilistic reachability
@@ -26,14 +28,22 @@ and it is decidable. Nothing in it mentions how the values and strategies were f
 * `lfp_le_of_steps`: a trace that starts above the reachability value ends above it.
 * `answers_reach_of_steps`: a trace from the constant `0` and a trace from the constant `1`
   together answer `Objective.reach target` with the interval `[lo n, hi m]`.
+* `answers_reach_of_steps_avoiding`: the same, with the upper trace started from `0` on a set `z`
+  and `1` elsewhere, where `z` avoids the target and the row player can stay in it.
 
 The bounds `0 ≤ vs k s ≤ 1` that packaging a vector into the operator's carrier needs are not
 hypotheses beyond the starting vector: `reachStep_bounds` derives them for the next vector from
 the step itself, because the operator's values lie in `[0, 1]`.
 
 **What a trace does not prove.** That the interval is narrow. The lower chain converges to the
-value; the upper chain stays above it but stalls wherever play can avoid the target forever. See
-`Comp/Reach.lean` on why that is a convergence question and not a soundness one.
+value; the upper chain from `1` stays above it but stalls wherever play can avoid the target
+forever. See `Comp/Reach.lean` on why that is a convergence question and not a soundness one.
+
+**The tighter start.** Where the row player can *surely* keep the play away from the target, the
+value is `0` (`Csg/ReachZero.lean`), and an upper chain may start there at `0` instead of `1`.
+What has to be checked is combinatorial: a set `z` disjoint from the target with
+`z ⊆ Qual.pre1 supp z`. Any such `z` is sound; the sure-safety region of the target's complement
+is the largest.
 
 The vectors and strategies are indexed by `ℕ`, as functions. An instance supplies them however is
 convenient, for example by reading literal tables with `List.getD`; the step count `n` says how
@@ -191,6 +201,59 @@ theorem answers_reach_of_steps (G : CsgQ S A1 A2) (h : G.WellFormed) (hrf : G.Re
     (castIcc_le_of_eq_zero (lo 0) a0 a1 hlo0 _) hlo
   obtain ⟨j0, j1, hU⟩ := lfp_le_of_steps G h hrf target hi up uq m b0 b1
     (le_castIcc_of_eq_one (hi 0) b0 b1 hhi0 _) hhi
+  exact .reach hrf k0 k1 j0 j1 hL hU
+
+/-! ## A tighter start for the upper chain -/
+
+/-- **The value lies below the vector that is `0` on `z` and `1` elsewhere**, when `z` avoids the
+    target and `z ⊆ Qual.pre1 supp z`. `CSG.reachOp_lfp_le_of_avoid`, with the `Pre1` hypothesis
+    carried from the `Finset` operator by `Qual.coe_pre1`. This is the starting hypothesis of an
+    upper chain. -/
+theorem lfp_le_castIcc_of_avoid (G : CsgQ S A1 A2) (h : G.WellFormed) (hrf : G.RewardFree)
+    (target : Finset S) (supp : S → A1 → A2 → Finset S)
+    (hsupp : ∀ s a1 a2, ((G.toCSG h).K s a1 a2).support = (↑(supp s a1 a2) : Set S))
+    (z : Finset S) (hz : z ⊆ Qual.pre1 supp z) (hdisj : ∀ s ∈ z, s ∉ target)
+    (v : S → ℚ) (h0 : ∀ s, 0 ≤ v s) (h1 : ∀ s, v s ≤ 1)
+    (hv : ∀ s, v s = if s ∈ z then 0 else 1) :
+    ((G.toCSG h).reachOp (· ∈ target) (toCSG_r_zero G h hrf)).lfp ≤ castIcc v h0 h1 := by
+  have hpre : (↑z : Set S) ⊆ (G.toCSG h).Pre1 ↑z := by
+    rw [← Qual.coe_pre1 (G.toCSG h) supp hsupp z]
+    exact Finset.coe_subset.mpr hz
+  refine (G.toCSG h).reachOp_lfp_le_of_avoid (· ∈ target) (toCSG_r_zero G h hrf) hpre
+    (fun s hs => hdisj s (Finset.mem_coe.mp hs)) (castIcc v h0 h1)
+    (fun s hs => ?_) (fun s hs => ?_)
+  · change ((v s : ℚ) : ℝ) = 0
+    rw [hv s, ite_eq_left (Finset.mem_coe.mp hs), Rat.cast_zero]
+  · change ((v s : ℚ) : ℝ) = 1
+    rw [hv s, ite_eq_right (fun hmem => hs (Finset.mem_coe.mpr hmem)), Rat.cast_one]
+
+/-- **A run with a tightened upper start.** As `answers_reach_of_steps`, except that the upper
+    trace starts from the vector that is `0` on `z` and `1` elsewhere. `z` must avoid the target
+    and satisfy `z ⊆ Qual.pre1 supp z`, for a support table `supp` of the game; both are decidable
+    and involve no arithmetic. With `z = ∅` this is `answers_reach_of_steps`. -/
+theorem answers_reach_of_steps_avoiding (G : CsgQ S A1 A2) (h : G.WellFormed)
+    (hrf : G.RewardFree) (target : Finset S) (supp : S → A1 → A2 → Finset S)
+    (hsupp : ∀ s a1 a2, ((G.toCSG h).K s a1 a2).support = (↑(supp s a1 a2) : Set S))
+    (z : Finset S) (hz : z ⊆ Qual.pre1 supp z) (hdisj : ∀ s ∈ z, s ∉ target)
+    (lo : ℕ → S → ℚ) (lp : ℕ → S → A1 → ℚ) (lq : ℕ → S → A2 → ℚ) (n : ℕ)
+    (hi : ℕ → S → ℚ) (up : ℕ → S → A1 → ℚ) (uq : ℕ → S → A2 → ℚ) (m : ℕ)
+    (hlo0 : ∀ s, lo 0 s = 0)
+    (hlo : ∀ k < n, G.ReachStep target (lo k) (lo (k + 1)) (lp k) (lq k))
+    (hhi0 : ∀ s, hi 0 s = if s ∈ z then 0 else 1)
+    (hhi : ∀ k < m, G.ReachStep target (hi k) (hi (k + 1)) (up k) (uq k)) :
+    G.Answers h (Objective.reach target) (Answer.interval (lo n) (hi m)) := by
+  have a0 : ∀ s, 0 ≤ lo 0 s := fun s => (hlo0 s).ge
+  have a1 : ∀ s, lo 0 s ≤ 1 := fun s => (hlo0 s).le.trans zero_le_one
+  have b0 : ∀ s, 0 ≤ hi 0 s := fun s => by
+    rw [hhi0 s]
+    split_ifs <;> norm_num
+  have b1 : ∀ s, hi 0 s ≤ 1 := fun s => by
+    rw [hhi0 s]
+    split_ifs <;> norm_num
+  obtain ⟨k0, k1, hL⟩ := le_lfp_of_steps G h hrf target lo lp lq n a0 a1
+    (castIcc_le_of_eq_zero (lo 0) a0 a1 hlo0 _) hlo
+  obtain ⟨j0, j1, hU⟩ := lfp_le_of_steps G h hrf target hi up uq m b0 b1
+    (lfp_le_castIcc_of_avoid G h hrf target supp hsupp z hz hdisj (hi 0) b0 b1 hhi0) hhi
   exact .reach hrf k0 k1 j0 j1 hL hU
 
 end CsgQ
