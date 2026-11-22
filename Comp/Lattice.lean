@@ -10,7 +10,7 @@ import Mathlib.Order.FixedPoints
 
 **Status: confirmed by a clean `lake build`.**
 
-Five order-theoretic facts, with no game in sight. They are collected here because everything in
+Six order-theoretic facts, with no game in sight. They are collected here because everything in
 `Comp/` that identifies a fixed point uses them, and because the alternative is what this file
 replaced: `Comp/FixLoop.lean` importing `Comp.Qualitative` and `Comp.Reach` -- and through them
 `Csg.QualitativeSure`, `Csg.ReachOp`, `Csg.IntervalCertificate` and `Comp.Shapley` -- to reach four
@@ -25,6 +25,7 @@ least or a greatest fixed point, and it alternates with nesting depth -- so the 
 lemmas below are the only thing distinguishing the two directions, and using the wrong one is the
 easiest way to prove nothing of interest. All three `_of_step` lemmas are Mathlib's
 `gfp_le_map`, `map_le_lfp` and `lfp_le_map` with the step named by an equation `b = f a`.
+`le_lfp_of_le_step` weakens that equation to `b ≤ f a` for the lower bound on an `lfp`.
 
 `lfp_le_of_step` is the odd one out: it is the *upper* bound on an `lfp`, sound from any starting
 point above it and needing no end-component analysis. What such analysis buys is convergence, not
@@ -60,6 +61,14 @@ theorem OrderHom.le_lfp_of_step {α : Type*} [CompleteLattice α] (f : α →o �
     (ha : a ≤ f.lfp) (hb : b = f a) : b ≤ f.lfp := by
   subst hb
   exact f.map_le_lfp ha
+
+/-- The inequality form of `le_lfp_of_step`: anything below one step from a lower bound is again a
+    lower bound. So the result of a computed step may be rounded down, and need not be an
+    iterate. The upper side has no need of a counterpart, since `f a ≤ a` alone gives
+    `f.lfp ≤ a` (Mathlib's `OrderHom.lfp_le`). -/
+theorem OrderHom.le_lfp_of_le_step {α : Type*} [CompleteLattice α] (f : α →o α) {a b : α}
+    (ha : a ≤ f.lfp) (hb : b ≤ f a) : b ≤ f.lfp :=
+  hb.trans (f.map_le_lfp ha)
 
 /-- The dual: one step preserves being *above* the least fixed point (Mathlib's
     `OrderHom.lfp_le_map`), so iterating downward from anything above it gives sound upper bounds.

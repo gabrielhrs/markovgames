@@ -5,6 +5,7 @@ Authors: Gabriel Santos
 -/
 import Comp.ModelDataQualitative
 import Comp.ReachTrace
+import Comp.ReachBounds
 import Comp.Search
 
 /-!
@@ -35,6 +36,14 @@ on a set `z` of states and `1` elsewhere. It asks that `z` avoid the target and 
 `z ⊆ Qual.pre1 (d.supportOf hs) z`, which plain `decide` settles since no weight is involved. The
 sure-safety region `d.gRegionTr hs (Finset.univ \ target)` is the largest such `z`, and `#eval`
 prints it.
+
+**One-sided runs.** `Comp/ReachBounds.lean` checks a lower run with column strategies alone and
+an upper vector with row strategies alone. `ModelData.reachLowerRun d target den n` searches for
+the first, rounding each value down to a multiple of `1 / den` before the next step.
+`ModelData.reachUpperRun d target u` prints, for a candidate upper vector `u`, one step of the
+operator from `u` and the row strategies of that step; `u` passes the check when the step is
+nowhere above `u`. `ModelData.answers_reach_of_bounds` takes the two as literal `ReachRun`s: a
+lower run leaves `rows` empty, and an upper one is read at index `0` and leaves `cols` empty.
 
 The stage games here are over the global action namespaces, with disabled actions padded as
 `ModelData.toCsgQ` pads them, so a strategy in a run has one entry per global action.
@@ -68,6 +77,17 @@ def col (r : ReachRun) {n n2 : ℕ} (k : ℕ) (s : Fin n) (a : Fin n2) : ℚ :=
 
 end ReachRun
 
+/-- `x` rounded down to a multiple of `1 / den`, for `x ≥ 0`. With `den = 0` it returns `x`. For
+    `#eval`. -/
+def floorTo (den : ℕ) (x : ℚ) : ℚ :=
+  if den = 0 then x else (((x * den).num.toNat / (x * den).den : ℕ) : ℚ) / den
+
+/-- `x` rounded up to a multiple of `1 / den`, for `x ≥ 0`. With `den = 0` it returns `x`. For
+    `#eval`. -/
+def ceilTo (den : ℕ) (x : ℚ) : ℚ :=
+  if den = 0 then x
+  else ((((x * den).num.toNat + (x * den).den - 1) / (x * den).den : ℕ) : ℚ) / den
+
 namespace ModelData
 
 /-! ## Finding a run -/
@@ -96,6 +116,26 @@ def reachRun (d : ModelData) [NeZero d.nAct1] [NeZero d.nAct2]
     let st := d.reachStepRun target (r.val n)
     ⟨r.vals ++ [st.map fun x => x.1], r.rows ++ [st.map fun x => x.2.1],
       r.cols ++ [st.map fun x => x.2.2]⟩
+
+/-- `n` lower steps of the search from the constant `0`, each value rounded down to a multiple of
+    `1 / den` before the next step, with the column strategies the search found. Rounding keeps the
+    numbers small, and a rounded value is still certified by the column strategy of the exact one.
+    For `#eval`. -/
+def reachLowerRun (d : ModelData) [NeZero d.nAct1] [NeZero d.nAct2]
+    (target : Finset (Fin d.nStates)) (den : ℕ) : ℕ → ReachRun
+  | 0 => ⟨[(List.finRange d.nStates).map (fun _ => (0 : ℚ))], [], []⟩
+  | n + 1 =>
+    let r := reachLowerRun d target den n
+    let st := d.reachStepRun target (r.val n)
+    ⟨r.vals ++ [st.map fun x => floorTo den x.1], [], r.cols ++ [st.map fun x => x.2.2]⟩
+
+/-- A candidate upper vector `u`, one step of the operator from it, and the row strategies of
+    that step. Where the second vector is nowhere above the first, `u` is a pre-fixed point and
+    these row strategies certify it. For `#eval`. -/
+def reachUpperRun (d : ModelData) [NeZero d.nAct1] [NeZero d.nAct2]
+    (target : Finset (Fin d.nStates)) (u : Fin d.nStates → ℚ) : ReachRun :=
+  let st := d.reachStepRun target u
+  ⟨[(List.finRange d.nStates).map u, st.map fun x => x.1], [st.map fun x => x.2.1], []⟩
 
 /-! ## Checking a run -/
 
@@ -135,6 +175,22 @@ theorem answers_reach_of_runs_avoiding (d : ModelData) [NeZero d.nAct1] [NeZero 
   CsgQ.answers_reach_of_steps_avoiding d.toCsgQ (d.wellFormed hs h2) hrf target
     (d.supportOf hs) (d.support_toCSG hs h2 hnz) z hz hdisj
     lo.val lo.row lo.col n hi.val hi.row hi.col m hlo0 hlo hhi0 hhi
+
+/-- **Reachability, from a one-sided lower run and a pre-fixed upper vector.** `lo` is a run of
+    `n` lower steps from `0`, read with its column strategies, and `hi.val 0` is an upper vector
+    that passes `ReachUpper` against itself with the row strategies `hi.row 0`. The three
+    hypotheses are closed and decidable. `CsgQ.answers_reach_of_bounds` at the tables' reading
+    functions. -/
+theorem answers_reach_of_bounds (d : ModelData) [NeZero d.nAct1] [NeZero d.nAct2]
+    (hs : d.Shape) (h2 : d.Stochastic) (hrf : d.toCsgQ.RewardFree)
+    (target : Finset (Fin d.nStates)) (lo hi : ReachRun) (n : ℕ)
+    (hlo0 : ∀ s : Fin d.nStates, lo.val 0 s = 0)
+    (hlo : ∀ k < n, d.toCsgQ.ReachLower target (lo.val k) (lo.val (k + 1)) (lo.col k))
+    (hhi : d.toCsgQ.ReachUpper target (hi.val 0) (hi.val 0) (hi.row 0)) :
+    d.toCsgQ.Answers (d.wellFormed hs h2) (Objective.reach target)
+      (Answer.interval (lo.val n) (hi.val 0)) :=
+  CsgQ.answers_reach_of_bounds d.toCsgQ (d.wellFormed hs h2) hrf target
+    lo.val lo.col n (hi.val 0) (hi.row 0) hlo0 hlo hhi
 
 end ModelData
 

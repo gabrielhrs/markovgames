@@ -25,6 +25,11 @@ sides and `le_antisymm` closes it. No complementary-slackness condition appears,
 the inequalities alone are necessary and sufficient, because LP duality has already been done once
 and for all in those two theorems.
 
+**One side at a time.** `UpperCert` and `LowerCert` are the two halves of a `ValueCert` taken
+separately. A row strategy alone bounds the value from above and a column strategy alone bounds
+it from below, and in neither case does the bound have to be the value. `value_eq_of_valueCert`
+is the two together.
+
 **So why is the bimatrix layer here at all?** Two reasons, neither of them about the zero-sum value.
 First, complementarity is what makes the *search* tractable: it characterises equilibria as
 *equalities* over a chosen support, which is what turns an optimisation problem into finitely many
@@ -131,27 +136,64 @@ instance (G : MatrixGameQ I J) (t : ℚ) (p : I → ℚ) (q : J → ℚ) : Decid
   unfold ValueCert
   infer_instance
 
-/-- **The payoff of this file.** A value certificate pins the real-valued game value exactly: no
-    approximation, no error term. The row inequalities put `t` in `rowLPFeasible`, so
-    `value ≤ t` by `value_isLeast_rowLPFeasible`; the column inequalities put `t` in
-    `colLPFeasible`, so `t ≤ value` by `value_isGreatest_colLPFeasible`; `le_antisymm` finishes.
+/-! ### One-sided certificates
 
-    All the mathematics is in those two theorems, which is why this proof is bookkeeping: cast the
-    rational witnesses into `ℝ`, and cast the rational inequalities across the finite sums. -/
+Each half of a `ValueCert` is a certificate in its own right, for a bound instead of the value:
+the number `t` in it need not be the value, and only one player's strategy is involved. -/
+
+/-- **An upper certificate.** The row strategy `p` caps the row player's loss at `t` against
+    every pure column. -/
+def UpperCert (G : MatrixGameQ I J) (t : ℚ) (p : I → ℚ) : Prop :=
+  IsStratQ p ∧ ∀ j, ∑ i, p i * G.A i j ≤ t
+
+/-- **A lower certificate.** The column strategy `q` guarantees the column player `t` against
+    every pure row. -/
+def LowerCert (G : MatrixGameQ I J) (t : ℚ) (q : J → ℚ) : Prop :=
+  IsStratQ q ∧ ∀ i, t ≤ ∑ j, G.A i j * q j
+
+instance (G : MatrixGameQ I J) (t : ℚ) (p : I → ℚ) : Decidable (G.UpperCert t p) := by
+  unfold UpperCert
+  infer_instance
+
+instance (G : MatrixGameQ I J) (t : ℚ) (q : J → ℚ) : Decidable (G.LowerCert t q) := by
+  unfold LowerCert
+  infer_instance
+
+/-- An upper certificate bounds the real-valued game value from above. The inequalities put `t`
+    in `rowLPFeasible`, so `value ≤ t` by `value_isLeast_rowLPFeasible`. The rest is bookkeeping:
+    cast the rational witness into `ℝ`, and cast the rational inequalities across the finite
+    sums. -/
+theorem value_le_of_upperCert {G : MatrixGameQ I J} {t : ℚ} {p : I → ℚ}
+    (h : G.UpperCert t p) : G.toMatrixGame.value ≤ ((t : ℚ) : ℝ) := by
+  obtain ⟨hp, hrow⟩ := h
+  refine G.toMatrixGame.value_isLeast_rowLPFeasible.2 ?_
+  refine ⟨fun i => ((p i : ℚ) : ℝ), mem_stdSimplex_of_isStratQ hp, fun j => ?_⟩
+  have hc : ((∑ i, p i * G.A i j : ℚ) : ℝ) ≤ ((t : ℚ) : ℝ) := by exact_mod_cast hrow j
+  push_cast at hc
+  simpa using hc
+
+/-- A lower certificate bounds the real-valued game value from below: the inequalities put `t`
+    in `colLPFeasible`, so `t ≤ value` by `value_isGreatest_colLPFeasible`. The mirror of
+    `value_le_of_upperCert`. -/
+theorem le_value_of_lowerCert {G : MatrixGameQ I J} {t : ℚ} {q : J → ℚ}
+    (h : G.LowerCert t q) : ((t : ℚ) : ℝ) ≤ G.toMatrixGame.value := by
+  obtain ⟨hq, hcol⟩ := h
+  refine G.toMatrixGame.value_isGreatest_colLPFeasible.2 ?_
+  refine ⟨fun j => ((q j : ℚ) : ℝ), mem_stdSimplex_of_isStratQ hq, fun i => ?_⟩
+  have hc : ((t : ℚ) : ℝ) ≤ ((∑ j, G.A i j * q j : ℚ) : ℝ) := by exact_mod_cast hcol i
+  push_cast at hc
+  simpa using hc
+
+/-- **The payoff of this file.** A value certificate pins the real-valued game value exactly: no
+    approximation, no error term. Its row half is an upper certificate for `t` and its column
+    half a lower certificate for the same `t`, so `value ≤ t` and `t ≤ value`, and `le_antisymm`
+    finishes. -/
 theorem value_eq_of_valueCert {G : MatrixGameQ I J} {t : ℚ} {p : I → ℚ} {q : J → ℚ}
     (h : G.ValueCert t p q) : G.toMatrixGame.value = ((t : ℚ) : ℝ) := by
   obtain ⟨hp, hq, hrow, hcol⟩ := h
-  refine le_antisymm ?_ ?_
-  · refine G.toMatrixGame.value_isLeast_rowLPFeasible.2 ?_
-    refine ⟨fun i => ((p i : ℚ) : ℝ), mem_stdSimplex_of_isStratQ hp, fun j => ?_⟩
-    have hc : ((∑ i, p i * G.A i j : ℚ) : ℝ) ≤ ((t : ℚ) : ℝ) := by exact_mod_cast hrow j
-    push_cast at hc
-    simpa using hc
-  · refine G.toMatrixGame.value_isGreatest_colLPFeasible.2 ?_
-    refine ⟨fun j => ((q j : ℚ) : ℝ), mem_stdSimplex_of_isStratQ hq, fun i => ?_⟩
-    have hc : ((t : ℚ) : ℝ) ≤ ((∑ j, G.A i j * q j : ℚ) : ℝ) := by exact_mod_cast hcol i
-    push_cast at hc
-    simpa using hc
+  have hu : G.UpperCert t p := And.intro hp hrow
+  have hl : G.LowerCert t q := And.intro hq hcol
+  exact le_antisymm (value_le_of_upperCert hu) (le_value_of_lowerCert hl)
 
 end MatrixGameQ
 
