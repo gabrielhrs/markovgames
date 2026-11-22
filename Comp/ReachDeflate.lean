@@ -37,8 +37,9 @@ outside `L` keeps the play inside `x` against `σ`, and each column in `L` pays 
 `u`, which is below `u`. At a capped state, `σ` holds a column outside `L` to at most `c` because
 all its successors are in `x`, where `w ≤ c`, and a column in `L` to at most `c` because `w ≤ u`.
 A step of the operator also takes pre-fixed vectors to pre-fixed vectors, and the starting vector
-is pre-fixed (`Csg/ReachZero.lean`). That argument is the reason to expect a pass. It is not
-formalised, and the check does not depend on it.
+is pre-fixed (`Csg/ReachZero.lean`). For the real-valued game the argument is
+`Csg/ReachCap.lean`'s `reachOp_cap_le`. This search is not proved to meet that theorem's
+hypotheses, and the check does not depend on it.
 
 **Relation to the literature.** Capping an end component by its best exit is deflation as in
 Kelmendi, Krämer, Křetínský and Weininger for turn-based games, and in Grobelna, Křetínský and
@@ -49,10 +50,10 @@ a state of the maximiser, and `0` at a state where the minimiser can stay.
 **Rounding.** With `den ≠ 0`, every value the search writes is rounded up to a multiple of
 `1 / den`: the result of a step of the operator, and each cap. The vectors then stay on that grid.
 Rounding up keeps a pre-fixed vector pre-fixed in both places. A vector `w` with `F u ≤ w ≤ u`,
-for the operator `F` and a pre-fixed `u`, satisfies `F w ≤ F u ≤ w`. And the argument for capping
-holds for any cap at or above the best exit value. With `den = 0` nothing is rounded and the
-values are exact; a mixed stage game multiplies denominators, so they can grow very fast, and on
-the model of `Comp/HideTwiceQ.lean` they pass thirty digits in four rounds.
+for the operator `F`, satisfies `F w ≤ F u ≤ w` (`CSG.reachOp_le_of_between`). And the argument
+for capping holds for any cap at or above the best exit value. With `den = 0` nothing is rounded
+and the values are exact; a mixed stage game multiplies denominators, so they can grow very fast,
+and on the model of `Comp/HideTwiceQ.lean` they pass thirty digits in four rounds.
 
 **Cost.** The exit value enumerates the subsets of a state's enabled row actions and solves one
 restricted game for each, by the support enumeration of `Comp/Search.lean`.
