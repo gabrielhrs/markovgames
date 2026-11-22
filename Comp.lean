@@ -11,6 +11,7 @@ import Comp.QualOps
 import Comp.QualBridge
 import Comp.Objective
 import Comp.ReachTrace
+import Comp.ReachBounds
 import Comp.ModelData
 import Comp.ModelDataQualitative
 import Comp.RockPaperScissorsQ
@@ -22,3 +23,6 @@ import Comp.HideOrRunDataQ
 import Comp.RaggedQ
 import Comp.ModelDataReach
 import Comp.RaggedReachQ
+import Comp.ReachDeflate
+import Comp.HideRunSlipQ
+import Comp.HideTwiceQ
