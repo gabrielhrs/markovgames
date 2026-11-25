@@ -88,17 +88,9 @@ instance : NeZero hrs.nAct2 := ⟨by decide⟩
 
 theorem hrs_shape : hrs.Shape := by decide
 
-theorem hrs_nonzero : hrs.Nonzero := by
-  intro s
-  fin_cases s <;>
-    norm_num [ModelData.transOf, ModelData.stateAt, or_imp, and_imp, forall_and,
-      forall_eq']
+theorem hrs_nonzero : hrs.Nonzero := by decide +kernel
 
-theorem hrs_stochastic : hrs.Stochastic := by
-  intro s
-  fin_cases s <;>
-    norm_num [ModelData.transOf, ModelData.stateAt, or_imp, and_imp, forall_and,
-      forall_eq']
+theorem hrs_stochastic : hrs.Stochastic := by decide +kernel
 
 theorem hrs_wf : hrs.toCsgQ.WellFormed :=
   hrs.wellFormed hrs_shape hrs_stochastic
@@ -124,13 +116,13 @@ def hrsAvoid : Finset (Fin hrs.nStates) := {2}
     waits and the column player hides. -/
 def hrsNaive : ReachRun where
   vals := [[1, 1, 0], [1, 1, 0]]
-  rows := [[[0, 1], [], [0, 1]]]
-  cols := [[[0, 1], [], [0, 1]]]
+  rows := [[[(1, 1)], [], [(0, 1)]]]
+  cols := [[[(1, 1)], [], [(0, 1)]]]
 
 /-- **The upper iteration does not move.** One exact step of the reachability operator from
     `(1, 1, 0)` returns `(1, 1, 0)`. -/
 theorem hrs_naive_stalls :
-    hrs.toCsgQ.ReachStep hrsTarget (hrsNaive.val 0) (hrsNaive.val 1) (hrsNaive.row 0)
+    hrs.ReachStepEn hrs_shape hrsTarget (hrsNaive.val 0) (hrsNaive.val 1) (hrsNaive.row 0)
       (hrsNaive.col 0) := by
   decide +kernel
 
@@ -143,7 +135,7 @@ theorem hrs_naive_stalls :
     that certify it: at the hiding place the row player waits. -/
 def hrsHi : ReachRun where
   vals := [[1/2, 1, 0], [1/2, 1, 0]]
-  rows := [[[0, 1], [], [0, 1]]]
+  rows := [[[(1, 1)], [], [(0, 1)]]]
   cols := []
 
 #eval hrs.reachLowerRun hrsTarget 100 9
@@ -155,15 +147,15 @@ def hrsLo : ReachRun where
   vals := [[0, 0, 0], [0, 1, 0], [1/4, 1, 0], [7/20, 1, 0], [2/5, 1, 0], [43/100, 1, 0],
            [9/20, 1, 0], [23/50, 1, 0], [47/100, 1, 0], [12/25, 1, 0]]
   rows := []
-  cols := [[[0, 1], [], [0, 1]],
-           [[3/4, 1/4], [], [0, 1]],
-           [[9/14, 5/14], [], [0, 1]],
-           [[13/22, 9/22], [], [0, 1]],
-           [[9/16, 7/16], [], [0, 1]],
-           [[171/314, 143/314], [], [0, 1]],
-           [[33/62, 29/62], [], [0, 1]],
-           [[81/154, 73/154], [], [0, 1]],
-           [[53/102, 49/102], [], [0, 1]]]
+  cols := [[[(1, 1)], [], [(0, 1)]],
+           [[(0, 3/4), (1, 1/4)], [], [(0, 1)]],
+           [[(0, 9/14), (1, 5/14)], [], [(0, 1)]],
+           [[(0, 13/22), (1, 9/22)], [], [(0, 1)]],
+           [[(0, 9/16), (1, 7/16)], [], [(0, 1)]],
+           [[(0, 171/314), (1, 143/314)], [], [(0, 1)]],
+           [[(0, 33/62), (1, 29/62)], [], [(0, 1)]],
+           [[(0, 81/154), (1, 73/154)], [], [(0, 1)]],
+           [[(0, 53/102), (1, 49/102)], [], [(0, 1)]]]
 
 #eval hrs.reachDeflateRun hrs_shape hrsTarget 0 6
 -- expect: both vectors `[365/729, 1, 0]`
@@ -172,7 +164,7 @@ def hrsLo : ReachRun where
     certify it. -/
 def hrsDeflated : ReachRun where
   vals := [[365/729, 1, 0], [365/729, 1, 0]]
-  rows := [[[0, 1], [], [0, 1]]]
+  rows := [[[(1, 1)], [], [(0, 1)]]]
   cols := []
 
 /-! ## The answer -/

@@ -30,6 +30,12 @@ separately. A row strategy alone bounds the value from above and a column strate
 it from below, and in neither case does the bound have to be the value. `value_eq_of_valueCert`
 is the two together.
 
+**On sets of actions.** `UpperCertOn`, `LowerCertOn` and `ValueCertOn` are the same certificates
+for a game in which only the actions in two given sets are available. The strategy is zero
+outside its own player's set and is tested against the other player's set only. When every action
+outside the sets duplicates one inside, they are certificates for the whole game
+(`upperCert_of_on`, `lowerCert_of_on`, `valueCert_of_on`).
+
 **So why is the bimatrix layer here at all?** Two reasons, neither of them about the zero-sum value.
 First, complementarity is what makes the *search* tractable: it characterises equilibria as
 *equalities* over a chosen support, which is what turns an optimisation problem into finitely many
@@ -194,6 +200,95 @@ theorem value_eq_of_valueCert {G : MatrixGameQ I J} {t : ℚ} {p : I → ℚ} {q
   have hu : G.UpperCert t p := And.intro hp hrow
   have hl : G.LowerCert t q := And.intro hq hcol
   exact le_antisymm (value_le_of_upperCert hu) (le_value_of_lowerCert hl)
+
+/-! ### Certificates on sets of actions
+
+The same certificates, for the rows in `E1` and the columns in `E2` only. A strategy is indexed
+by the whole action type and must vanish outside its player's set; the inequalities are asked of
+the other player's set alone. -/
+
+/-- **An upper certificate on `E1` and `E2`.** `p` is a mixed strategy on the rows of `E1` that
+    holds every column of `E2` to at most `t`. -/
+def UpperCertOn (G : MatrixGameQ I J) (E1 : Finset I) (E2 : Finset J) (t : ℚ) (p : I → ℚ) :
+    Prop :=
+  (∀ i, 0 ≤ p i) ∧ (∀ i, i ∉ E1 → p i = 0) ∧ (∑ i ∈ E1, p i = 1) ∧
+    ∀ j ∈ E2, ∑ i ∈ E1, p i * G.A i j ≤ t
+
+/-- **A lower certificate on `E1` and `E2`.** `q` is a mixed strategy on the columns of `E2` that
+    secures at least `t` against every row of `E1`. -/
+def LowerCertOn (G : MatrixGameQ I J) (E1 : Finset I) (E2 : Finset J) (t : ℚ) (q : J → ℚ) :
+    Prop :=
+  (∀ j, 0 ≤ q j) ∧ (∀ j, j ∉ E2 → q j = 0) ∧ (∑ j ∈ E2, q j = 1) ∧
+    ∀ i ∈ E1, t ≤ ∑ j ∈ E2, G.A i j * q j
+
+/-- **A value certificate on `E1` and `E2`**: an upper and a lower certificate for the same
+    number. -/
+def ValueCertOn (G : MatrixGameQ I J) (E1 : Finset I) (E2 : Finset J) (t : ℚ) (p : I → ℚ)
+    (q : J → ℚ) : Prop :=
+  G.UpperCertOn E1 E2 t p ∧ G.LowerCertOn E1 E2 t q
+
+instance (G : MatrixGameQ I J) (E1 : Finset I) (E2 : Finset J) (t : ℚ) (p : I → ℚ) :
+    Decidable (G.UpperCertOn E1 E2 t p) := by
+  unfold UpperCertOn
+  infer_instance
+
+instance (G : MatrixGameQ I J) (E1 : Finset I) (E2 : Finset J) (t : ℚ) (q : J → ℚ) :
+    Decidable (G.LowerCertOn E1 E2 t q) := by
+  unfold LowerCertOn
+  infer_instance
+
+instance (G : MatrixGameQ I J) (E1 : Finset I) (E2 : Finset J) (t : ℚ) (p : I → ℚ)
+    (q : J → ℚ) : Decidable (G.ValueCertOn E1 E2 t p q) := by
+  unfold ValueCertOn
+  infer_instance
+
+/-- If every column duplicates a column of `E2`, an upper certificate on `E1` and `E2` is an
+    upper certificate for the whole game. The strategy is unchanged: its sums over all rows are
+    its sums over `E1`, and a column outside `E2` pays what its duplicate pays. -/
+theorem upperCert_of_on {G : MatrixGameQ I J} {E1 : Finset I} {E2 : Finset J} {t : ℚ}
+    {p : I → ℚ} (h : G.UpperCertOn E1 E2 t p)
+    (hdup : ∀ j, ∃ j' ∈ E2, ∀ i, G.A i j = G.A i j') : G.UpperCert t p := by
+  obtain ⟨hp0, hpz, hp1, hcol⟩ := h
+  have hall : ∑ i, p i = ∑ i ∈ E1, p i :=
+    (Finset.sum_subset (Finset.subset_univ E1) fun i _ hi => hpz i hi).symm
+  have hsum : ∀ j, ∑ i, p i * G.A i j = ∑ i ∈ E1, p i * G.A i j := fun j =>
+    (Finset.sum_subset (Finset.subset_univ E1) fun i _ hi => by
+      change p i * G.A i j = 0
+      rw [hpz i hi, zero_mul]).symm
+  refine And.intro (And.intro hp0 (hall.trans hp1)) fun j => ?_
+  obtain ⟨j', hj', hjj⟩ := hdup j
+  have hEq : ∑ i ∈ E1, p i * G.A i j = ∑ i ∈ E1, p i * G.A i j' :=
+    Finset.sum_congr rfl fun i _ => by rw [hjj i]
+  exact ((hsum j).trans hEq).le.trans (hcol j' hj')
+
+/-- If every row duplicates a row of `E1`, a lower certificate on `E1` and `E2` is a lower
+    certificate for the whole game. The mirror of `upperCert_of_on`. -/
+theorem lowerCert_of_on {G : MatrixGameQ I J} {E1 : Finset I} {E2 : Finset J} {t : ℚ}
+    {q : J → ℚ} (h : G.LowerCertOn E1 E2 t q)
+    (hdup : ∀ i, ∃ i' ∈ E1, ∀ j, G.A i j = G.A i' j) : G.LowerCert t q := by
+  obtain ⟨hq0, hqz, hq1, hrow⟩ := h
+  have hall : ∑ j, q j = ∑ j ∈ E2, q j :=
+    (Finset.sum_subset (Finset.subset_univ E2) fun j _ hj => hqz j hj).symm
+  have hsum : ∀ i, ∑ j, G.A i j * q j = ∑ j ∈ E2, G.A i j * q j := fun i =>
+    (Finset.sum_subset (Finset.subset_univ E2) fun j _ hj => by
+      change G.A i j * q j = 0
+      rw [hqz j hj, mul_zero]).symm
+  refine And.intro (And.intro hq0 (hall.trans hq1)) fun i => ?_
+  obtain ⟨i', hi', hii⟩ := hdup i
+  have hEq : ∑ j ∈ E2, G.A i j * q j = ∑ j ∈ E2, G.A i' j * q j :=
+    Finset.sum_congr rfl fun j _ => by rw [hii j]
+  exact (hrow i' hi').trans ((hsum i).trans hEq).ge
+
+/-- With both kinds of duplication, a value certificate on `E1` and `E2` is a value certificate
+    for the whole game. -/
+theorem valueCert_of_on {G : MatrixGameQ I J} {E1 : Finset I} {E2 : Finset J} {t : ℚ}
+    {p : I → ℚ} {q : J → ℚ} (h : G.ValueCertOn E1 E2 t p q)
+    (hcol : ∀ j, ∃ j' ∈ E2, ∀ i, G.A i j = G.A i j')
+    (hrow : ∀ i, ∃ i' ∈ E1, ∀ j, G.A i j = G.A i' j) : G.ValueCert t p q := by
+  obtain ⟨hu, hl⟩ := h
+  obtain ⟨hp, hc⟩ := upperCert_of_on hu hcol
+  obtain ⟨hq, hr⟩ := lowerCert_of_on hl hrow
+  exact And.intro hp (And.intro hq (And.intro hc hr))
 
 end MatrixGameQ
 

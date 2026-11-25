@@ -26,6 +26,7 @@ import Csg.CoBuchiOp
 import Csg.QualitativeSure
 import Csg.ReachZero
 import Csg.ReachCap
+import Csg.MatrixGameRestrict
 import Csg.QualitativeAlmostSure
 import Csg.QualitativeLimitSure
 import Csg.QualitativeDet

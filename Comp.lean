@@ -14,6 +14,7 @@ import Comp.ReachTrace
 import Comp.ReachBounds
 import Comp.ModelData
 import Comp.ModelDataQualitative
+import Comp.ModelDataStage
 import Comp.RockPaperScissorsQ
 import Comp.TwoStateQ
 import Comp.SafetyChainQ
@@ -26,3 +27,5 @@ import Comp.RaggedReachQ
 import Comp.ReachDeflate
 import Comp.HideRunSlipQ
 import Comp.HideTwiceQ
+import Comp.GameData
+import Comp.GateKeeperG

@@ -75,19 +75,11 @@ namespace ModelData
 
 /-! ## Closed components -/
 
-/-- The row actions enabled at `s`, as a list. -/
-def rowList (d : ModelData) (hs : d.Shape) (s : Fin d.nStates) : List (Fin d.nAct1) :=
-  (List.finRange d.nAct1).filter fun a => decide (a ∈ d.enabled1 hs s)
-
-/-- The column actions enabled at `s`, as a list. -/
-def colList (d : ModelData) (hs : d.Shape) (s : Fin d.nStates) : List (Fin d.nAct2) :=
-  (List.finRange d.nAct2).filter fun a => decide (a ∈ d.enabled2 hs s)
-
 /-- The successors of `s` under the enabled joint actions that keep the play inside `x`. -/
 def staySucc (d : ModelData) (hs : d.Shape) (x : Finset (Fin d.nStates)) (s : Fin d.nStates) :
     Finset (Fin d.nStates) :=
-  (d.rowList hs s).foldl (fun acc a1 =>
-    (d.colList hs s).foldl (fun acc' a2 =>
+  (d.rowList s).foldl (fun acc a1 =>
+    (d.colList s).foldl (fun acc' a2 =>
       if d.supportOf hs s a1 a2 ⊆ x then acc' ∪ d.supportOf hs s a1 a2 else acc') acc)
     (∅ : Finset (Fin d.nStates))
 
@@ -128,8 +120,8 @@ def closedComps (d : ModelData) (hs : d.Shape) :
     leave `x` against some action of `T`. -/
 def exitValue (d : ModelData) [NeZero d.nAct1] [NeZero d.nAct2] (hs : d.Shape)
     (x : Finset (Fin d.nStates)) (v : Fin d.nStates → ℚ) (s : Fin d.nStates) : ℚ :=
-  let cols := d.colList hs s
-  let cands : List ℚ := (d.rowList hs s).sublists.filterMap fun T =>
+  let cols := d.colList s
+  let cands : List ℚ := (d.rowList s).sublists.filterMap fun T =>
     if T.isEmpty then none
     else
       let L := cols.filter fun a2 => T.any fun a1 => !decide (d.supportOf hs s a1 a2 ⊆ x)

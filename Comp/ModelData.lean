@@ -58,16 +58,12 @@ invalid, and `transOf_ne_nil` is a theorem.
 
 **Validity splits in two, and the split matters.** `InRange` says every successor index is a real
 state -- a finite conjunction of `ℕ` comparisons, so `decide` settles it. `Stochastic` says every
-row is nonnegative and sums to one -- genuine `ℚ` arithmetic, so `decide` runs into the `Nat.gcd`
-obstruction recorded in `Comp/RockPaperScissorsQ.lean` and a caller discharges it with `norm_num`
-instead (or `#eval decide` to *check* rather than prove). `Nonneg` and `Nonzero` are the other two
-conditions, and what they buy is explained at `keysNat`: together they let a support be read off a
-row's keys without the weights being inspected, which is what keeps the kernel in play above the
-bridge. None of the three `ℚ` conditions is reachable by `decide` once a weight is written as a
-fraction -- `(1/2 : ℚ)` is a division -- so each is proved once per model by `norm_num`, and
-*nothing above them* needs rational arithmetic again. That holds for a model whose weights are all
-`0` or `1` as well: `Stochastic` adds weights, and rational addition normalises through `Nat.gcd`
-whatever the summands are.
+row is nonnegative and sums to one, which is arithmetic in `ℚ`: `decide +kernel` settles it, by
+having the kernel evaluate the sums, and plain `decide` does not. `Nonneg` and `Nonzero` are the
+other two conditions, and what they buy is explained at `keysNat`: together they let a support be
+read off a row's keys without the weights being inspected, which is what keeps the kernel in play
+above the bridge. Each of the three is proved once per model, and the qualitative results above
+them need no rational arithmetic again.
 
 **Why `NeZero` appears, and one practical note.** `Comp/Basic.lean`'s `CsgQ` requires
 `[Nonempty A1] [Nonempty A2]`, and `Fin d.nAct1` is nonempty only when `d.nAct1 ≠ 0`. So `toCsgQ`
@@ -282,8 +278,9 @@ instance : Inhabited StateEntry := ⟨⟨0, []⟩⟩
     state count is derived from the list, so it cannot disagree with it.
 
     `nAct1`/`nAct2` bound the *global* action namespaces. They are not per-state matrix dimensions:
-    the stage game a state denotes is `enabled1 × enabled2`, which `Comp/Shapley.lean` builds, and
-    "row" and "column" are reserved for that. -/
+    the stage game a state denotes has the value of the game on `enabled1 × enabled2`
+    (`ModelData.stageValue_eq_enabled`, `Comp/ModelDataStage.lean`), and "row" and "column" are
+    reserved for that. -/
 structure ModelData where
   /-- Size of the row player's global action namespace. -/
   nAct1 : ℕ
@@ -505,8 +502,8 @@ def ModelData.Nonzero (d : ModelData) : Prop :=
 instance (d : ModelData) : Decidable d.Nonzero := by
   unfold ModelData.Nonzero; infer_instance
 
-/-- Every transition's distribution is a probability distribution. Genuine `ℚ` arithmetic, so a
-    caller discharges it with `norm_num` rather than `decide` once any weight is a fraction. -/
+/-- Every transition's distribution is a probability distribution. Arithmetic in `ℚ`: for a
+    concrete model `decide +kernel` settles it, and plain `decide` does not. -/
 def ModelData.Stochastic (d : ModelData) : Prop :=
   ∀ s : Fin d.nStates, ∀ t ∈ d.transOf s,
     (∀ p ∈ t.dist, 0 ≤ p.2) ∧ (t.dist.map Prod.snd).sum = 1

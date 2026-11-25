@@ -39,8 +39,8 @@ upper run is already at a fixed point, `(1, 1, 0, 0)`, and the interval closes a
 **How it is checked.** The `#eval`s print the runs and the region. The runs are pasted below as
 literals, and the hypotheses of `ModelData.answers_reach_of_runs_avoiding` are closed by `decide`
 for the two conditions on `raggedAvoid` and by `decide +kernel` for everything with a rational in
-it. The strategies have one entry per global action: at the stand-off row action `1` and column
-action `0` are disabled and carry weight `0`.
+it. A strategy lists the actions it gives weight to, by global index: at the stand-off the row
+actions are `0` (run) and `2` (wait), and the column actions `1` (throw) and `2` (wait).
 -/
 
 -- `#eval` runs compiled code, which is how this library computes; see `Comp/Search.lean`.
@@ -66,20 +66,20 @@ theorem ragged_rewardFree : ragged.toCsgQ.RewardFree := by decide +kernel
 /-- Four steps up from `0`. -/
 def raggedLo : ReachRun where
   vals := [[0, 0, 0, 0], [0, 1, 0, 0], [1/3, 1, 0, 0], [1/2, 1, 0, 0], [3/5, 1, 0, 0]]
-  rows := [[[0, 0, 1], [], [0, 0, 1], [0, 0, 1]],
-           [[1/3, 0, 2/3], [], [0, 0, 1], [0, 0, 1]],
-           [[1/4, 0, 3/4], [], [0, 0, 1], [0, 0, 1]],
-           [[1/5, 0, 4/5], [], [0, 0, 1], [0, 0, 1]]]
-  cols := [[[0, 0, 1], [], [0, 0, 1], [0, 0, 1]],
-           [[0, 2/3, 1/3], [], [0, 0, 1], [0, 0, 1]],
-           [[0, 1/2, 1/2], [], [0, 0, 1], [0, 0, 1]],
-           [[0, 2/5, 3/5], [], [0, 0, 1], [0, 0, 1]]]
+  rows := [[[(2, 1)], [], [(2, 1)], [(0, 1)]],
+           [[(0, 1/3), (2, 2/3)], [], [(2, 1)], [(0, 1)]],
+           [[(0, 1/4), (2, 3/4)], [], [(2, 1)], [(0, 1)]],
+           [[(0, 1/5), (2, 4/5)], [], [(2, 1)], [(0, 1)]]]
+  cols := [[[(2, 1)], [], [(2, 1)], [(0, 1)]],
+           [[(1, 2/3), (2, 1/3)], [], [(2, 1)], [(0, 1)]],
+           [[(1, 1/2), (2, 1/2)], [], [(2, 1)], [(0, 1)]],
+           [[(1, 2/5), (2, 3/5)], [], [(2, 1)], [(0, 1)]]]
 
 /-- One step down from `1`. Every stage game is constant at `1`. -/
 def raggedHi : ReachRun where
   vals := [[1, 1, 1, 1], [1, 1, 1, 1]]
-  rows := [[[0, 0, 1], [], [0, 0, 1], [0, 0, 1]]]
-  cols := [[[0, 0, 1], [], [0, 0, 1], [0, 0, 1]]]
+  rows := [[[(2, 1)], [], [(2, 1)], [(0, 1)]]]
+  cols := [[[(2, 1)], [], [(2, 1)], [(0, 1)]]]
 
 /-! ## The answer -/
 
@@ -122,8 +122,8 @@ def raggedAvoid : Finset (Fin ragged.nStates) := {2, 3}
     `1`. -/
 def raggedHiTight : ReachRun where
   vals := [[1, 1, 0, 0], [1, 1, 0, 0]]
-  rows := [[[0, 0, 1], [], [0, 0, 1], [0, 0, 1]]]
-  cols := [[[0, 0, 1], [], [0, 0, 1], [0, 0, 1]]]
+  rows := [[[(2, 1)], [], [(2, 1)], [(0, 1)]]]
+  cols := [[[(2, 1)], [], [(2, 1)], [(0, 1)]]]
 
 /-- **Reaching the goal, with the interval closed where the value is `0`.** The lower run of
     `ragged_reach`, and an upper run started at `0` on `raggedAvoid`. -/
